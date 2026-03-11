@@ -1,8 +1,7 @@
-package mysql
+package repo
 
 import (
 	model "real_estate_be/internal/models"
-	"real_estate_be/internal/repository"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -13,9 +12,9 @@ type realEstateRepo struct {
 }
 
 // đảm bảo implement interface
-var _ repository.RealEstateRepository = (*realEstateRepo)(nil)
+var _ repo.RealEstateRepository = (*realEstateRepo)(nil)
 
-func NewRealEstateRepository(db *gorm.DB) repository.RealEstateRepository {
+func NewRealEstateRepository(db *gorm.DB) repo.RealEstateRepository {
 	return &realEstateRepo{db: db}
 }
 

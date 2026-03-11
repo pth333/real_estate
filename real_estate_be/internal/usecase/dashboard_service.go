@@ -3,26 +3,28 @@ package usecase
 import (
 	"real_estate_be/internal/delivery/https/dto"
 	model "real_estate_be/internal/models"
-	"real_estate_be/internal/repository"
 )
 
 type DashboardService struct {
-	repo repository.DashboardRepository
+	repo mysql.IDashboardRepository
 }
 
-func NewDashboardService(repo repository.DashboardRepository) *DashboardService {
+type IDashboardService interface {
+	Summary(from, to string) (model.DashboardSummary, error)
+	ListRealEstate(req dto.RealEstateSearchRequest) ([]model.RealEstate, int64, error)
+}
+
+func NewDashboardService(repo mysql.IDashboardRepository) *DashboardService {
 	return &DashboardService{
 		repo: repo,
 	}
 }
 
-// ===== Summary =====
-
 func (s *DashboardService) Summary(from, to string) (model.DashboardSummary, error) {
 	start := from + " 00:00:00"
 	end := to + " 23:59:59"
 
-	return s.repo.Summary(start, end)
+	return s.repo.GetSummary(start, end)
 }
 
 func (s *DashboardService) ListRealEstate(
@@ -30,5 +32,5 @@ func (s *DashboardService) ListRealEstate(
 ) ([]model.RealEstate, int64, error) {
 
 	offset := (req.Page - 1) * req.Size
-	return s.repo.ListRealEstate(req, offset, req.Size)
+	return s.repo.GetListRealEstate(req, offset, req.Size)
 }

@@ -1,8 +1,7 @@
-package mysql
+package repo
 
 import (
 	model "real_estate_be/internal/models"
-	"real_estate_be/internal/repository"
 
 	"gorm.io/gorm"
 )
@@ -11,7 +10,7 @@ type UserRepository struct {
 	db *gorm.DB
 }
 
-func NewUserRepository(db *gorm.DB) repository.UserRepository {
+func NewUserRepository(db *gorm.DB) UserRepository {
 	return &UserRepository{db: db}
 }
 

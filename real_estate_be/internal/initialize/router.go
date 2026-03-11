@@ -3,7 +3,7 @@ package initialize
 import (
 	"real_estate_be/internal/delivery/https"
 	"real_estate_be/internal/global"
-	"real_estate_be/internal/repository/mysql"
+	"real_estate_be/internal/repo"
 	"real_estate_be/internal/routers"
 	"real_estate_be/internal/usecase"
 
@@ -16,7 +16,7 @@ func InitRouter() *fiber.App {
 	MainGroup := app.Group("/v1/2026")
 	{
 		// Dashboard
-		dashboardRepo := mysql.NewDashboardRepository(global.DB)
+		dashboardRepo := repo.NewDashboardRepository(global.DB)
 		dashboardService := usecase.NewDashboardService(dashboardRepo)
 		dashboardHandler := https.NewDashboardHandler(dashboardService)
 
