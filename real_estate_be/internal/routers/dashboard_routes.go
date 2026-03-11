@@ -1,14 +1,15 @@
 package routers
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"real_estate_be/internal/delivery/https"
 
-type DashboardRoutes struct {
-}
+	"github.com/gofiber/fiber/v2"
+)
 
-func (r *DashboardRoutes) InitDashboardRoutes(Router fiber.Router) {
+func InitDashboardRoutes(Router fiber.Router, handler *https.DashboardHandler) {
 	dashRouter := Router.Group("/dashboard")
 	{
-		dashRouter.Get("/summary")
-		dashRouter.Post("/list-real-estate")
+		dashRouter.Get("/summary", handler.Summary)
+		dashRouter.Post("/list-real-estate", handler.ListRealEstate)
 	}
 }
