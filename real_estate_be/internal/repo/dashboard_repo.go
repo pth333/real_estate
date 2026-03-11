@@ -1,10 +1,9 @@
-package mysql
+package repo
 
 import (
 	"fmt"
 	"real_estate_be/internal/delivery/https/dto"
 	model "real_estate_be/internal/models"
-	"real_estate_be/internal/repository"
 
 	"gorm.io/gorm"
 )
@@ -13,11 +12,21 @@ type dashboardRepo struct {
 	db *gorm.DB
 }
 
-func NewDashboardRepository(db *gorm.DB) repository.DashboardRepository {
+type IDashboardRepository interface {
+	GetSummary(startDate, endDate string) (model.DashboardSummary, error)
+	GetListRealEstate(
+		req dto.RealEstateSearchRequest,
+		offset int,
+		limit int,
+	) ([]model.RealEstate, int64, error)
+	// Latest(limit int) ([]model.RealEstate, error)
+}
+
+func NewDashboardRepository(db *gorm.DB) IDashboardRepository {
 	return &dashboardRepo{db: db}
 }
 
-func (r *dashboardRepo) Summary(startDate, endDate string) (model.DashboardSummary, error) {
+func (r *dashboardRepo) GetSummary(startDate, endDate string) (model.DashboardSummary, error) {
 
 	var result model.DashboardSummary
 
@@ -35,7 +44,7 @@ func (r *dashboardRepo) Summary(startDate, endDate string) (model.DashboardSumma
 	return result, err
 }
 
-func (r *dashboardRepo) ListRealEstate(
+func (r *dashboardRepo) GetListRealEstate(
 	req dto.RealEstateSearchRequest,
 	offset int,
 	limit int,
