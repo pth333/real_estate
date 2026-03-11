@@ -13,9 +13,6 @@ type dashboardRepo struct {
 	db *gorm.DB
 }
 
-// đảm bảo implement interface
-var _ repository.DashboardRepository = (*dashboardRepo)(nil)
-
 func NewDashboardRepository(db *gorm.DB) repository.DashboardRepository {
 	return &dashboardRepo{db: db}
 }
@@ -51,10 +48,10 @@ func (r *dashboardRepo) ListRealEstate(
 
 	db := r.db.Model(&model.RealEstate{})
 
-	// // filter (nếu có)
-	// if req.District != "" {
-	// 	db = db.Where("district = ?", req.District)
-	// }
+	// filter (nếu có)
+	if req.District != "" {
+		db = db.Where("district = ?", req.District)
+	}
 
 	if err := db.Count(&total).Error; err != nil {
 		return nil, 0, err
