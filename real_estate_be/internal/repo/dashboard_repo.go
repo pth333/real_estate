@@ -1,8 +1,7 @@
 package repo
 
 import (
-	"fmt"
-	"real_estate_be/internal/delivery/https/dto"
+	"real_estate_be/internal/controller/dto"
 	model "real_estate_be/internal/models"
 
 	"gorm.io/gorm"
@@ -18,8 +17,7 @@ type IDashboardRepository interface {
 		req dto.RealEstateSearchRequest,
 		offset int,
 		limit int,
-	) ([]model.RealEstate, int64, error)
-	// Latest(limit int) ([]model.RealEstate, error)
+	) ([]model.RealEstateModel, int64, error)
 }
 
 func NewDashboardRepository(db *gorm.DB) IDashboardRepository {
@@ -27,7 +25,6 @@ func NewDashboardRepository(db *gorm.DB) IDashboardRepository {
 }
 
 func (r *dashboardRepo) GetSummary(startDate, endDate string) (model.DashboardSummary, error) {
-
 	var result model.DashboardSummary
 
 	err := r.db.
@@ -41,6 +38,7 @@ func (r *dashboardRepo) GetSummary(startDate, endDate string) (model.DashboardSu
 		Where("crawled_at BETWEEN ? AND ?", startDate, endDate).
 		Scan(&result).
 		Error
+
 	return result, err
 }
 
@@ -48,21 +46,27 @@ func (r *dashboardRepo) GetListRealEstate(
 	req dto.RealEstateSearchRequest,
 	offset int,
 	limit int,
-) ([]model.RealEstate, int64, error) {
-
+) ([]model.RealEstateModel, int64, error) {
 	var (
-		items []model.RealEstate
+		items []model.RealEstateModel
 		total int64
 	)
 
-	db := r.db.Model(&model.RealEstate{})
+	db := r.db.Model(&model.RealEstateModel{})
 
-	// filter (nếu có)
-	if req.District != "" {
-		db = db.Where("district = ?", req.District)
+	if req.Filter.District != "" {
+		db = db.Where("district = ?", req.Filter.District)
 	}
 
-	if err := db.Count(&total).Error; err != nil {
+	if req.Filter.MinPrice != 0 {
+		db = db.Where("price_vnd >= ?", req.Filter.MinPrice)
+	}
+
+	if req.Filter.MaxPrice != 0 {
+		db = db.Where("price_vnd <= ?", req.Filter.MaxPrice)
+	}
+
+	if err := r.db.Model(&model.RealEstateModel{}).Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -72,8 +76,6 @@ func (r *dashboardRepo) GetListRealEstate(
 		Limit(limit).
 		Find(&items).
 		Error
-
-	fmt.Println((items))
 
 	return items, total, err
 }

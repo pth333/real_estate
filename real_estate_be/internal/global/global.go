@@ -21,5 +21,5 @@ type MysqlConfig struct {
 	Port     int    `mapstructure:"port"`
 	Username string `mapstructure:"username"`
 	Password string `mapstructure:"password"`
-	DBName   string `mapstructure:"dbname"`
+	DBName   string `mapstructure:"database"`
 }
