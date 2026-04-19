@@ -10,7 +10,12 @@ type UserRepository struct {
 	db *gorm.DB
 }
 
-func NewUserRepository(db *gorm.DB) UserRepository {
+type IUserRepository interface {
+	Register(item *model.User) error
+	FindByEmail(email string) (*model.User, error)
+}
+
+func NewUserRepository(db *gorm.DB) IUserRepository {
 	return &UserRepository{db: db}
 }
 

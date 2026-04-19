@@ -1,56 +1,131 @@
 package crawler
 
+// import thêm:
 import (
+	"context"
 	"log"
+	"sync"
 	"time"
 
 	"real_estate_be/internal/crawler/mapper"
 	provider "real_estate_be/internal/crawler/provider"
-	"real_estate_be/internal/repository/mysql"
+	"real_estate_be/internal/repo"
 
 	"gorm.io/gorm"
 )
 
-func Run(db *gorm.DB) {
-	repo := mysql.NewRealEstateRepository(db)
+type pageResult struct {
+	page int
+	data []provider.BatDongSanRaw
+	err  error
+}
 
-	page := 0
+func Run(db *gorm.DB) {
+	repo := repo.NewRealEstateRepository(db)
+
+	crawler := provider.NewBatDongSanCrawler()
+	defer crawler.Close()
+
+	const workers = 3
+	const batchSize = 12 // mỗi vòng crawl 12 page song song
+
+	startPage := 0
 
 	for {
-		log.Println("➡ Crawling page:", page)
+		ctx, cancel := context.WithCancel(context.Background())
 
-		rawData, err := provider.CrawlBatDongSanHanoi(page)
-		if err != nil {
-			log.Println("❌ Crawl error:", err)
-			break
+		jobs := make(chan int, batchSize)
+		results := make(chan pageResult, batchSize)
+
+		var wg sync.WaitGroup
+		for i := 0; i < workers; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for p := range jobs {
+					if ctx.Err() != nil {
+						return
+					}
+					raw, err := crawler.CrawlPage(p)
+					select {
+					case results <- pageResult{page: p, data: raw, err: err}:
+					case <-ctx.Done():
+						return
+					}
+				}
+			}()
 		}
 
-		if len(rawData) == 0 {
-			log.Println("🛑 Empty page → STOP")
-			break
+		for p := startPage; p < startPage+batchSize; p++ {
+			jobs <- p
 		}
+		close(jobs)
 
-		stop := false
+		go func() {
+			wg.Wait()
+			close(results)
+		}()
 
-		for _, raw := range rawData {
-			if !isToday(raw.PostedDate) {
-				log.Println("🛑 Reached older listing → STOP ALL")
-				stop = true
+		buffer := map[int]pageResult{}
+		nextPage := startPage
+		stopAll := false
+
+		for r := range results {
+			buffer[r.page] = r
+
+			for {
+				cur, ok := buffer[nextPage]
+				if !ok {
+					break
+				}
+				delete(buffer, nextPage)
+
+				log.Println("➡ Crawling page:", cur.page)
+
+				if cur.err != nil {
+					log.Println("❌ Crawl error:", cur.err)
+					stopAll = true
+					cancel()
+					break
+				}
+				if len(cur.data) == 0 {
+					log.Println("🛑 Empty page → STOP")
+					stopAll = true
+					cancel()
+					break
+				}
+
+				for _, raw := range cur.data {
+					if !isToday(raw.PostedDate) {
+						log.Println("🛑 Reached older listing → STOP ALL")
+						stopAll = true
+						cancel()
+						break
+					}
+
+					item := mapper.MapBatDongSan(raw)
+					if err := repo.Create(&item); err != nil {
+						log.Println("Insert error:", err)
+					}
+				}
+
+				if stopAll {
+					break
+				}
+				nextPage++
+			}
+
+			if stopAll {
 				break
 			}
-
-			item := mapper.MapBatDongSan(raw)
-			if err := repo.Create(&item); err != nil {
-				log.Println("Insert error:", err)
-			}
 		}
 
-		if stop {
+		cancel()
+		if stopAll {
 			break
 		}
-
-		page++
-		time.Sleep(3 * time.Second) // tránh bị block
+		startPage += batchSize
+		time.Sleep(2 * time.Second)
 	}
 
 	log.Println("✅ Crawl today listings DONE")

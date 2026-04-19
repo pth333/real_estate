@@ -1,22 +1,21 @@
 package main
 
 import (
-	"real_estate_be/database"
-	"real_estate_be/internal/config"
 	"real_estate_be/internal/crawler"
+	"real_estate_be/internal/global"
+	"real_estate_be/internal/initialize"
 )
 
 func main() {
 
-	// Load .env
-	cfg := config.LoadConfig()
+	// Load config
+	initialize.RunCrawler()
 
 	// Connect MySQL
-	db := database.Connect(cfg)
+	// db := database.Connect(cfg)
 
 	// Migrate
 	// db.AutoMigrate(&model.RealEstate{})
 	// Run crawler
-	crawler.Run(db)
-
+	crawler.Run(global.DB)
 }

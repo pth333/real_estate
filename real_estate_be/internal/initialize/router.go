@@ -1,11 +1,7 @@
 package initialize
 
 import (
-	"real_estate_be/internal/delivery/https"
-	"real_estate_be/internal/global"
-	"real_estate_be/internal/repo"
 	"real_estate_be/internal/routers"
-	"real_estate_be/internal/usecase"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -16,11 +12,9 @@ func InitRouter() *fiber.App {
 	MainGroup := app.Group("/v1/2026")
 	{
 		// Dashboard
-		dashboardRepo := repo.NewDashboardRepository(global.DB)
-		dashboardService := usecase.NewDashboardService(dashboardRepo)
-		dashboardHandler := https.NewDashboardHandler(dashboardService)
-
-		routers.InitDashboardRoutes(MainGroup, dashboardHandler)
+		routers.InitDashboardRoutes(MainGroup)
+		//Auth
+		routers.InitAuthRoutes(MainGroup)
 	}
 
 	return app

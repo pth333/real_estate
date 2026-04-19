@@ -52,7 +52,7 @@ func parseAddress(addr string) (district, city string) {
 	return
 }
 
-func MapBatDongSan(raw crawler.BatDongSanRaw) model.RealEstate {
+func MapBatDongSan(raw crawler.BatDongSanRaw) model.RealEstateModel {
 
 	price := parsePrice(raw.Price)
 	area := parseArea(raw.Acreage)
@@ -63,7 +63,7 @@ func MapBatDongSan(raw crawler.BatDongSanRaw) model.RealEstate {
 		pricePerM2 = price / area
 	}
 
-	return model.RealEstate{
+	return model.RealEstateModel{
 		Title:            raw.Title,
 		PriceVND:         price,
 		Address:          raw.Address,

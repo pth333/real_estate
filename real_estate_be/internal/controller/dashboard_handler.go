@@ -1,18 +1,17 @@
-package https
+package controller
 
 import (
-	"fmt"
-	"real_estate_be/internal/delivery/https/dto"
+	"real_estate_be/internal/controller/dto"
 	"real_estate_be/internal/usecase"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 type DashboardHandler struct {
-	service *usecase.DashboardService
+	service usecase.IDashboardService
 }
 
-func NewDashboardHandler(service *usecase.DashboardService) *DashboardHandler {
+func NewDashboardHandler(service usecase.IDashboardService) *DashboardHandler {
 	return &DashboardHandler{
 		service: service,
 	}
@@ -43,7 +42,6 @@ func (h *DashboardHandler) ListRealEstate(c *fiber.Ctx) error {
 	}
 
 	data, total, err := h.service.ListRealEstate(req)
-	fmt.Println("data:", data)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"message": err.Error(),
