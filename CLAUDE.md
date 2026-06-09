@@ -1,0 +1,11 @@
+# Global Rules
+
+## Communication
+- Trả lời bằng tiếng Việt
+- Không giải thích dài dòng, đi thẳng vào vấn đề
+- Hỏi lại khi chưa hiểu vấn đề, không tự bịa ra\
+## Code Style
+- Luôn viết unit test trước khi implement
+- Dùng absolute imports, không dùng relative (../../)
+- Không dùng `any` trong TypeScript
+
