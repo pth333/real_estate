@@ -16,14 +16,24 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	workerCount = 3
+	batchSize   = 12
+	batchDelay  = 2 * time.Second
+)
+
 type pageResult struct {
 	page int
 	data []provider.BatDongSanRaw
 	err  error
 }
 
+// Run starts the crawl for today's listings.
+// It works in batches: each batch crawls N pages concurrently,
+// then processes results sequentially in page order.
+// Stops when encountering an error, empty page, or old listing.
 func Run(db *gorm.DB) {
-	repoInstance := repo.NewRealEstateRepository(db)
+	repo := repo.NewRealEstateRepository(db)
 
 	producer, err := kafka.NewProducer()
 	if err != nil {
@@ -35,125 +45,135 @@ func Run(db *gorm.DB) {
 	defer crawler.Close()
 	defer producer.Close()
 
-	const (
-		workerCount = 3
-		batchSize   = 12
-	)
-
-	// Graceful shutdown via OS signal
 	ctx, cancel := signal.NotifyContext(context.Background(),
 		syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	defer cancel()
 
-	currentPage := 0
-	for {
-		shouldStop := crawlBatch(
-			ctx,
-			crawler,
-			&repoInstance,
-			producer,
-			currentPage,
-			workerCount,
-			batchSize,
-		)
-
-		if shouldStop {
+	for startPage := 0; ; startPage += batchSize {
+		if processBatch(ctx, crawler, &repo, producer, startPage) {
 			break
 		}
 
-		currentPage += batchSize
-
-		// Check nếu có signal trong lúc sleep
 		select {
 		case <-ctx.Done():
 			log.Println("⏹ Received shutdown signal")
 			return
-		case <-time.After(2 * time.Second):
+		case <-time.After(batchDelay):
 		}
 	}
 
 	log.Println("✅ Crawl today listings DONE")
 }
 
-func crawlBatch(
+// processBatch crawls pages [startPage, startPage+batchSize).
+// Pages are crawled concurrently but results are processed
+// sequentially in page order.
+func processBatch(
 	ctx context.Context,
 	crawler *provider.BatDongSanCrawler,
 	repository *repo.RealEstateRepository,
 	producer *kafka.Producer,
-	startPage, workerCount, batchSize int,
+	startPage int,
 ) bool {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	pageJobs := make(chan int, batchSize)
-	pageResults := make(chan pageResult, batchSize)
-	startCrawlWorkers(ctx, crawler, pageJobs, pageResults, workerCount)
+	results := crawlPages(ctx, crawler, startPage, batchSize)
+	return processResults(ctx, repository, producer, results, startPage)
+}
 
-	for page := startPage; page < startPage+batchSize; page++ {
+// crawlPages fans out crawling to workerCount goroutines.
+// Returns a channel that emits results as workers complete (may be out of order).
+func crawlPages(
+	ctx context.Context,
+	crawler *provider.BatDongSanCrawler,
+	startPage, count int,
+) <-chan pageResult {
+	jobs := make(chan int, count)
+	results := make(chan pageResult, count)
+
+	var wg sync.WaitGroup
+	for i := 0; i < workerCount; i++ {
+		wg.Add(1)
+		go crawlWorker(ctx, crawler, jobs, results, &wg)
+	}
+
+	// Dispatch page jobs
+	go func() {
+		for page := startPage; page < startPage+count; page++ {
+			select {
+			case jobs <- page:
+			case <-ctx.Done():
+				close(jobs)
+				return
+			}
+		}
+		close(jobs)
+	}()
+
+	// Close results when all workers finish
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	return results
+}
+
+// crawlWorker reads page numbers from jobs, crawls them, and sends results.
+func crawlWorker(
+	ctx context.Context,
+	crawler *provider.BatDongSanCrawler,
+	jobs <-chan int,
+	results chan<- pageResult,
+	wg *sync.WaitGroup,
+) {
+	defer wg.Done()
+	for page := range jobs {
+		if ctx.Err() != nil {
+			return
+		}
+
+		raw, err := crawler.CrawlPage(page)
 		select {
-		case pageJobs <- page:
+		case results <- pageResult{page: page, data: raw, err: err}:
 		case <-ctx.Done():
-			return true
+			return
 		}
 	}
-	close(pageJobs)
+}
 
-	bufferByPage := make(map[int]pageResult, batchSize)
+// processResults reads results from the channel and processes them
+// in page order. Since results may arrive out of order (workers finish
+// at different times), we buffer them until the expected next page arrives.
+func processResults(
+	ctx context.Context,
+	repository *repo.RealEstateRepository,
+	producer *kafka.Producer,
+	results <-chan pageResult,
+	startPage int,
+) bool {
+	buffer := make(map[int]pageResult)
 	expectedPage := startPage
 
-	for result := range pageResults {
-		bufferByPage[result.page] = result
+	for result := range results {
+		buffer[result.page] = result
 
+		// Drain buffer in sequential order
 		for {
-			pageResult, exists := bufferByPage[expectedPage]
-			if !exists {
+			res, ok := buffer[expectedPage]
+			if !ok {
 				break
 			}
-			delete(bufferByPage, expectedPage)
-
-			if stop := handlePageResult(ctx, repository, producer, pageResult); stop {
-				cancel()
+			delete(buffer, expectedPage)
+			if handlePageResult(ctx, repository, producer, res) {
 				return true
 			}
-
 			expectedPage++
 		}
 	}
 
 	return false
-}
-
-func startCrawlWorkers(
-	ctx context.Context,
-	crawler *provider.BatDongSanCrawler,
-	pageJobs <-chan int,
-	pageResults chan<- pageResult,
-	workerCount int,
-) {
-	var wg sync.WaitGroup
-	for i := 0; i < workerCount; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for page := range pageJobs {
-				if ctx.Err() != nil {
-					return
-				}
-
-				raw, err := crawler.CrawlPage(page)
-				select {
-				case pageResults <- pageResult{page: page, data: raw, err: err}:
-				case <-ctx.Done():
-					return
-				}
-			}
-		}()
-	}
-
-	go func() {
-		wg.Wait()
-		close(pageResults)
-	}()
 }
 
 func handlePageResult(
