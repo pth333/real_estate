@@ -6,3 +6,12 @@ mysql:
   username: root
   password: 1111
   database: real_estate_db
+kafka:
+  brokers:
+    - localhost:9092
+  client_id: real-estate-be
+  group_prefix: real-estate-be
+  topics:
+    real_estate_crawled: real_estate.crawled.v1
+    real_estate_enriched: real_estate.enriched.v1
+    real_estate_notified: real_estate.notified.v1

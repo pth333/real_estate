@@ -9,12 +9,14 @@ import (
 func InitRouter() *fiber.App {
 	app := fiber.New()
 
-	MainGroup := app.Group("/v1/2026")
+	MainGroup := app.Group("/api/2026")
 	{
 		// Dashboard
 		routers.InitDashboardRoutes(MainGroup)
-		//Auth
+		// Auth
 		routers.InitAuthRoutes(MainGroup)
+		// Notifications + SSE
+		routers.InitNotificationRoutes(MainGroup)
 	}
 
 	return app
