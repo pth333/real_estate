@@ -3,7 +3,6 @@ package initialize
 import (
 	"fmt"
 	"real_estate_be/internal/global"
-	model "real_estate_be/internal/models"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -18,15 +17,14 @@ func InitMysql() {
 		m.Port,
 		m.DBName,
 	)
-	// fmt.Printf("Connecting to MySQL at %s", dsn)
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+
+	// db.AutoMigrate(&model.RealEstateModel{})
+	// db.AutoMigrate(&model.User{})
+
 	if err != nil {
 		panic(err)
 	}
-
-	db.AutoMigrate(&model.RealEstateModel{})
-	db.AutoMigrate(&model.RealEstateEnriched{})
-	db.AutoMigrate(&model.User{})
 
 	global.DB = db
 }

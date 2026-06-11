@@ -6,26 +6,7 @@ import (
 	model "real_estate_be/internal/models"
 )
 
-// ============================================================
-// Event types — versioned semantic names used as message Key
-// qua Kafka headers để consumer routing không phụ thuộc topic name
-// ============================================================
-
-const (
-	// Crawled: emitted bởi crawler sau khi scrape được dữ liệu
-	EventTypeCrawled = "real_estate.crawled.v1"
-
-	// Enriched: emitted bởi enrichment worker sau khi enrich dữ liệu
-	EventTypeEnriched = "real_estate.enriched.v1"
-
-	// Notified: emitted sau khi gửi notification thành công
-	EventTypeNotified = "real_estate.notified.v1"
-)
-
-// ============================================================
-// Event headers — trace context cho toàn bộ pipeline
-// ============================================================
-
+// Header keys.
 const (
 	HeaderEventType   = "x-event-type"
 	HeaderSource      = "x-source"
@@ -35,11 +16,14 @@ const (
 	HeaderContentType = "content-type"
 )
 
-const ContentTypeJSON = "application/json"
+// ── Interfaces cho buildMessage tự gắn headers ──
 
-// ============================================================
-// BaseEvent — các field chung cho mọi message
-// ============================================================
+type EventTyper   interface{ GetEventType() string }
+type EventSourcer interface{ GetSource() string }
+type EventVersion interface{ GetVersion() string }
+type EventKeyer   interface{ GetKey() string }
+
+// ── BaseEvent ──
 
 type BaseEvent struct {
 	EventType string    `json:"event_type"`
@@ -49,95 +33,120 @@ type BaseEvent struct {
 	TraceID   string    `json:"trace_id,omitempty"`
 }
 
-// ============================================================
-// RealEstateCrawledEvent — từ crawler → raw data
-// ============================================================
+func (e BaseEvent) GetEventType() string { return e.EventType }
+func (e BaseEvent) GetSource() string    { return e.Source }
+func (e BaseEvent) GetVersion() string   { return e.Version }
+
+// ── Event type constants ──
+
+const (
+	EventTypeCrawled  = "real_estate.crawled.v1"
+	EventTypeEnriched = "real_estate.enriched.v1"
+	EventTypeNotified = "real_estate.notified.v1"
+
+	SourceCrawler = "crawler"
+	SourceEnrich  = "enrich-consumer"
+	SourceNotify  = "notify-consumer"
+
+	VersionV1 = "v1"
+)
+
+// ── RealEstateCrawledEvent ──
 
 type RealEstateCrawledEvent struct {
 	BaseEvent
-	SourceURL   string    `json:"source_url"`
-	Title       string    `json:"title"`
-	Address     string    `json:"address"`
-	District    string    `json:"district"`
-	City        string    `json:"city"`
-	PriceVND    float64   `json:"price_vnd"`
-	Acreage     float64   `json:"acreage"`
-	PricePerM2  float64   `json:"price_per_m2"`
-	CrawledAt   time.Time `json:"crawled_at"`
+
+	SourceURL   string     `json:"source_url"`
+	Title       string     `json:"title"`
+	Address     string     `json:"address"`
+	District    string     `json:"district"`
+	City        string     `json:"city"`
+	PriceVND    float64    `json:"price_vnd"`
+	Acreage     float64    `json:"acreage"`
+	PricePerM2  float64    `json:"price_per_m2"`
+	CrawledAt   time.Time  `json:"crawled_at"`
 	PublishedAt *time.Time `json:"published_at,omitempty"`
 }
 
-// GetKey trả về Kafka message key (SourceURL)
 func (e RealEstateCrawledEvent) GetKey() string { return e.SourceURL }
 
-// GetEventType trả về event type
-func (e RealEstateCrawledEvent) GetEventType() string { return e.EventType }
-
-// GetSource trả về nguồn dữ liệu
-func (e RealEstateCrawledEvent) GetSource() string { return e.Source }
-
-// GetVersion trả về version
-func (e RealEstateCrawledEvent) GetVersion() string { return e.Version }
-
-// NewRealEstateCrawledEvent tạo event từ DB model sau khi đã lưu
-func NewRealEstateCrawledEvent(item model.RealEstateModel) RealEstateCrawledEvent {
+func NewRealEstateCrawledEvent(m model.RealEstateModel) RealEstateCrawledEvent {
 	return RealEstateCrawledEvent{
 		BaseEvent: BaseEvent{
 			EventType: EventTypeCrawled,
-			Source:    item.Source,
-			Version:   "1.0",
+			Source:    SourceCrawler,
+			Version:   VersionV1,
 			Timestamp: time.Now(),
 		},
-		SourceURL:   item.SourceURL,
-		Title:       item.Title,
-		Address:     item.Address,
-		District:    item.District,
-		City:        item.City,
-		PriceVND:    item.PriceVND,
-		Acreage:     item.Acreage,
-		PricePerM2:  item.PricePerM2,
-		CrawledAt:   item.CrawledAt,
-		PublishedAt: item.PublishedAt,
+		SourceURL:   m.SourceURL,
+		Title:       m.Title,
+		Address:     m.Address,
+		District:    m.District,
+		City:        m.City,
+		PriceVND:    m.PriceVND,
+		Acreage:     m.Acreage,
+		PricePerM2:  m.PricePerM2,
+		CrawledAt:   m.CrawledAt,
+		PublishedAt: nil,
 	}
 }
 
-// ============================================================
-// RealEstateEnrichedEvent — sau enrichment step
-// ============================================================
+// ── RealEstateEnrichedEvent ──
 
 type RealEstateEnrichedEvent struct {
 	BaseEvent
-	SourceURL       string   `json:"source_url"`
-	Title           string   `json:"title"`
-	Address         string   `json:"address"`
-	District        string   `json:"district"`
-	City            string   `json:"city"`
-	PriceVND        float64  `json:"price_vnd"`
-	Acreage         float64  `json:"acreage"`
-	PricePerM2      float64  `json:"price_per_m2"`
-	TypeOfRealEstate string  `json:"type_of_real_estate"`
-	Latitude        *float64 `json:"latitude,omitempty"`
-	Longitude       *float64 `json:"longitude,omitempty"`
+
+	SourceURL   string     `json:"source_url"`
+	Title       string     `json:"title"`
+	Address     string     `json:"address"`
+	District    string     `json:"district"`
+	City        string     `json:"city"`
+	PriceVND    float64    `json:"price_vnd"`
+	Acreage     float64    `json:"acreage"`
+	PricePerM2  float64    `json:"price_per_m2"`
+	CrawledAt   time.Time  `json:"crawled_at"`
+	PublishedAt *time.Time `json:"published_at,omitempty"`
+
+	// Enriched fields
+	TypeOfRealEstate string   `json:"type_of_real_estate"`
+	Latitude         *float64 `json:"latitude,omitempty"`
+	Longitude        *float64 `json:"longitude,omitempty"`
 }
 
-func (e RealEstateEnrichedEvent) GetKey() string      { return e.SourceURL }
-func (e RealEstateEnrichedEvent) GetEventType() string  { return e.EventType }
-func (e RealEstateEnrichedEvent) GetSource() string     { return e.Source }
-func (e RealEstateEnrichedEvent) GetVersion() string    { return e.Version }
+func (e RealEstateEnrichedEvent) GetKey() string { return e.SourceURL }
 
-// ============================================================
-// RealEstateNotifiedEvent — log notification đã gửi
-// ============================================================
+func NewRealEstateEnrichedEvent(crawled RealEstateCrawledEvent, typeStr string) RealEstateEnrichedEvent {
+	return RealEstateEnrichedEvent{
+		BaseEvent: BaseEvent{
+			EventType: EventTypeEnriched,
+			Source:    SourceEnrich,
+			Version:   VersionV1,
+			Timestamp: time.Now(),
+		},
+		SourceURL:   crawled.SourceURL,
+		Title:       crawled.Title,
+		Address:     crawled.Address,
+		District:    crawled.District,
+		City:        crawled.City,
+		PriceVND:    crawled.PriceVND,
+		Acreage:     crawled.Acreage,
+		PricePerM2:  crawled.PricePerM2,
+		CrawledAt:   crawled.CrawledAt,
+		PublishedAt: crawled.PublishedAt,
+
+		TypeOfRealEstate: typeStr,
+	}
+}
+
+// ── RealEstateNotifiedEvent ──
 
 type RealEstateNotifiedEvent struct {
 	BaseEvent
+
 	SourceURL  string `json:"source_url"`
-	Channel    string `json:"channel"` // email, sms, webhook, ...
+	Channel    string `json:"channel"`
 	Recipients int    `json:"recipients"`
 	Success    bool   `json:"success"`
 }
 
-func (e RealEstateNotifiedEvent) GetKey() string        { return e.SourceURL }
-func (e RealEstateNotifiedEvent) GetEventType() string  { return e.EventType }
-func (e RealEstateNotifiedEvent) GetSource() string     { return e.Source }
-func (e RealEstateNotifiedEvent) GetVersion() string    { return e.Version }
+func (e RealEstateNotifiedEvent) GetKey() string { return e.SourceURL }

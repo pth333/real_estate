@@ -6,34 +6,62 @@ import (
 
 	"real_estate_be/internal/global"
 	kafkaconsumer "real_estate_be/internal/kafka"
+	model "real_estate_be/internal/models"
+	"real_estate_be/internal/sse"
+	"real_estate_be/pkg/kafka"
+
+	"gorm.io/gorm"
 )
 
-// StartKafkaConsumers khởi động các Kafka consumer workers.
-// Hàm block nếu consumer Start() block;
-// gọi trong goroutine nếu cần non-blocking.
-func StartKafkaConsumers(ctx context.Context) {
+// InitKafka khởi tạo Producer, SSE Hub và Kafka consumers.
+func InitKafka() *kafka.Producer {
+	// Khởi tạo SSE hub global
+	global.SSEHub = sse.NewHub()
+
+	// Nếu không có Kafka broker, bỏ qua consumer
 	if len(global.Config.Kafka.Brokers) == 0 {
-		log.Println("[Kafka] No brokers configured — skip consumers")
+		log.Println("⚠️ [Kafka] no brokers configured, skipping consumers")
+		return nil
+	}
+
+	producer := kafka.NewProducer()
+	return producer
+}
+
+// StartKafkaConsumers khởi động EnrichConsumer và NotifyConsumer trong goroutine.
+func StartKafkaConsumers(ctx context.Context, db *gorm.DB) {
+	if len(global.Config.Kafka.Brokers) == 0 {
 		return
 	}
 
-	// Enrich consumer: lấy crawled events → enrich → publish enriched
-	enrich := kafkaconsumer.NewEnrichConsumer(global.DB)
+	// Dùng chung 1 producer
+	producer := kafka.NewProducer()
+
+	// EnrichConsumer
 	go func() {
-		log.Println("[Kafka] Starting EnrichConsumer...")
-		if err := enrich.Start(ctx); err != nil {
-			log.Printf("[Kafka] EnrichConsumer stopped: %v", err)
-		}
+		enrich := kafkaconsumer.NewEnrichConsumer(db, producer)
+		defer enrich.Close()
+		enrich.Start(ctx)
 	}()
 
-	// Notify consumer (stub): lấy enriched events → gửi notification (future)
-	notify := kafkaconsumer.NewNotifyConsumer()
+	// NotifyConsumer
 	go func() {
-		log.Println("[Kafka] Starting NotifyConsumer...")
-		if err := notify.Start(ctx); err != nil {
-			log.Printf("[Kafka] NotifyConsumer stopped: %v", err)
-		}
+		notify := kafkaconsumer.NewNotifyConsumer(db)
+		defer notify.Close()
+		notify.Start(ctx)
 	}()
 
-	log.Println("[Kafka] Consumers started ✅")
+	log.Println("✅ Kafka consumers started")
+}
+
+// MigrateDb tự động migrate các bảng.
+func MigrateDb(db *gorm.DB) {
+	if err := db.AutoMigrate(
+		&model.User{},
+		&model.RealEstateModel{},
+		&model.Notification{},
+	); err != nil {
+		log.Fatalf("❌ DB migration failed: %v", err)
+	}
+	log.Println("✅ DB migration completed")
 }

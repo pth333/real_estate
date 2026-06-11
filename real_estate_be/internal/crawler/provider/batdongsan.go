@@ -1,15 +1,29 @@
-// real_estate_be/internal/crawler/provider/batdongsan.go
-package crawler
+// Package provider chứa các implementation cụ thể của ICrawler.
+package provider
 
 import (
 	"context"
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
+
+	model "real_estate_be/internal/models"
 
 	"github.com/chromedp/chromedp"
 )
 
+// BatDongSanCrawler crawl dữ liệu BĐS từ batdongsan.com.vn.
+type BatDongSanCrawler struct {
+	allocCtx    context.Context
+	allocCancel context.CancelFunc
+
+	browserCtx    context.Context
+	browserCancel context.CancelFunc
+}
+
+// BatDongSanRaw là dữ liệu thô từ DOM.
 type BatDongSanRaw struct {
 	Title      string
 	Price      string
@@ -17,14 +31,6 @@ type BatDongSanRaw struct {
 	Acreage    string
 	SourceURL  string
 	PostedDate string
-}
-
-type BatDongSanCrawler struct {
-	allocCtx    context.Context
-	allocCancel context.CancelFunc
-
-	browserCtx    context.Context
-	browserCancel context.CancelFunc
 }
 
 func NewBatDongSanCrawler() *BatDongSanCrawler {
@@ -37,7 +43,7 @@ func NewBatDongSanCrawler() *BatDongSanCrawler {
 	allocCtx, allocCancel := chromedp.NewExecAllocator(context.Background(), opts...)
 	browserCtx, browserCancel := chromedp.NewContext(allocCtx)
 
-	// warm up browser
+	// Warm up browser
 	_ = chromedp.Run(browserCtx)
 
 	return &BatDongSanCrawler{
@@ -65,17 +71,24 @@ func buildBatDongSanURL(page int) string {
 	return fmt.Sprintf("%s/p%d", base, page)
 }
 
-// func CrawlBatDongSanHanoi(page int) ([]BatDongSanRaw, error) {
-// 	c := NewBatDongSanCrawler()
-// 	defer c.Close()
-// 	return c.CrawlPage(page)
-// }
+// CrawlPage implements ICrawler, trả về []model.RealEstateModel.
+func (c *BatDongSanCrawler) CrawlPage(page int) ([]model.RealEstateModel, error) {
+	raw, err := c.crawlRaw(page)
+	if err != nil {
+		return nil, err
+	}
 
-func (c *BatDongSanCrawler) CrawlPage(page int) ([]BatDongSanRaw, error) {
+	items := make([]model.RealEstateModel, 0, len(raw))
+	for _, r := range raw {
+		items = append(items, mapBatDongSan(r))
+	}
+	return items, nil
+}
+
+// crawlRaw crawl dữ liệu thô từ DOM.
+func (c *BatDongSanCrawler) crawlRaw(page int) ([]BatDongSanRaw, error) {
 	url := buildBatDongSanURL(page)
 
-	// Create a dedicated tab context per page so concurrent workers do not
-	// interfere with each other by sharing the same tab/session state.
 	tabCtx, tabCancel := chromedp.NewContext(c.browserCtx)
 	defer tabCancel()
 
@@ -148,6 +161,76 @@ func (c *BatDongSanCrawler) CrawlPage(page int) ([]BatDongSanRaw, error) {
 	}
 
 	return results, nil
+}
+
+// ── Mapper functions ──
+
+func mapBatDongSan(raw BatDongSanRaw) model.RealEstateModel {
+	price := parsePrice(raw.Price)
+	area := parseArea(raw.Acreage)
+	district, city := parseAddress(raw.Address)
+
+	var pricePerM2 float64
+	if price > 0 && area > 0 {
+		pricePerM2 = price / area
+	}
+
+	return model.RealEstateModel{
+		Title:            raw.Title,
+		PriceVND:         price,
+		Address:          raw.Address,
+		District:         district,
+		City:             city,
+		Acreage:          area,
+		PricePerM2:       pricePerM2,
+		TypeOfRealEstate: "",
+		Source:           "batdongsan.com.vn",
+		SourceURL:        raw.SourceURL,
+		CrawledAt:        time.Now(),
+	}
+}
+
+func parsePrice(price string) float64 {
+	price = strings.ToLower(strings.ReplaceAll(price, ",", "."))
+
+	re := regexp.MustCompile(`([\d.]+)\s*(tỷ|triệu)?`)
+	m := re.FindStringSubmatch(price)
+	if len(m) < 2 {
+		return 0
+	}
+
+	val, _ := strconv.ParseFloat(m[1], 64)
+
+	switch m[2] {
+	case "tỷ":
+		return val * 1_000_000_000
+	case "triệu":
+		return val * 1_000_000
+	default:
+		return val
+	}
+}
+
+func parseArea(area string) float64 {
+	area = strings.ToLower(strings.ReplaceAll(area, ",", "."))
+
+	re := regexp.MustCompile(`([\d.]+)`)
+	m := re.FindStringSubmatch(area)
+	if len(m) < 2 {
+		return 0
+	}
+
+	val, _ := strconv.ParseFloat(m[1], 64)
+	return val
+}
+
+func parseAddress(addr string) (district, city string) {
+	parts := strings.Split(addr, ",")
+	if len(parts) >= 2 {
+		district = strings.TrimSpace(parts[0])
+		city = strings.TrimSpace(parts[len(parts)-1])
+	}
+	return
 }
 
 func min(nums ...int) int {

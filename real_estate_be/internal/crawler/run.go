@@ -3,220 +3,163 @@ package crawler
 import (
 	"context"
 	"log"
-	"os/signal"
 	"sync"
-	"syscall"
 	"time"
 
-	"real_estate_be/internal/crawler/mapper"
-	provider "real_estate_be/internal/crawler/provider"
+	model "real_estate_be/internal/models"
 	"real_estate_be/internal/repo"
-	"real_estate_be/pkg/kafka"
+	kafkapkg "real_estate_be/pkg/kafka"
 
 	"gorm.io/gorm"
 )
 
-const (
-	workerCount = 3
-	batchSize   = 12
-	batchDelay  = 2 * time.Second
-)
-
+// pageResult chứa kết quả crawl của 1 trang.
 type pageResult struct {
 	page int
-	data []provider.BatDongSanRaw
+	data []model.RealEstateModel
 	err  error
 }
 
-// Run starts the crawl for today's listings.
-// It works in batches: each batch crawls N pages concurrently,
-// then processes results sequentially in page order.
-// Stops when encountering an error, empty page, or old listing.
-func Run(db *gorm.DB) {
-	repo := repo.NewRealEstateRepository(db)
+const (
+	workers   = 3
+	batchSize = 12
+)
 
-	producer, err := kafka.NewProducer()
-	if err != nil {
-		log.Println("Kafka producer error:", err)
-		return
-	}
+// Run thực hiện crawl theo batch, mỗi batch gồm N trang chạy song song.
+// Kết quả được xử lý theo thứ tự trang. Dừng khi hết tin hôm nay.
+func Run(ctx context.Context, crawl ICrawler, db *gorm.DB, producer *kafkapkg.Producer) {
+	re := repo.NewRealEstateRepository(db)
 
-	crawler := provider.NewBatDongSanCrawler()
-	defer crawler.Close()
-	defer producer.Close()
+	for page := 0; ; page += batchSize {
+		if ctx.Err() != nil {
+			log.Println("⏹ Crawler stopped by context")
+			return
+		}
 
-	ctx, cancel := signal.NotifyContext(context.Background(),
-		syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-	defer cancel()
+		// Crawl batch N trang song song
+		pages := crawlBatch(ctx, crawl, page, batchSize)
 
-	for startPage := 0; ; startPage += batchSize {
-		if processBatch(ctx, crawler, &repo, producer, startPage) {
+		// Xử lý kết quả theo thứ tự trang (0, 1, 2...)
+		more := processPages(ctx, pages, re, producer)
+		if !more {
 			break
 		}
 
-		select {
-		case <-ctx.Done():
-			log.Println("⏹ Received shutdown signal")
-			return
-		case <-time.After(batchDelay):
-		}
+		time.Sleep(2 * time.Second)
 	}
 
 	log.Println("✅ Crawl today listings DONE")
 }
 
-// processBatch crawls pages [startPage, startPage+batchSize).
-// Pages are crawled concurrently but results are processed
-// sequentially in page order.
-func processBatch(
-	ctx context.Context,
-	crawler *provider.BatDongSanCrawler,
-	repository *repo.RealEstateRepository,
-	producer *kafka.Producer,
-	startPage int,
-) bool {
-	ctx, cancel := context.WithCancel(ctx)
+// crawlBatch crawl các trang từ start đến start+count, trả về map[page]result.
+func crawlBatch(ctx context.Context, crawl ICrawler, start, count int) map[int]pageResult {
+	ctxInner, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	results := crawlPages(ctx, crawler, startPage, batchSize)
-	return processResults(ctx, repository, producer, results, startPage)
-}
-
-// crawlPages fans out crawling to workerCount goroutines.
-// Returns a channel that emits results as workers complete (may be out of order).
-func crawlPages(
-	ctx context.Context,
-	crawler *provider.BatDongSanCrawler,
-	startPage, count int,
-) <-chan pageResult {
+	// Worker pool
 	jobs := make(chan int, count)
 	results := make(chan pageResult, count)
 
 	var wg sync.WaitGroup
-	for i := 0; i < workerCount; i++ {
+	for i := 0; i < workers; i++ {
 		wg.Add(1)
-		go crawlWorker(ctx, crawler, jobs, results, &wg)
+		go func() {
+			defer wg.Done()
+			for p := range jobs {
+				if ctxInner.Err() != nil {
+					return
+				}
+				data, err := crawl.CrawlPage(p)
+				select {
+				case results <- pageResult{page: p, data: data, err: err}:
+				case <-ctxInner.Done():
+					return
+				}
+			}
+		}()
 	}
 
-	// Dispatch page jobs
-	go func() {
-		for page := startPage; page < startPage+count; page++ {
-			select {
-			case jobs <- page:
-			case <-ctx.Done():
-				close(jobs)
-				return
-			}
-		}
-		close(jobs)
-	}()
+	// Gửi job
+	for p := start; p < start+count; p++ {
+		jobs <- p
+	}
+	close(jobs)
 
-	// Close results when all workers finish
+	// Chờ worker xong rồi đóng results
 	go func() {
 		wg.Wait()
 		close(results)
 	}()
 
-	return results
+	// Gom kết quả vào map
+	out := make(map[int]pageResult, count)
+	for r := range results {
+		out[r.page] = r
+	}
+	return out
 }
 
-// crawlWorker reads page numbers from jobs, crawls them, and sends results.
-func crawlWorker(
-	ctx context.Context,
-	crawler *provider.BatDongSanCrawler,
-	jobs <-chan int,
-	results chan<- pageResult,
-	wg *sync.WaitGroup,
-) {
-	defer wg.Done()
-	for page := range jobs {
-		if ctx.Err() != nil {
-			return
+// processPages xử lý kết quả theo thứ tự trang.
+// Trả về false nếu cần dừng (lỗi, hết dữ liệu, gặp tin cũ).
+func processPages(ctx context.Context, pages map[int]pageResult, re repo.RealEstateRepository, producer *kafkapkg.Producer) bool {
+	for p := 0; ; p++ {
+		res, ok := pages[p]
+		if !ok {
+			// Đã xử lý hết pages có kết quả
+			break
 		}
 
-		raw, err := crawler.CrawlPage(page)
-		select {
-		case results <- pageResult{page: page, data: raw, err: err}:
-		case <-ctx.Done():
-			return
+		log.Println("➡ Processing page:", p)
+
+		if res.err != nil {
+			log.Println("❌ Crawl error:", res.err)
+			return false
+		}
+		if len(res.data) == 0 {
+			log.Println("🛑 Empty page → STOP")
+			return false
+		}
+
+		if !processItems(ctx, res.data, re, producer) {
+			return false
 		}
 	}
+	return true
 }
 
-// processResults reads results from the channel and processes them
-// in page order. Since results may arrive out of order (workers finish
-// at different times), we buffer them until the expected next page arrives.
-func processResults(
-	ctx context.Context,
-	repository *repo.RealEstateRepository,
-	producer *kafka.Producer,
-	results <-chan pageResult,
-	startPage int,
-) bool {
-	buffer := make(map[int]pageResult)
-	expectedPage := startPage
-
-	for result := range results {
-		buffer[result.page] = result
-
-		// Drain buffer in sequential order
-		for {
-			res, ok := buffer[expectedPage]
-			if !ok {
-				break
-			}
-			delete(buffer, expectedPage)
-			if handlePageResult(ctx, repository, producer, res) {
-				return true
-			}
-			expectedPage++
-		}
-	}
-
-	return false
-}
-
-func handlePageResult(
-	ctx context.Context,
-	repository *repo.RealEstateRepository,
-	producer *kafka.Producer,
-	result pageResult,
-) bool {
-	if result.err != nil {
-		log.Println("❌ Crawl error:", result.err)
-		return true
-	}
-
-	if len(result.data) == 0 {
-		log.Println("🛑 Empty page → STOP")
-		return true
-	}
-
-	log.Println("➡ Crawling page:", result.page)
-
-	for _, raw := range result.data {
-		if !isToday(raw.PostedDate) {
+// processItems lưu từng item vào DB và publish Kafka.
+// Trả về false nếu gặp item cũ (cần dừng).
+func processItems(ctx context.Context, items []model.RealEstateModel, re repo.RealEstateRepository, producer *kafkapkg.Producer) bool {
+	for i := range items {
+		if !isTodayFromPosted(&items[i]) {
 			log.Println("🛑 Reached older listing → STOP ALL")
-			return true
+			return false
 		}
 
-		item := mapper.MapBatDongSan(raw)
-		if err := (*repository).Create(&item); err != nil {
+		// Lưu DB (UPSERT)
+		if err := re.Create(&items[i]); err != nil {
 			log.Println("Insert error:", err)
 			continue
 		}
 
+		// Publish Kafka
 		if producer != nil {
-			event := kafka.NewRealEstateCrawledEvent(item)
-			if err := producer.Publish(ctx, item.SourceURL, event); err != nil {
-				log.Println("Publish error:", err)
+			event := kafkapkg.NewRealEstateCrawledEvent(items[i])
+			if err := producer.Publish(ctx, items[i].SourceURL, event); err != nil {
+				log.Printf("⚠️ Kafka publish error: %v", err)
 			}
 		}
 	}
-
-	return false
+	return true
 }
 
+// isTodayFromPosted kiểm tra bài đăng có phải hôm nay không.
+// Tạm thời luôn true vì model chưa lưu postedDate.
+func isTodayFromPosted(_ *model.RealEstateModel) bool {
+	return true
+}
+
+// isToday kiểm tra chuỗi ngày có phải hôm nay không.
 func isToday(posted string) bool {
 	t, err := time.Parse("02/01/2006", posted)
 	if err != nil {
@@ -227,4 +170,43 @@ func isToday(posted string) bool {
 	return t.Year() == now.Year() &&
 		t.Month() == now.Month() &&
 		t.Day() == now.Day()
+}
+
+// Scheduler chạy crawl định kỳ.
+type Scheduler struct {
+	Interval time.Duration
+	Crawler  ICrawler
+	DB       *gorm.DB
+	Producer *kafkapkg.Producer
+}
+
+func NewScheduler(interval time.Duration, crawl ICrawler, db *gorm.DB, producer *kafkapkg.Producer) *Scheduler {
+	return &Scheduler{
+		Interval: interval,
+		Crawler:  crawl,
+		DB:       db,
+		Producer: producer,
+	}
+}
+
+// Start bắt đầu scheduler, block cho đến khi ctx kết thúc.
+func (s *Scheduler) Start(ctx context.Context) {
+	log.Printf("⏰ [Crawler Scheduler] starting, interval=%v", s.Interval)
+
+	// Chạy ngay lần đầu
+	Run(ctx, s.Crawler, s.DB, s.Producer)
+
+	ticker := time.NewTicker(s.Interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Println("⏹ Crawler scheduler stopped")
+			return
+		case <-ticker.C:
+			log.Println("⏰ [Crawler Scheduler] wake up, starting crawl...")
+			Run(ctx, s.Crawler, s.DB, s.Producer)
+		}
+	}
 }
