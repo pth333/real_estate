@@ -3,115 +3,105 @@ package kafka
 import (
 	"context"
 	"log"
-	"time"
 
 	"real_estate_be/internal/global"
 	model "real_estate_be/internal/models"
-	"real_estate_be/pkg/kafka"
+	"real_estate_be/internal/repo"
+	kafkapkg "real_estate_be/pkg/kafka"
 
 	kafkago "github.com/segmentio/kafka-go"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
-// EnrichConsumer nhận crawled events, enrich và lưu vào DB + publish enriched event
+// EnrichConsumer xử lý RealEstateCrawledEvent, enrich và publish lên topic enriched.
 type EnrichConsumer struct {
-	db       *gorm.DB
-	producer *kafka.Producer
+	consumer *kafkapkg.Consumer
+	producer *kafkapkg.Producer
+	repo     repo.RealEstateRepository
 }
 
-func NewEnrichConsumer(db *gorm.DB) *EnrichConsumer {
-	return &EnrichConsumer{db: db}
-}
-
-func (e *EnrichConsumer) Start(ctx context.Context) error {
-	producer, err := kafka.NewProducer()
-	if err != nil {
-		return err
-	}
-	e.producer = producer
-	defer e.producer.Close()
-
-	// Override topic của producer sang enriched topic
-	e.producer.SetTopic(global.Config.Kafka.Topics.RealEstateEnriched)
-
-	consumer := kafka.NewConsumer(kafka.ConsumerConfig{
-		Topic:       global.Config.Kafka.Topics.RealEstateCrawled,
+func NewEnrichConsumer(db *gorm.DB, producer *kafkapkg.Producer) *EnrichConsumer {
+	cfg := global.Config.Kafka
+	consumer := kafkapkg.NewConsumer(kafkapkg.ConsumerConfig{
+		Topic:       cfg.Topics.RealEstateCrawled,
 		GroupSuffix: "enrich",
-		Handler:     e.handle,
+		Handler:     nil, // set bên dưới
 		Concurrency: 2,
 	})
 
-	return consumer.Start(ctx)
+	ec := &EnrichConsumer{
+		consumer: consumer,
+		producer: producer,
+		repo:     repo.NewRealEstateRepository(db),
+	}
+
+	// Tạo consumer mới với handler đã biết
+	ec.consumer = kafkapkg.NewConsumer(kafkapkg.ConsumerConfig{
+		Topic:       cfg.Topics.RealEstateCrawled,
+		GroupSuffix: "enrich",
+		Handler:     ec.handle,
+		Concurrency: 2,
+	})
+
+	return ec
+}
+
+func (e *EnrichConsumer) Start(ctx context.Context) {
+	log.Println("🚀 [EnrichConsumer] starting...")
+
+	// Set producer topic sang enriched topic
+	e.producer.SetTopic(global.Config.Kafka.Topics.RealEstateEnriched)
+
+	e.consumer.Start(ctx)
+}
+
+func (e *EnrichConsumer) Close() error {
+	return e.consumer.Close()
 }
 
 func (e *EnrichConsumer) handle(ctx context.Context, msg kafkago.Message) error {
-	eventType := kafka.GetEventHeader(msg, kafka.HeaderEventType)
-	if eventType != kafka.EventTypeCrawled {
-		log.Printf("[Enrich] Skip unknown event type: %s", eventType)
-		return nil
+	// Parse event
+	event, err := kafkapkg.UnmarshalMsg[kafkapkg.RealEstateCrawledEvent](msg)
+	if err != nil {
+		log.Printf("❌ [EnrichConsumer] unmarshal error: %v", err)
+		return nil // không retry
 	}
 
-	var event kafka.RealEstateCrawledEvent
-	if err := kafka.UnmarshalEvent(msg, &event); err != nil {
-		log.Printf("[Enrich] Parse error: %v", err)
-		return nil
-	}
+	log.Printf("🔧 [EnrichConsumer] processing: %s", event.SourceURL)
 
-	log.Printf("[Enrich] Processing: %s — %s", event.SourceURL, event.Title)
+	// Phân loại BĐS — hiện là stub
+	typeStr := classifyType(event.Title, event.PriceVND)
 
-	// ---- Enrichment ----
-	typeOfRealEstate := classifyType(event.Title, event.PriceVND)
-	var lat, lng *float64
-
-	// Lưu enrichment vào DB
-	enriched := model.RealEstateEnriched{
-		SourceURL:        event.SourceURL,
-		TypeOfRealEstate: typeOfRealEstate,
-		Latitude:         lat,
-		Longitude:        lng,
-	}
-
-	if err := e.db.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "source_url"}},
-		DoUpdates: clause.AssignmentColumns([]string{"type_of_real_estate", "latitude", "longitude"}),
-	}).Create(&enriched).Error; err != nil {
-		log.Printf("[Enrich] DB error: %v", err)
-		return nil
-	}
-
-	// Publish enriched event
-	enrichedEvent := kafka.RealEstateEnrichedEvent{
-		BaseEvent: kafka.BaseEvent{
-			EventType: kafka.EventTypeEnriched,
-			Source:    event.Source,
-			Version:   "1.0",
-			Timestamp: time.Now(),
-		},
-		SourceURL:        event.SourceURL,
+	// Lưu DB với enriched data
+	enriched := &model.RealEstateModel{
 		Title:            event.Title,
+		PriceVND:         event.PriceVND,
 		Address:          event.Address,
 		District:         event.District,
 		City:             event.City,
-		PriceVND:         event.PriceVND,
 		Acreage:          event.Acreage,
 		PricePerM2:       event.PricePerM2,
-		TypeOfRealEstate: typeOfRealEstate,
-		Latitude:         lat,
-		Longitude:        lng,
+		TypeOfRealEstate: typeStr,
+		Source:           event.Source,
+		SourceURL:        event.SourceURL,
+		CrawledAt:        event.CrawledAt,
+	}
+	if err := e.repo.Create(enriched); err != nil {
+		log.Printf("⚠️ [EnrichConsumer] DB error: %v", err)
+		// Lỗi DB vẫn tiếp tục — không block
 	}
 
+	// Publish enriched event
+	enrichedEvent := kafkapkg.NewRealEstateEnrichedEvent(*event, typeStr)
 	if err := e.producer.Publish(ctx, event.SourceURL, enrichedEvent); err != nil {
-		log.Printf("[Enrich] Publish error: %v", err)
-		return nil
+		log.Printf("⚠️ [EnrichConsumer] publish error: %v", err)
 	}
 
-	log.Printf("[Enrich] Done: %s → %s", event.SourceURL, typeOfRealEstate)
 	return nil
 }
 
-// classifyType heuristic phân loại BĐS dựa trên title
-func classifyType(title string, price float64) string {
-	// TODO: có thể train model sau này, giờ rule-based tạm
+// classifyType — stub, luôn trả "apartment".
+func classifyType(title string, priceVND float64) string {
+	// TODO: dùng title + price để phân loại chính xác hơn
 	return "apartment"
 }

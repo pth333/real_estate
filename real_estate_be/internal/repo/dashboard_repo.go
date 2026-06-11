@@ -66,7 +66,7 @@ func (r *dashboardRepo) GetListRealEstate(
 		db = db.Where("price_vnd <= ?", req.Filter.MaxPrice)
 	}
 
-	if err := db.Count(&total).Error; err != nil {
+	if err := r.db.Model(&model.RealEstateModel{}).Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 

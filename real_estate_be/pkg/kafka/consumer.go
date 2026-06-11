@@ -10,137 +10,116 @@ import (
 	"real_estate_be/internal/global"
 
 	kafkago "github.com/segmentio/kafka-go"
+	"golang.org/x/sync/semaphore"
 )
 
-// ConsumerHandler xử lý từng message nhận được
-type ConsumerHandler func(ctx context.Context, msg kafkago.Message) error
+// HandlerFunc nhận message và trả về lỗi nếu xử lý thất bại.
+type HandlerFunc func(ctx context.Context, msg kafkago.Message) error
 
-// Consumer là base consumer reusable
-type Consumer struct {
-	reader      *kafkago.Reader
-	topic       string
-	groupID     string
-	handler     ConsumerHandler
-	concurrency int
-}
-
+// ConsumerConfig ...
 type ConsumerConfig struct {
 	Topic       string
-	GroupSuffix string // suffix thêm vào group_prefix từ config
-	Handler     ConsumerHandler
-	Concurrency int // số goroutine xử lý song song (default 1)
+	GroupSuffix string
+	Handler     HandlerFunc
+	Concurrency int // số goroutine xử lý song song (mặc định 1 -> tuần tự)
+}
+
+type Consumer struct {
+	reader *kafkago.Reader
+	cfg    ConsumerConfig
 }
 
 func NewConsumer(cfg ConsumerConfig) *Consumer {
-	brokers := global.Config.Kafka.Brokers
-	groupPrefix := global.Config.Kafka.GroupPrefix
-
-	groupID := groupPrefix
-	if cfg.GroupSuffix != "" {
-		groupID = groupPrefix + "-" + cfg.GroupSuffix
-	}
-
+	groupID := global.Config.Kafka.GroupPrefix + "-" + cfg.GroupSuffix
 	if cfg.Concurrency < 1 {
 		cfg.Concurrency = 1
 	}
 
 	reader := kafkago.NewReader(kafkago.ReaderConfig{
-		Brokers:        brokers,
-		Topic:          cfg.Topic,
+		Brokers:        global.Config.Kafka.Brokers,
 		GroupID:        groupID,
-		GroupTopics:    []string{cfg.Topic},
+		Topic:          cfg.Topic,
 		StartOffset:    kafkago.FirstOffset,
-		MinBytes:       10,
-		MaxBytes:       10e6, // 10MB
-		MaxWait:        1 * time.Second,
 		CommitInterval: time.Second,
-		RetentionTime:  24 * time.Hour,
+		MaxWait:        3 * time.Second,
 	})
 
-	return &Consumer{
-		reader:      reader,
-		topic:       cfg.Topic,
-		groupID:     groupID,
-		handler:     cfg.Handler,
-		concurrency: cfg.Concurrency,
+	return &Consumer{reader: reader, cfg: cfg}
+}
+
+// Start bắt đầu consume vô hạn, block goroutine.
+func (c *Consumer) Start(ctx context.Context) {
+	log.Printf("🔄 [Kafka] consumer starting: topic=%s group=%s concurrency=%d",
+		c.cfg.Topic, c.reader.Config().GroupID, c.cfg.Concurrency)
+
+	if c.cfg.Concurrency <= 1 {
+		c.loop(ctx)
+	} else {
+		c.loopConcurrent(ctx)
 	}
 }
 
-// Start bắt đầu consume message, block đến khi context bị cancel
-func (c *Consumer) Start(ctx context.Context) error {
-	log.Printf("[Kafka] Consumer started — topic=%s group=%s concurrency=%d",
-		c.topic, c.groupID, c.concurrency)
-
-	if c.concurrency <= 1 {
-		return c.loop(ctx)
-	}
-
-	return c.loopConcurrent(ctx)
-}
-
-// loop xử lý tuần tự
-func (c *Consumer) loop(ctx context.Context) error {
+// loop — tuần tự, từng message một.
+func (c *Consumer) loop(ctx context.Context) {
 	for {
 		msg, err := c.reader.FetchMessage(ctx)
 		if err != nil {
-			return fmt.Errorf("fetch message: %w", err)
+			if ctx.Err() != nil {
+				return
+			}
+			log.Printf("❌ [Kafka] FetchMessage error: %v", err)
+			continue
 		}
 
-		if err := c.handler(ctx, msg); err != nil {
-			log.Printf("[Kafka] Handler error: %v — msg key=%s", err, string(msg.Key))
-			// Commit anyway để không block consumer
+		if err := c.cfg.Handler(ctx, msg); err != nil {
+			log.Printf("⚠️ [Kafka] handler error (will commit anyway): %v", err)
 		}
 
 		if err := c.reader.CommitMessages(ctx, msg); err != nil {
-			return fmt.Errorf("commit message: %w", err)
+			log.Printf("❌ [Kafka] CommitMessages error: %v", err)
 		}
 	}
 }
 
-// loopConcurrent xử lý song song với semaphore
-func (c *Consumer) loopConcurrent(ctx context.Context) error {
-	sem := make(chan struct{}, c.concurrency)
-	errCh := make(chan error, 1)
+// loopConcurrent — song song, dùng semaphore giới hạn concurrency.
+func (c *Consumer) loopConcurrent(ctx context.Context) {
+	sem := semaphore.NewWeighted(int64(c.cfg.Concurrency))
 
 	for {
 		msg, err := c.reader.FetchMessage(ctx)
 		if err != nil {
-			return fmt.Errorf("fetch message: %w", err)
+			if ctx.Err() != nil {
+				return
+			}
+			log.Printf("❌ [Kafka] FetchMessage error: %v", err)
+			continue
 		}
 
-		sem <- struct{}{}
-		go func(m kafkago.Message) {
-			defer func() { <-sem }()
+		if err := sem.Acquire(ctx, 1); err != nil {
+			return
+		}
 
-			if err := c.handler(ctx, m); err != nil {
-				log.Printf("[Kafka] Handler error: %v — msg key=%s", err, string(m.Key))
+		m := msg
+		go func() {
+			defer sem.Release(1)
+
+			if err := c.cfg.Handler(ctx, m); err != nil {
+				log.Printf("⚠️ [Kafka] handler error: %v", err)
 			}
 
 			if err := c.reader.CommitMessages(ctx, m); err != nil {
-				select {
-				case errCh <- err:
-				default:
-				}
+				log.Printf("❌ [Kafka] CommitMessages error: %v", err)
 			}
-		}(msg)
-
-		select {
-		case commitErr := <-errCh:
-			return commitErr
-		default:
-		}
+		}()
 	}
 }
 
-// Close đóng consumer
 func (c *Consumer) Close() error {
-	if c.reader != nil {
-		return c.reader.Close()
-	}
-	return nil
+	return c.reader.Close()
 }
 
-// GetEventHeader helper lấy header value từ message
+// ── Helpers ──
+
 func GetEventHeader(msg kafkago.Message, key string) string {
 	for _, h := range msg.Headers {
 		if h.Key == key {
@@ -150,7 +129,14 @@ func GetEventHeader(msg kafkago.Message, key string) string {
 	return ""
 }
 
-// UnmarshalEvent helper unmarshal message value vào struct
 func UnmarshalEvent[T any](msg kafkago.Message, v *T) error {
 	return json.Unmarshal(msg.Value, v)
+}
+
+func UnmarshalMsg[T any](msg kafkago.Message) (*T, error) {
+	var v T
+	if err := json.Unmarshal(msg.Value, &v); err != nil {
+		return nil, fmt.Errorf("unmarshal %T: %w", v, err)
+	}
+	return &v, nil
 }

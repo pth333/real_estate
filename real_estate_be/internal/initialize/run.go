@@ -2,39 +2,36 @@ package initialize
 
 import (
 	"context"
-	"log"
-	"os/signal"
-	"syscall"
+
+	"real_estate_be/internal/global"
 )
 
 func Run() {
 	LoadConfig()
 	InitMysql()
 
-	// Graceful shutdown context
-	ctx, cancel := signal.NotifyContext(context.Background(),
-		syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	// Migrate DB
+	MigrateDb(global.DB)
+
+	// Init Kafka + SSE
+	InitKafka()
+
+	// Start Kafka consumers (background)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	StartKafkaConsumers(ctx, global.DB)
 
-	// Start Kafka consumers (non-blocking)
-	StartKafkaConsumers(ctx)
-
-	// Start Fiber server
+	// Init routes
 	app := InitRouter()
-
-	// Shutdown server khi context done
-	go func() {
-		<-ctx.Done()
-		log.Println("⏹ Shutting down server...")
-		_ = app.Shutdown()
-	}()
-
-	if err := app.Listen(":8000"); err != nil {
-		log.Printf("Server error: %v", err)
-	}
+	app.Listen(":8000")
 }
 
 func RunCrawler() {
 	LoadConfig()
 	InitMysql()
+
+	// Migrate DB
+	MigrateDb(global.DB)
+
+	// Crawler được start từ cmd/crawler/main.go
 }

@@ -22,10 +22,8 @@ type RealEstateModel struct {
 
 	CrawledAt time.Time `gorm:"column:crawled_at;index"`
 
-	PublishedAt *time.Time `gorm:"column:published_at"`
-
-	CreatedAt time.Time  `gorm:"autoCreateTime"`
-	UpdatedAt time.Time  `gorm:"autoUpdateTime"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 type DashboardSummary struct {
@@ -39,17 +37,4 @@ type DistrictStat struct {
 	District   string  `json:"district"`
 	TotalPosts int64   `json:"total_posts"`
 	AvgPriceM2 float64 `json:"avg_price_m2"`
-}
-
-// RealEstateEnriched lưu kết quả enrichment
-type RealEstateEnriched struct {
-	ID               uint64   `gorm:"primaryKey"`
-	SourceURL        string   `gorm:"column:source_url;uniqueIndex;size:512"`
-	TypeOfRealEstate string   `gorm:"column:type_of_real_estate;index"`
-	Latitude         *float64 `gorm:"column:latitude"`
-	Longitude        *float64 `gorm:"column:longitude"`
-}
-
-func (RealEstateEnriched) TableName() string {
-	return "real_estate_enriched"
 }
