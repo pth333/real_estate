@@ -2,7 +2,7 @@ package model
 
 import "time"
 
-type RealEstateModel struct {
+type RealEstate struct {
 	ID uint64 `gorm:"primaryKey"`
 
 	Title    string  `gorm:"column:title"`

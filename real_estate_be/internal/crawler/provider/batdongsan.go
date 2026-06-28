@@ -72,13 +72,13 @@ func buildBatDongSanURL(page int) string {
 }
 
 // CrawlPage implements ICrawler, trả về []model.RealEstateModel.
-func (c *BatDongSanCrawler) CrawlPage(page int) ([]model.RealEstateModel, error) {
+func (c *BatDongSanCrawler) CrawlPage(page int) ([]model.RealEstate, error) {
 	raw, err := c.crawlRaw(page)
 	if err != nil {
 		return nil, err
 	}
 
-	items := make([]model.RealEstateModel, 0, len(raw))
+	items := make([]model.RealEstate, 0, len(raw))
 	for _, r := range raw {
 		items = append(items, mapBatDongSan(r))
 	}
@@ -165,7 +165,7 @@ func (c *BatDongSanCrawler) crawlRaw(page int) ([]BatDongSanRaw, error) {
 
 // ── Mapper functions ──
 
-func mapBatDongSan(raw BatDongSanRaw) model.RealEstateModel {
+func mapBatDongSan(raw BatDongSanRaw) model.RealEstate {
 	price := parsePrice(raw.Price)
 	area := parseArea(raw.Acreage)
 	district, city := parseAddress(raw.Address)
@@ -175,7 +175,7 @@ func mapBatDongSan(raw BatDongSanRaw) model.RealEstateModel {
 		pricePerM2 = price / area
 	}
 
-	return model.RealEstateModel{
+	return model.RealEstate{
 		Title:            raw.Title,
 		PriceVND:         price,
 		Address:          raw.Address,

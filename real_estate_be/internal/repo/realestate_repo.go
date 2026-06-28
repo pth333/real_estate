@@ -12,15 +12,15 @@ type realEstateRepo struct {
 }
 
 type RealEstateRepository interface {
-	Create(item *model.RealEstateModel) error
-	CreateBatch(items []*model.RealEstateModel) error
+	Create(item *model.RealEstate) error
+	CreateBatch(items []*model.RealEstate) error
 }
 
 func NewRealEstateRepository(db *gorm.DB) RealEstateRepository {
 	return &realEstateRepo{db: db}
 }
 
-func (r *realEstateRepo) Create(item *model.RealEstateModel) error {
+func (r *realEstateRepo) Create(item *model.RealEstate) error {
 	return r.db.
 		Clauses(clause.OnConflict{
 			Columns: []clause.Column{
@@ -43,7 +43,7 @@ func (r *realEstateRepo) Create(item *model.RealEstateModel) error {
 		Error
 }
 
-func (r *realEstateRepo) CreateBatch(items []*model.RealEstateModel) error {
+func (r *realEstateRepo) CreateBatch(items []*model.RealEstate) error {
 	return r.db.
 		Clauses(clause.OnConflict{
 			Columns: []clause.Column{

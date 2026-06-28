@@ -73,7 +73,7 @@ func (e *EnrichConsumer) handle(ctx context.Context, msg kafkago.Message) error 
 	typeStr := classifyType(event.Title, event.PriceVND)
 
 	// Lưu DB với enriched data
-	enriched := &model.RealEstateModel{
+	enriched := &model.RealEstate{
 		Title:            event.Title,
 		PriceVND:         event.PriceVND,
 		Address:          event.Address,

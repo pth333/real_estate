@@ -19,7 +19,7 @@ func InitMysql() {
 	)
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 
-	// db.AutoMigrate(&model.RealEstateModel{})
+	// db.AutoMigrate(&model.RealEstate{})
 	// db.AutoMigrate(&model.User{})
 
 	if err != nil {

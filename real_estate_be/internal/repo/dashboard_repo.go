@@ -17,7 +17,7 @@ type IDashboardRepository interface {
 		req dto.RealEstateSearchRequest,
 		offset int,
 		limit int,
-	) ([]model.RealEstateModel, int64, error)
+	) ([]model.RealEstate, int64, error)
 }
 
 func NewDashboardRepository(db *gorm.DB) IDashboardRepository {
@@ -46,13 +46,13 @@ func (r *dashboardRepo) GetListRealEstate(
 	req dto.RealEstateSearchRequest,
 	offset int,
 	limit int,
-) ([]model.RealEstateModel, int64, error) {
+) ([]model.RealEstate, int64, error) {
 	var (
-		items []model.RealEstateModel
+		items []model.RealEstate
 		total int64
 	)
 
-	db := r.db.Model(&model.RealEstateModel{})
+	db := r.db.Model(&model.RealEstate{})
 
 	if req.Filter.District != "" {
 		db = db.Where("district = ?", req.Filter.District)
@@ -66,7 +66,7 @@ func (r *dashboardRepo) GetListRealEstate(
 		db = db.Where("price_vnd <= ?", req.Filter.MaxPrice)
 	}
 
-	if err := r.db.Model(&model.RealEstateModel{}).Count(&total).Error; err != nil {
+	if err := r.db.Model(&model.RealEstate{}).Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 

@@ -6,7 +6,7 @@ import (
 
 // ICrawler định nghĩa interface chung cho các provider crawl BĐS.
 type ICrawler interface {
-	CrawlPage(page int) ([]model.RealEstateModel, error)
+	CrawlPage(page int) ([]model.RealEstate, error)
 	Close()
 }
 
