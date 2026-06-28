@@ -5,13 +5,5 @@ import (
 )
 
 func main() {
-
 	initialize.Run()
-	// db := database.Connect(cfg)
-
-	// appFiber := fiber.New()
-
-	// app.RegisterRoutes(appFiber, db)
-
-	// log.Fatal(appFiber.Listen(":8000"))
 }

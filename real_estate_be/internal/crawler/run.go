@@ -16,7 +16,7 @@ import (
 // pageResult chứa kết quả crawl của 1 trang.
 type pageResult struct {
 	page int
-	data []model.RealEstateModel
+	data []model.RealEstate
 	err  error
 }
 
@@ -129,7 +129,7 @@ func processPages(ctx context.Context, pages map[int]pageResult, re repo.RealEst
 
 // processItems lưu từng item vào DB và publish Kafka.
 // Trả về false nếu gặp item cũ (cần dừng).
-func processItems(ctx context.Context, items []model.RealEstateModel, re repo.RealEstateRepository, producer *kafkapkg.Producer) bool {
+func processItems(ctx context.Context, items []model.RealEstate, re repo.RealEstateRepository, producer *kafkapkg.Producer) bool {
 	for i := range items {
 		if !isTodayFromPosted(&items[i]) {
 			log.Println("🛑 Reached older listing → STOP ALL")
@@ -155,7 +155,7 @@ func processItems(ctx context.Context, items []model.RealEstateModel, re repo.Re
 
 // isTodayFromPosted kiểm tra bài đăng có phải hôm nay không.
 // Tạm thời luôn true vì model chưa lưu postedDate.
-func isTodayFromPosted(_ *model.RealEstateModel) bool {
+func isTodayFromPosted(_ *model.RealEstate) bool {
 	return true
 }
 

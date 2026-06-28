@@ -60,7 +60,7 @@ func parsePostedDate(raw string) *time.Time {
 	return &t
 }
 
-func MapBatDongSan(raw crawler.BatDongSanRaw) model.RealEstateModel {
+func MapBatDongSan(raw crawler.BatDongSanRaw) model.RealEstate {
 
 	price := parsePrice(raw.Price)
 	area := parseArea(raw.Acreage)
@@ -71,7 +71,7 @@ func MapBatDongSan(raw crawler.BatDongSanRaw) model.RealEstateModel {
 		pricePerM2 = price / area
 	}
 
-	return model.RealEstateModel{
+	return model.RealEstate{
 		Title:            raw.Title,
 		PriceVND:         price,
 		Address:          raw.Address,
@@ -82,7 +82,7 @@ func MapBatDongSan(raw crawler.BatDongSanRaw) model.RealEstateModel {
 		TypeOfRealEstate: "",
 		Source:           "batdongsan.com.vn",
 		SourceURL:        raw.SourceURL,
-		PublishedAt:      parsePostedDate(raw.PostedDate),
-		CrawledAt:        time.Now(),
+		// PublishedAt:      parsePostedDate(raw.PostedDate),
+		CrawledAt: time.Now(),
 	}
 }

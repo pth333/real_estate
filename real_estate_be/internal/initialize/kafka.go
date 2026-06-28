@@ -58,7 +58,7 @@ func StartKafkaConsumers(ctx context.Context, db *gorm.DB) {
 func MigrateDb(db *gorm.DB) {
 	if err := db.AutoMigrate(
 		&model.User{},
-		&model.RealEstateModel{},
+		&model.RealEstate{},
 		&model.Notification{},
 	); err != nil {
 		log.Fatalf("❌ DB migration failed: %v", err)

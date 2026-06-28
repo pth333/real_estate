@@ -13,7 +13,7 @@ type DashboardService struct {
 type IDashboardService interface {
 	// FilterByPrice(minPrice, maxPrice *float64) []model.RealEstate
 	Summary(from, to string) (model.DashboardSummary, error)
-	ListRealEstate(req dto.RealEstateSearchRequest) ([]model.RealEstateModel, int64, error)
+	ListRealEstate(req dto.RealEstateSearchRequest) ([]model.RealEstate, int64, error)
 }
 
 func NewDashboardService(repo repo.IDashboardRepository) IDashboardService {
@@ -31,7 +31,7 @@ func (s *DashboardService) Summary(from, to string) (model.DashboardSummary, err
 
 func (s *DashboardService) ListRealEstate(
 	req dto.RealEstateSearchRequest,
-) ([]model.RealEstateModel, int64, error) {
+) ([]model.RealEstate, int64, error) {
 
 	offset := (req.Page - 1) * req.Size
 
