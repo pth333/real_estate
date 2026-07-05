@@ -6,31 +6,54 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var secretKey = []byte("SUPER_SECRET_KEY")
+var (
+	accessSecret  = []byte("SUPER_SECRET_KEY_ACCESS")
+	refreshSecret = []byte("SUPER_SECRET_KEY_REFRESH")
+)
 
-type Claims struct {
+type AccessClaims struct {
 	Email string `json:"email"`
 	jwt.RegisteredClaims
 }
 
-func GenerateToken(email string) (string, error) {
-	claims := Claims{
+type RefreshClaims struct {
+	Email string `json:"email"`
+	jwt.RegisteredClaims
+}
+
+// GenerateAccessToken — hết hạn sau 15 phút
+func GenerateAccessToken(email string) (string, error) {
+	claims := AccessClaims{
 		Email: email,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(15 * time.Minute)),
 		},
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(secretKey)
+	return token.SignedString(accessSecret)
 }
 
-func ParseToken(tokenStr string) (*Claims, error) {
+// GenerateRefreshToken — hết hạn sau 7 ngày
+func GenerateRefreshToken(email string) (string, error) {
+	claims := RefreshClaims{
+		Email: email,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour)),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(refreshSecret)
+}
+
+// ParseAccessToken — giải mã access token
+func ParseAccessToken(tokenStr string) (*AccessClaims, error) {
 	token, err := jwt.ParseWithClaims(
 		tokenStr,
-		&Claims{},
+		&AccessClaims{},
 		func(token *jwt.Token) (interface{}, error) {
-			return secretKey, nil
+			return accessSecret, nil
 		},
 	)
 
@@ -38,5 +61,22 @@ func ParseToken(tokenStr string) (*Claims, error) {
 		return nil, err
 	}
 
-	return token.Claims.(*Claims), nil
+	return token.Claims.(*AccessClaims), nil
+}
+
+// ParseRefreshToken — giải mã refresh token
+func ParseRefreshToken(tokenStr string) (*RefreshClaims, error) {
+	token, err := jwt.ParseWithClaims(
+		tokenStr,
+		&RefreshClaims{},
+		func(t *jwt.Token) (interface{}, error) {
+			return refreshSecret, nil
+		},
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return token.Claims.(*RefreshClaims), nil
 }
