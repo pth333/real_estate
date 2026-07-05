@@ -11,7 +11,7 @@ func Run() {
 	InitMysql()
 
 	// Migrate DB
-	MigrateDb(global.DB)
+	// MigrateDb(global.DB)
 
 	// Init Kafka + SSE
 	InitKafka()
@@ -31,7 +31,7 @@ func RunCrawler() {
 	InitMysql()
 
 	// Migrate DB
-	MigrateDb(global.DB)
+	// MigrateDb(global.DB)
 
 	// Crawler được start từ cmd/crawler/main.go
 }

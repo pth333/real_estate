@@ -5,6 +5,8 @@ import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 import tailwindcss from '@tailwindcss/vite'
 import AutoImport from 'unplugin-auto-import/vite'
+import Components from 'unplugin-vue-components/vite'
+import { NaiveUiResolver } from 'unplugin-vue-components/resolvers'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -14,10 +16,14 @@ export default defineConfig({
     tailwindcss(),
     AutoImport({
       imports: ['vue', 'vue-router', 'pinia'],
-      dts: 'src/auto-imports.d.ts', // Tạo file type definitions
+      dts: 'src/auto-imports.d.ts',
       eslintrc: {
-        enabled: true, // Tạo file .eslintrc-auto-import.json
+        enabled: true,
       },
+    }),
+    Components({
+      resolvers: [NaiveUiResolver()],
+      dts: 'src/components.d.ts',
     }),
   ],
   resolve: {

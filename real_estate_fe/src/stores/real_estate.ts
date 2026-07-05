@@ -1,83 +1,89 @@
+import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import type {
   DashboardSummary,
   Filter,
-  PaginatedResponse,
   RealEstateModel,
 } from '@/types/real_estate'
 import realEstateApi from '@/api/real_estate.api'
 
-interface RealEstateState {
-  items: RealEstateModel[]
-  total: number
-  loading: boolean
-  summary: DashboardSummary | null
-  summaryLoading: boolean
-  page: number
-  pageSize: number
-  filter: Filter
-}
+export const useRealEstateStore = defineStore('realEstate', () => {
+  const items = ref<RealEstateModel[]>([])
+  const total = ref(0)
+  const loading = ref(false)
+  const summary = ref<DashboardSummary | null>(null)
+  const summaryLoading = ref(false)
+  const page = ref(1)
+  const pageSize = ref(50)
+  const filter = ref<Filter>({})
 
-export const useRealEstateStore = defineStore('realEstate', {
-  state: (): RealEstateState => ({
-    items: [],
-    total: 0,
-    loading: false,
-    summary: null,
-    summaryLoading: false,
-    page: 1,
-    pageSize: 50,
-    filter: {},
-  }),
+  // Chuyển price từ VND sang tỷ
+  function formattedPrice(priceVND: number): string {
+    return (priceVND / 1_000_000_000).toFixed(2) + ' tỷ'
+  }
 
-  getters: {
-    // Chuyển price từ VND sang tỷ
-    formattedPrice:
-      () =>
-      (priceVND: number): string => {
-        return (priceVND / 1_000_000_000).toFixed(2) + ' tỷ'
-      },
-  },
+  const payload = computed(() => ({
+    page: page.value,
+    size: pageSize.value,
+    filter: filter.value,
+  }))
 
-  actions: {
-    async fetchList() {
-      this.loading = true
-      try {
-        const res = await realEstateApi.getList({
-          page: this.page,
-          size: this.pageSize,
-          filter: this.filter,
-        })
-        this.items = res.data.data
-        this.total = res.data.total
-      } catch (e) {
-        console.error('Lỗi tải danh sách BĐS:', e)
-      } finally {
-        this.loading = false
-      }
-    },
+  async function fetchList() {
+    loading.value = true
+    try {
+      const res = await realEstateApi.getList(payload.value)
+      items.value = res.data.data
+      total.value = res.data.total
+    } catch (e) {
+      console.error('Lỗi tải danh sách BĐS:', e)
+    } finally {
+      loading.value = false
+    }
+  }
 
-    async fetchSummary(from?: string, to?: string) {
-      this.summaryLoading = true
-      try {
-        const res = await realEstateApi.getSummary(from, to)
-        this.summary = res.data
-      } catch (e) {
-        console.error('Lỗi tải summary:', e)
-      } finally {
-        this.summaryLoading = false
-      }
-    },
+  async function fetchSummary(from?: string, to?: string) {
+    summaryLoading.value = true
+    try {
+      const res = await realEstateApi.getSummary(from, to)
+      summary.value = res.data
+    } catch (e) {
+      console.error('Lỗi tải summary:', e)
+    } finally {
+      summaryLoading.value = false
+    }
+  }
 
-    setFilter(filter: Filter) {
-      this.filter = filter
-      this.page = 1
-      this.fetchList()
-    },
+  function setFilter(newFilter: Filter) {
+    filter.value = newFilter
+    page.value = 1
+    fetchList()
+  }
 
-    setPage(page: number) {
-      this.page = page
-      this.fetchList()
-    },
-  },
+  function setPage(newPage: number) {
+    page.value = newPage
+    fetchList()
+  }
+
+  function setPageSize(newSize: number) {
+    pageSize.value = newSize
+    page.value = 1
+    fetchList()
+  }
+
+  return {
+    items,
+    total,
+    loading,
+    summary,
+    summaryLoading,
+    page,
+    pageSize,
+    filter,
+    formattedPrice,
+    fetchList,
+    fetchSummary,
+    setFilter,
+    setPage,
+    setPageSize,
+  }
 })

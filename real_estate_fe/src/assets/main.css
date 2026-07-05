@@ -1,1 +1,10 @@
 @import 'tailwindcss';
+
+@theme {
+  --color-foundation: #2a3439;
+  --color-patina: #678983;
+  --color-oak: #c4a57b;
+  --color-limestone: #f8f5f0;
+  --color-graphite: #1a1f23;
+  --color-success: #86a59c;
+}

@@ -2,37 +2,50 @@
   <div>
     <div class="mb-3 flex items-center justify-between">
       <h2 class="text-lg font-semibold">Danh sách Bất Động Sản</h2>
-      <span v-if="store.total" class="text-sm text-gray-500">
-        Tổng: {{ store.total }} kết quả
+      <span v-if="realEstateStore.total" class="text-sm text-gray-500">
+        Trang {{ realEstateStore.page }}/{{ pageCount }} - Tổng: {{ realEstateStore.total }}
       </span>
     </div>
 
     <ag-grid-vue
-      class="ag-theme-alpine w-full"
+      :theme="themeBalham"
       style="height: 500px"
       :column-defs="columnDefs"
-      :row-data="store.items"
-      :pagination="true"
-      :pagination-page-size="store.pageSize"
-      :loading="store.loading"
+      :row-data="realEstateStore.items"
+      :pagination="false"
       :default-col-def="defaultColDef"
       suppress-cell-focus
-      @grid-ready="onGridReady"
+    />
+
+    <n-pagination
+      :page="realEstateStore.page"
+      :page-size="realEstateStore.pageSize"
+      show-size-picker
+      class="py-3 justify-end items-center flex"
+      :page-count="pageCount"
+      :page-sizes="[20, 50, 100]"
+      @update:page="updatePage"
+      @update:page-size="updatePageSize"
     />
   </div>
 </template>
 
 <script setup lang="ts">
 import { AgGridVue } from 'ag-grid-vue3'
-import type { ColDef, GridApi, GridReadyEvent } from 'ag-grid-community'
+import { themeBalham } from 'ag-grid-community'
+import type { ColDef } from 'ag-grid-community'
 import { useRealEstateStore } from '@/stores/real_estate'
 
-const store = useRealEstateStore()
+const realEstateStore = useRealEstateStore()
 
-let gridApi: GridApi | null = null
+const pageCount = computed(() => Math.ceil(realEstateStore.total / realEstateStore.pageSize))
 
-function onGridReady(params: GridReadyEvent) {
-  gridApi = params.api
+function updatePage(page: number) {
+  realEstateStore.setPage(page)
+}
+
+function updatePageSize(pageSize: number) {
+  realEstateStore.setPageSize(pageSize)
 }
 
 const defaultColDef: ColDef = {

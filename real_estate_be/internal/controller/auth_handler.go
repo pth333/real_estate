@@ -38,12 +38,68 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 		return response.BadRequest(c, "Invalid request body", err.Error())
 	}
 
-	token, err := h.service.Login(req)
+	accessToken, refreshToken, err := h.service.Login(req)
 	if err != nil {
 		return response.Unauthorized(c, "Login failed", err.Error())
 	}
 
+	// Set refresh token vào http-only cookie
+	c.Cookie(&fiber.Cookie{
+		Name:     "refresh_token",
+		Value:    refreshToken,
+		HTTPOnly: true,
+		Secure:   false, // true nếu dùng HTTPS
+		SameSite: "Lax",
+		Path:     "/api/2026/auth",
+		MaxAge:   7 * 24 * 3600, // 7 ngày
+	})
+
 	return response.OK(c, fiber.Map{
-		"token": token,
+		"token": accessToken,
+	})
+}
+
+func (h *UserHandler) RefreshToken(c *fiber.Ctx) error {
+	// Lấy refresh token từ cookie
+	refreshToken := c.Cookies("refresh_token")
+	if refreshToken == "" {
+		return response.Unauthorized(c, "Missing refresh token", nil)
+	}
+
+	newAccess, newRefresh, err := h.service.RefreshToken(refreshToken)
+	if err != nil {
+		return response.Unauthorized(c, "Refresh token failed", err.Error())
+	}
+
+	// Set refresh token mới vào cookie
+	c.Cookie(&fiber.Cookie{
+		Name:     "refresh_token",
+		Value:    newRefresh,
+		HTTPOnly: true,
+		Secure:   false,
+		SameSite: "Lax",
+		Path:     "/api/2026/auth",
+		MaxAge:   7 * 24 * 3600,
+	})
+
+	return response.OK(c, fiber.Map{
+		"token": newAccess,
+	})
+}
+
+func (h *UserHandler) Logout(c *fiber.Ctx) error {
+	// Xoá cookie refresh token
+	c.Cookie(&fiber.Cookie{
+		Name:     "refresh_token",
+		Value:    "",
+		HTTPOnly: true,
+		Secure:   false,
+		SameSite: "Lax",
+		Path:     "/api/2026/auth",
+		MaxAge:   -1,
+	})
+
+	return response.OK(c, fiber.Map{
+		"message": "Logged out",
 	})
 }

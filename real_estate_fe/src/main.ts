@@ -4,9 +4,7 @@ import App from './App.vue'
 import router from './router'
 import './assets/main.css'
 
-// AG Grid styles
-import 'ag-grid-community/styles/ag-grid.css'
-import 'ag-grid-community/styles/ag-theme-alpine.css'
+// AG Grid theme — dùng Theming API, không import CSS legacy
 
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
 
