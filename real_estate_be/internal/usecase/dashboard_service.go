@@ -1,7 +1,7 @@
 package usecase
 
 import (
-	"real_estate_be/internal/controller/dto"
+	"real_estate_be/internal/dto"
 	model "real_estate_be/internal/models"
 	"real_estate_be/internal/repo"
 )

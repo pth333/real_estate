@@ -1,4 +1,3 @@
-import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { authApi } from '@/api/auth.api'
 import type { LoginRequest, RegisterRequest } from '@/types/auth'

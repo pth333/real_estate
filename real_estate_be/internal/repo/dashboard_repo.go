@@ -1,7 +1,7 @@
 package repo
 
 import (
-	"real_estate_be/internal/controller/dto"
+	"real_estate_be/internal/dto"
 	model "real_estate_be/internal/models"
 
 	"gorm.io/gorm"

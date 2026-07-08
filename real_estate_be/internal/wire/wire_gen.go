@@ -22,6 +22,16 @@ func InitializeAuthHandler() (*controller.UserHandler, error) {
 	return userHandler, nil
 }
 
+// Injectors from category.wire.go:
+
+func InitializeCategoryHandler() (*controller.CategoryHandler, error) {
+	db := providerDB()
+	iCategoryRepository := repo.NewCategoryRepository(db)
+	iCategoryService := usecase.NewCategoryService(iCategoryRepository)
+	categoryHandler := controller.NewCategoryHandler(iCategoryService)
+	return categoryHandler, nil
+}
+
 // Injectors from dashboard.wire.go:
 
 func InitializeDashboardHandler() (*controller.DashboardHandler, error) {

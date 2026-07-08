@@ -21,6 +21,7 @@ func InitMysql() {
 
 	// db.AutoMigrate(&model.RealEstate{})
 	// db.AutoMigrate(&model.User{})
+	// db.AutoMigrate(&model.Category{})
 
 	if err != nil {
 		panic(err)

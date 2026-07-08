@@ -9,7 +9,6 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
 import DefaultLayout from './layouts/DefaultLayout.vue'
 import NotificationToast from '@/components/notification/NotificationToast.vue'
 import { useNotificationStore } from '@/stores/notification'
