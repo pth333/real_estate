@@ -1,4 +1,3 @@
-import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import type { NotificationItem, NotificationSSEPayload } from '@/types/real_estate'
 import notificationApi from '@/api/notification.api'

@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"real_estate_be/internal/controller/dto"
+	"real_estate_be/internal/dto"
 	"real_estate_be/internal/usecase"
 
 	"github.com/gofiber/fiber/v2"

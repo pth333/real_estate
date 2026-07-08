@@ -1,13 +1,16 @@
 <template>
-  <div>
-    <div class="mb-3 flex items-center justify-between">
-      <h2 class="text-lg font-semibold">Danh sách Bất Động Sản</h2>
-      <span v-if="realEstateStore.total" class="text-sm text-gray-500">
-        Trang {{ realEstateStore.page }}/{{ pageCount }} - Tổng: {{ realEstateStore.total }}
-      </span>
-    </div>
 
-    <ag-grid-vue
+  <div>
+
+    <div class="mb-3 flex items-center justify-between">
+
+      <h2 class="text-lg font-semibold"> Danh sách Bất Động Sản </h2>
+       <span v-if="realEstateStore.total" class="text-sm text-gray-500"
+        > Trang {{ realEstateStore.page }}/{{ pageCount }} - Tổng: {{ realEstateStore.total }}
+        </span
+      >
+    </div>
+     <ag-grid-vue
       :theme="themeBalham"
       style="height: 500px"
       :column-defs="columnDefs"
@@ -15,9 +18,7 @@
       :pagination="false"
       :default-col-def="defaultColDef"
       suppress-cell-focus
-    />
-
-    <n-pagination
+    /> <n-pagination
       :page="realEstateStore.page"
       :page-size="realEstateStore.pageSize"
       show-size-picker
@@ -28,6 +29,7 @@
       @update:page-size="updatePageSize"
     />
   </div>
+
 </template>
 
 <script setup lang="ts">
@@ -120,3 +122,4 @@ const columnDefs: ColDef[] = [
   },
 ]
 </script>
+

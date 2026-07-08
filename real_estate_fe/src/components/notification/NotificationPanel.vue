@@ -52,7 +52,6 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
 import type { NotificationItem } from '@/types/real_estate'
 import { useNotificationStore } from '@/stores/notification'
 

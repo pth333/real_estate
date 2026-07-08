@@ -38,7 +38,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
 import { useNotificationStore } from '@/stores/notification'
 import NotificationPanel from './NotificationPanel.vue'
 
