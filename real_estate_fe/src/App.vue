@@ -1,16 +1,17 @@
 <template>
+
   <div id="app" class="min-h-screen bg-gray-50 text-gray-800">
-    <DefaultLayout>
-      <router-view />
-    </DefaultLayout>
-    <!-- Toast notifications layer -->
+     <DefaultLayout> <router-view /> </DefaultLayout> <!-- Toast notifications layers -->
     <NotificationToast />
+    <ToastDisplay />
   </div>
+
 </template>
 
 <script setup lang="ts">
 import DefaultLayout from './layouts/DefaultLayout.vue'
 import NotificationToast from '@/components/notification/NotificationToast.vue'
+import ToastDisplay from '@/components/common/ToastDisplay.vue'
 import { useNotificationStore } from '@/stores/notification'
 import { useAuthStore } from './stores/auth.ts'
 
@@ -36,3 +37,4 @@ body {
   font-family: 'Inter', system-ui, sans-serif;
 }
 </style>
+

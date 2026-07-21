@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"real_estate_be/internal/dto"
 	model "real_estate_be/internal/models"
 
 	"gorm.io/gorm"
@@ -14,6 +15,8 @@ type realEstateRepo struct {
 type RealEstateRepository interface {
 	Create(item *model.RealEstate) error
 	CreateBatch(items []*model.RealEstate) error
+	GetList(req dto.RealEstateSearchRequest, offset, limit int) ([]model.RealEstate, int64, error)
+	GetListByCategoryID(categoryID int64, req dto.RealEstateSearchRequest, limit int) ([]model.RealEstate, int64, error)
 }
 
 func NewRealEstateRepository(db *gorm.DB) RealEstateRepository {
@@ -64,4 +67,86 @@ func (r *realEstateRepo) CreateBatch(items []*model.RealEstate) error {
 		}).
 		CreateInBatches(items, 100).
 		Error
+}
+
+func (r *realEstateRepo) GetList(req dto.RealEstateSearchRequest, offset, limit int) ([]model.RealEstate, int64, error) {
+	var (
+		items []model.RealEstate
+		total int64
+	)
+
+	db := r.db.Model(&model.RealEstate{})
+
+	if req.Filter.District != "" {
+		db = db.Where("district = ?", req.Filter.District)
+	}
+	if req.Filter.MinPrice != 0 {
+		db = db.Where("price_vnd >= ?", req.Filter.MinPrice)
+	}
+	if req.Filter.MaxPrice != 0 {
+		db = db.Where("price_vnd <= ?", req.Filter.MaxPrice)
+	}
+
+	if err := r.db.Model(&model.RealEstate{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	err := db.
+		Order("created_at DESC").
+		Offset(offset).
+		Limit(limit).
+		Find(&items).
+		Error
+
+	return items, total, err
+}
+
+// GetMaxID lấy id lớn nhất của BĐS theo category_id
+func (r *realEstateRepo) GetMaxID(categoryID int64) (int64, error) {
+	var maxID int64
+	if err := r.db.Model(&model.RealEstate{}).
+		Select("MAX(id)").
+		Where("category_id = ?", categoryID).
+		Scan(&maxID).Error; err != nil {
+		return 0, err
+	}
+	return maxID, nil
+}
+
+// GetListByCategoryID query BĐS theo category_id với filter và keyset pagination
+func (r *realEstateRepo) GetListByCategoryID(categoryID int64, req dto.RealEstateSearchRequest, limit int) ([]model.RealEstate, int64, error) {
+	var (
+		items []model.RealEstate
+		total int64
+	)
+
+	db := r.db.Model(&model.RealEstate{}).
+		Where("category_id = ?", categoryID)
+
+	if req.Filter.District != "" {
+		db = db.Where("district = ?", req.Filter.District)
+	}
+	if req.Filter.MinPrice != 0 {
+		db = db.Where("price_vnd >= ?", req.Filter.MinPrice)
+	}
+	if req.Filter.MaxPrice != 0 {
+		db = db.Where("price_vnd <= ?", req.Filter.MaxPrice)
+	}
+
+	if err := db.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Keyset pagination: dùng cursorID (id bản ghi cuối trang trước)
+	if req.CursorID > 0 {
+		db = db.Where("id < ?", req.CursorID)
+	}
+
+	err := db.
+		Order("id DESC").
+		Limit(limit).
+		Find(&items).
+		Error
+
+	return items, total, err
 }

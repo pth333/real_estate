@@ -25,6 +25,8 @@ func InitRouter() *fiber.App {
 		routers.InitAuthRoutes(MainGroup)
 		// Category
 		routers.InitCategoryRoutes(MainGroup)
+		// Real Estate
+		routers.InitRealEstateRoutes(MainGroup)
 		// Notifications + SSE
 		routers.InitNotificationRoutes(MainGroup)
 	}

@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import DashboardV1 from '@/components/pages/DashboardV1.vue'
 import LoginV1 from '@/components/pages/LoginV1.vue'
 import RegisterV1 from '@/components/pages/RegisterV1.vue'
+import ListRealEstateByCategory from '@/components/pages/ListRealEstateByCategory.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -23,6 +24,12 @@ const router = createRouter({
       path: '/register',
       name: 'Register',
       component: RegisterV1,
+    },
+    {
+      path: '/:slug/:page(\\d+)?',
+      name: 'ListRealEstateByCategory',
+      component: ListRealEstateByCategory,
+      meta: { requiresAuth: true },
     },
   ],
 })

@@ -15,6 +15,9 @@ type RealEstate struct {
 	Acreage    float64 `gorm:"column:acreage"`
 	PricePerM2 float64 `gorm:"column:price_per_m2"`
 
+	CategoryID *uint64 `gorm:"column:category_id"`
+	Category   *Category `gorm:"foreignKey:CategoryID"`
+
 	TypeOfRealEstate string `gorm:"column:type_of_real_estate"`
 
 	Source    string `gorm:"column:source;index"`

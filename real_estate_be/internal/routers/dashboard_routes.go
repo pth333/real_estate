@@ -15,6 +15,5 @@ func InitDashboardRoutes(Router fiber.Router) {
 	dashRouter := Router.Group("/dashboard")
 	{
 		dashRouter.Get("/summary", dashboardHandler.Summary)
-		dashRouter.Post("/list-real-estate", dashboardHandler.ListRealEstate)
 	}
 }

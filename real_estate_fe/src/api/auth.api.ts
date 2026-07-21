@@ -2,19 +2,20 @@ import api from './service.api'
 import type { LoginRequest, RegisterRequest, AuthResponse } from '@/types/auth'
 
 export const authApi = {
-  login(payload: LoginRequest): Promise<AuthResponse> {
-    return api.post('/auth/login', payload).then((res) => res.data)
+  login: async (payload: LoginRequest) => {
+    const res = await api.request<AuthResponse>({ url: '/auth/login', data: payload, method: 'post' })
+    return res.data
   },
-
-  register(payload: RegisterRequest): Promise<AuthResponse> {
-    return api.post('/auth/register', payload).then((res) => res.data)
+  register: async (payload: RegisterRequest) => {
+    const res = await api.request<AuthResponse>({ url: '/auth/register', data: payload, method: 'post' })
+    return res.data
   },
-
-  refreshToken(): Promise<AuthResponse> {
-    return api.post('/auth/refresh', {}).then((res) => res.data)
+  refreshToken: async () => {
+    const res = await api.request<AuthResponse>({ url: '/auth/refresh', data: {}, method: 'post' })
+    return res.data
   },
-
-  logout(): Promise<AuthResponse> {
-    return api.post('/auth/logout', {}).then((res) => res.data)
+  logout: async () => {
+    const res = await api.request<AuthResponse>({ url: '/auth/logout', data: {}, method: 'post' })
+    return res.data
   },
 }

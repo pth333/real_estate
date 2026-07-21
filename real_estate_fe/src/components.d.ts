@@ -13,18 +13,23 @@ declare module 'vue' {
   export interface GlobalComponents {
     AppFooter: typeof import('./components/common/AppFooter.vue')['default']
     AppHeader: typeof import('./components/common/AppHeader.vue')['default']
+    CategoryMenu: typeof import('./components/common/CategoryMenu.vue')['default']
     DashboardV1: typeof import('./components/pages/DashboardV1.vue')['default']
     DistrictChart: typeof import('./components/real-estate/DistrictChart.vue')['default']
+    ListRealEstateByCategory: typeof import('./components/pages/ListRealEstateByCategory.vue')['default']
     LoginV1: typeof import('./components/pages/LoginV1.vue')['default']
+    MenuItem: typeof import('./components/common/MenuItem.vue')['default']
     NotificationBell: typeof import('./components/notification/NotificationBell.vue')['default']
     NotificationPanel: typeof import('./components/notification/NotificationPanel.vue')['default']
     NotificationToast: typeof import('./components/notification/NotificationToast.vue')['default']
     NPagination: typeof import('naive-ui')['NPagination']
     PriceChart: typeof import('./components/real-estate/PriceChart.vue')['default']
+    RealEstateCard: typeof import('./components/real-estate/RealEstateCard.vue')['default']
     RealEstateTable: typeof import('./components/real-estate/RealEstateTable.vue')['default']
     RegisterV1: typeof import('./components/pages/RegisterV1.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SummaryCards: typeof import('./components/real-estate/SummaryCards.vue')['default']
+    ToastDisplay: typeof import('./components/common/ToastDisplay.vue')['default']
   }
 }

@@ -1,11 +1,6 @@
 import { defineStore } from 'pinia'
-import type {
-  DashboardSummary,
-  Filter,
-  RealEstateModel,
-} from '@/types/real_estate'
-import realEstateApi from '@/api/real_estate.api'
-
+import type { DashboardSummary, Filter, RealEstateModel } from '@/types/real_estate'
+import { realEstateApi } from '@/api/real_estate.api'
 export const useRealEstateStore = defineStore('realEstate', () => {
   const items = ref<RealEstateModel[]>([])
   const total = ref(0)

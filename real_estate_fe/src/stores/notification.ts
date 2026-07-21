@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import type { NotificationItem, NotificationSSEPayload } from '@/types/real_estate'
-import notificationApi from '@/api/notification.api'
+import { notificationApi } from '@/api/notification.api'
 
 export const useNotificationStore = defineStore('notification', () => {
   const items = ref<NotificationItem[]>([])
@@ -19,7 +19,7 @@ export const useNotificationStore = defineStore('notification', () => {
       const res = await notificationApi.getList(userID)
       items.value = res.data.data
       total.value = res.data.total
-      unreadCount.value = res.data.data.filter((n) => !n.is_read).length
+      unreadCount.value = res.data.data.filter((n: any) => !n.is_read).length
     } catch (e) {
       console.error('Lỗi tải notifications:', e)
     } finally {

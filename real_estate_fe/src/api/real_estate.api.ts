@@ -1,22 +1,14 @@
 import api from './service.api'
-import type {
-  DashboardSummary,
-  PaginatedResponse,
-  RealEstateModel,
-  RealEstateSearchRequest,
-} from '@/types/real_estate'
+import type { RealEstateSearchRequest } from '@/types/real_estate'
 
-export default {
-  getList(payload: RealEstateSearchRequest) {
-    return api.post<PaginatedResponse<RealEstateModel>>(
-      '/dashboard/list-real-estate',
-      payload,
+export const realEstateApi = {
+  getList: async (payload: RealEstateSearchRequest) => {
+    return (
+      (await api.request({ url: '/real-estate/list', data: payload, method: 'post' })) ||
+      {}
     )
   },
-
-  getSummary(from?: string, to?: string) {
-    return api.get<DashboardSummary>('/dashboard/summary', {
-      params: { from, to },
-    })
+  getSummary: async (from?: string, to?: string) => {
+    return (await api.request({ url: '/dashboard/summary', params: { from, to } })) || {}
   },
 }
