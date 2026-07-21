@@ -1,6 +1,0 @@
-{
-  "devDependencies": {
-    "prettier": "^3.9.4",
-    "prettier-plugin-vue": "^1.1.6"
-  }
-}
