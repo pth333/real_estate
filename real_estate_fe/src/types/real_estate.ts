@@ -14,6 +14,16 @@ export interface RealEstateModel {
   CrawledAt: string
   CreatedAt: string
   UpdatedAt: string
+
+  // Optional fields - có thể có hoặc không từ backend
+  Images?: string[] // Danh sách URL ảnh
+  Bedrooms?: number // Số phòng ngủ
+  Bathrooms?: number // Số toilet/phòng tắm
+  Description?: string // Mô tả chi tiết
+  AgentName?: string // Tên người đăng
+  AgentPhone?: string // Số điện thoại liên hệ
+  Badge?: string // Badge đặc biệt: VIP, HOT, etc.
+  IsFavorite?: boolean // Đã yêu thích chưa
 }
 
 export interface DashboardSummary {
@@ -31,6 +41,7 @@ export interface Filter {
 
 export interface RealEstateSearchRequest {
   page: number
+  cursor_id?: number // keyset cursor: id của bản ghi cuối trang trước
   size: number
   filter?: Filter
 }

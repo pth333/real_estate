@@ -41,3 +41,14 @@ func InitializeDashboardHandler() (*controller.DashboardHandler, error) {
 	dashboardHandler := controller.NewDashboardHandler(iDashboardService)
 	return dashboardHandler, nil
 }
+
+// Injectors from realestate.wire.go:
+
+func InitializeRealEstateHandler() (*controller.RealEstateHandler, error) {
+	db := providerDB()
+	realEstateRepository := repo.NewRealEstateRepository(db)
+	iCategoryRepository := repo.NewCategoryRepository(db)
+	iRealEstateService := usecase.NewRealEstateService(realEstateRepository, iCategoryRepository)
+	realEstateHandler := controller.NewRealEstateHandler(iRealEstateService)
+	return realEstateHandler, nil
+}

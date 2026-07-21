@@ -1,9 +1,12 @@
 <template>
   <header class="bg-white shadow-sm border-b border-gray-200">
-    <div class="container mx-auto flex justify-between items-center p-4">
-      <h1 class="text-xl font-bold text-blue-600">RealEstate</h1>
+    <div class="container mx-auto flex justify-between items-center p-4 gap-8">
+      <h1 class="text-xl font-bold text-blue-600 whitespace-nowrap">RealEstate</h1>
 
-      <nav class="flex items-center gap-6 text-gray-700">
+      <!-- Category Menu -->
+      <CategoryMenu />
+
+      <nav class="flex items-center gap-6 text-gray-700 whitespace-nowrap">
         <!-- Notification (chỉ hiển thị khi đã login) -->
         <template v-if="auth.isAuthenticated">
           <span class="text-sm font-medium text-gray-600">{{ auth.userName || auth.userEmail }}</span>
@@ -40,6 +43,7 @@
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import NotificationBell from '@/components/notification/NotificationBell.vue'
+import CategoryMenu from './CategoryMenu.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
