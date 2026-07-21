@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"real_estate_be/internal/controller/dto"
 	"real_estate_be/internal/usecase"
 
 	"github.com/gofiber/fiber/v2"
@@ -17,7 +16,6 @@ func NewDashboardHandler(service usecase.IDashboardService) *DashboardHandler {
 	}
 }
 
-// ===== Summary =====
 func (h *DashboardHandler) Summary(c *fiber.Ctx) error {
 	from := c.Query("from")
 	to := c.Query("to")
@@ -30,26 +28,4 @@ func (h *DashboardHandler) Summary(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(result)
-}
-
-func (h *DashboardHandler) ListRealEstate(c *fiber.Ctx) error {
-	var req dto.RealEstateSearchRequest
-
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{
-			"message": "Invalid request body",
-		})
-	}
-
-	data, total, err := h.service.ListRealEstate(req)
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{
-			"message": err.Error(),
-		})
-	}
-
-	return c.JSON(fiber.Map{
-		"total": total,
-		"data":  data,
-	})
 }

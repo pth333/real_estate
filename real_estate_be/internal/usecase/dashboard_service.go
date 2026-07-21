@@ -1,7 +1,6 @@
 package usecase
 
 import (
-	"real_estate_be/internal/controller/dto"
 	model "real_estate_be/internal/models"
 	"real_estate_be/internal/repo"
 )
@@ -11,9 +10,7 @@ type DashboardService struct {
 }
 
 type IDashboardService interface {
-	// FilterByPrice(minPrice, maxPrice *float64) []model.RealEstate
 	Summary(from, to string) (model.DashboardSummary, error)
-	ListRealEstate(req dto.RealEstateSearchRequest) ([]model.RealEstateModel, int64, error)
 }
 
 func NewDashboardService(repo repo.IDashboardRepository) IDashboardService {
@@ -28,16 +25,3 @@ func (s *DashboardService) Summary(from, to string) (model.DashboardSummary, err
 
 	return s.repo.GetSummary(start, end)
 }
-
-func (s *DashboardService) ListRealEstate(
-	req dto.RealEstateSearchRequest,
-) ([]model.RealEstateModel, int64, error) {
-
-	offset := (req.Page - 1) * req.Size
-
-	return s.repo.GetListRealEstate(req, offset, req.Size)
-}
-
-// func (s *DashboardService) FilterByPrice(minPrice, maxPrice *float64) []model.RealEstate {
-// 	return s.repo.FilterByPrice(minPrice, maxPrice)
-// }

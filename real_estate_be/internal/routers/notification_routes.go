@@ -50,9 +50,19 @@ func SSEStream(c *fiber.Ctx) error {
 		keepaliveTicker := time.NewTicker(30 * time.Second)
 		defer keepaliveTicker.Stop()
 
+		// Luồng đọc context.Done
+		done := make(chan struct{})
+		go func() {
+			ctx := c.Context()
+			if ctx != nil {
+				<-ctx.Done()
+			}
+			close(done)
+		}()
+
 		for {
 			select {
-			case <-c.Context().Done():
+			case <-done:
 				return
 			case data, ok := <-client.Send:
 				if !ok {

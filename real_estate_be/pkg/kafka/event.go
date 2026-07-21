@@ -18,10 +18,10 @@ const (
 
 // ── Interfaces cho buildMessage tự gắn headers ──
 
-type EventTyper   interface{ GetEventType() string }
+type EventTyper interface{ GetEventType() string }
 type EventSourcer interface{ GetSource() string }
 type EventVersion interface{ GetVersion() string }
-type EventKeyer   interface{ GetKey() string }
+type EventKeyer interface{ GetKey() string }
 
 // ── BaseEvent ──
 
@@ -70,7 +70,7 @@ type RealEstateCrawledEvent struct {
 
 func (e RealEstateCrawledEvent) GetKey() string { return e.SourceURL }
 
-func NewRealEstateCrawledEvent(m model.RealEstateModel) RealEstateCrawledEvent {
+func NewRealEstateCrawledEvent(m model.RealEstate) RealEstateCrawledEvent {
 	return RealEstateCrawledEvent{
 		BaseEvent: BaseEvent{
 			EventType: EventTypeCrawled,

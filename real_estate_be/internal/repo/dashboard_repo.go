@@ -1,8 +1,7 @@
 package repo
 
 import (
-	"real_estate_be/internal/controller/dto"
-	model "real_estate_be/internal/models"
+	"real_estate_be/internal/models"
 
 	"gorm.io/gorm"
 )
@@ -13,11 +12,6 @@ type dashboardRepo struct {
 
 type IDashboardRepository interface {
 	GetSummary(startDate, endDate string) (model.DashboardSummary, error)
-	GetListRealEstate(
-		req dto.RealEstateSearchRequest,
-		offset int,
-		limit int,
-	) ([]model.RealEstateModel, int64, error)
 }
 
 func NewDashboardRepository(db *gorm.DB) IDashboardRepository {
@@ -40,42 +34,4 @@ func (r *dashboardRepo) GetSummary(startDate, endDate string) (model.DashboardSu
 		Error
 
 	return result, err
-}
-
-func (r *dashboardRepo) GetListRealEstate(
-	req dto.RealEstateSearchRequest,
-	offset int,
-	limit int,
-) ([]model.RealEstateModel, int64, error) {
-	var (
-		items []model.RealEstateModel
-		total int64
-	)
-
-	db := r.db.Model(&model.RealEstateModel{})
-
-	if req.Filter.District != "" {
-		db = db.Where("district = ?", req.Filter.District)
-	}
-
-	if req.Filter.MinPrice != 0 {
-		db = db.Where("price_vnd >= ?", req.Filter.MinPrice)
-	}
-
-	if req.Filter.MaxPrice != 0 {
-		db = db.Where("price_vnd <= ?", req.Filter.MaxPrice)
-	}
-
-	if err := r.db.Model(&model.RealEstateModel{}).Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-
-	err := db.
-		Order("created_at DESC").
-		Offset(offset).
-		Limit(limit).
-		Find(&items).
-		Error
-
-	return items, total, err
 }

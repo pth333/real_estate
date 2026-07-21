@@ -2,7 +2,7 @@ package model
 
 import "time"
 
-type RealEstateModel struct {
+type RealEstate struct {
 	ID uint64 `gorm:"primaryKey"`
 
 	Title    string  `gorm:"column:title"`
@@ -14,6 +14,9 @@ type RealEstateModel struct {
 
 	Acreage    float64 `gorm:"column:acreage"`
 	PricePerM2 float64 `gorm:"column:price_per_m2"`
+
+	CategoryID *uint64 `gorm:"column:category_id"`
+	Category   *Category `gorm:"foreignKey:CategoryID"`
 
 	TypeOfRealEstate string `gorm:"column:type_of_real_estate"`
 

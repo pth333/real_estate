@@ -9,4 +9,6 @@
 - Luôn viết unit test trước khi implement
 - Dùng absolute imports, không dùng relative (../../)
 - Không dùng `any` trong TypeScript
+- Trong vuejs luôn viết theo kiểu composition api
+- Sử dụng tên biến tường minh, chuẩn quy tắc
 
