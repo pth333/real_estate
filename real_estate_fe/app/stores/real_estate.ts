@@ -4,7 +4,6 @@ import type {
   Filter,
   RealEstateModel,
 } from "@/types/real_estate";
-import { realEstateApi } from "~/server/real_estate.api";
 export const useRealEstateStore = defineStore("realEstate", () => {
   const items = ref<RealEstateModel[]>([]);
   const total = ref(0);
@@ -29,7 +28,7 @@ export const useRealEstateStore = defineStore("realEstate", () => {
   async function fetchList() {
     loading.value = true;
     try {
-      const res = await realEstateApi.getList(payload.value);
+      const res = await $fetch("/api/real-estate/list", { method: "POST", body: payload.value });
       items.value = res.data.data;
       total.value = res.data.total;
     } catch (e) {
@@ -42,7 +41,7 @@ export const useRealEstateStore = defineStore("realEstate", () => {
   async function fetchSummary(from?: string, to?: string) {
     summaryLoading.value = true;
     try {
-      const res = await realEstateApi.getSummary(from, to);
+      const res = await $fetch("/api/dashboard/summary", { params: { from, to } });
       summary.value = res.data;
     } catch (e) {
       console.error("Lỗi tải summary:", e);

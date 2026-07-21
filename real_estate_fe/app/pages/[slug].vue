@@ -206,9 +206,8 @@
 </style>
 
 <script setup lang="ts">
-import { general } from "~/server/general.api";
-import type { RealEstateModel, Filter } from "~/app/types/real_estate";
-import { useToast } from "~/app/composables/useToast";
+import type { RealEstateModel, Filter } from "~/types/real_estate";
+import { useToast } from "~/composables/useToast";
 
 const route = useRoute();
 const { showToast } = useToast();
@@ -262,11 +261,10 @@ const fetchData = async () => {
       size: pageSize.value,
       filter: filters.value,
     };
-    const res = await general.GetListByCategory(
-      payload,
-      route.params.slug as string,
-      currentPage.value,
-    );
+    const res = await $fetch(`/api/real-estate/${route.params.slug as string}/${currentPage.value}`, {
+      method: "POST",
+      body: payload,
+    });
 
     realEstates.value = res.data?.data || [];
     totalRecords.value = res.data?.total || 0;

@@ -174,7 +174,7 @@
 </style>
 
 <script setup lang="ts">
-import { useAuthStore } from "~/app/stores/auth";
+import { useAuthStore } from "~/stores/auth";
 
 const auth = useAuthStore();
 const form = reactive({

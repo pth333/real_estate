@@ -54,7 +54,7 @@
 </template>
 
 <script setup lang="ts">
-import { useToast } from "~/app/composables/useToast";
+import { useToast } from "~/composables/useToast";
 const { toasts, dismissToast } = useToast();
 </script>
 

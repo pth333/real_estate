@@ -6,7 +6,7 @@ export default defineNuxtConfig({
   // Modules
   modules: ["@pinia/nuxt"],
 
-  css: ["~/app/assets/css/main.css"],
+  css: ["~/assets/css/main.css"],
 
   // Runtime config cho API URL — có thể override bằng biến môi trường
   runtimeConfig: {
@@ -25,7 +25,7 @@ export default defineNuxtConfig({
   ssr: true,
 
   // Components auto-import
-  components: [{ path: "~/app/components", pathPrefix: false }],
+  components: [{ path: "~/components", pathPrefix: false }],
 
   // Vite config (Nuxt dùng Vite bên trong)
   vite: {

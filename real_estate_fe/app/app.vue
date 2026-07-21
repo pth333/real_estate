@@ -9,7 +9,7 @@
 </template>
 
 <script setup lang="ts">
-import { useNotificationStore } from "~/app/stores/notification";
+import { useNotificationStore } from "~/stores/notification";
 
 const notifStore = useNotificationStore();
 

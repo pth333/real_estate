@@ -1,5 +1,4 @@
 import { defineStore } from "pinia";
-import { general } from "~/server/general.api";
 
 export interface Category {
   ID: number;
@@ -19,7 +18,7 @@ export const useMenuStore = defineStore("menu", () => {
 
   const fetchMenuItems = async () => {
     try {
-      const res = await general.GetAllCategory();
+      const res = await $fetch("/api/category");
       categories.value = res.data?.data || [];
     } catch (error) {
       console.error("Error fetching menu items:", error);

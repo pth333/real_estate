@@ -90,7 +90,7 @@
 </template>
 
 <script setup lang="ts">
-import { useRealEstateStore } from "~/app/stores/real_estate";
+import { useRealEstateStore } from "~/stores/real_estate";
 
 const store = useRealEstateStore();
 

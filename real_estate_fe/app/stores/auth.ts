@@ -1,7 +1,5 @@
 import { defineStore } from "pinia";
-import { authApi } from "~/server/auth.api";
 import type { LoginRequest, RegisterRequest } from "@/types/auth";
-
 export const useAuthStore = defineStore("auth", () => {
   // Dùng useCookie để tương thích SSR (Nuxt sẽ hydrate từ request cookie)
   const tokenCookie = useCookie<string | null>("auth_token", {
@@ -52,7 +50,7 @@ export const useAuthStore = defineStore("auth", () => {
 
   /** Login */
   async function login(payload: LoginRequest) {
-    const res = await authApi.login(payload);
+    const res = await $fetch("/api/auth/login", { method: "POST", body: payload });
 
     if (!res.success || !res.data?.token) {
       throw new Error(res.message || "Đăng nhập thất bại");
@@ -65,7 +63,7 @@ export const useAuthStore = defineStore("auth", () => {
 
   /** Đăng ký */
   async function register(payload: RegisterRequest) {
-    const res = await authApi.register(payload);
+    const res = await $fetch("/api/auth/register", { method: "POST", body: payload });
 
     if (!res.success) {
       throw new Error(res.message || "Đăng ký thất bại");
@@ -77,7 +75,7 @@ export const useAuthStore = defineStore("auth", () => {
   /** Refresh token */
   async function refreshToken() {
     try {
-      const res = await authApi.refreshToken();
+      const res = await $fetch("/api/auth/refresh", { method: "POST" });
       if (res.success && res.data?.token) {
         token.value = res.data.token;
         return true;
@@ -91,7 +89,7 @@ export const useAuthStore = defineStore("auth", () => {
   /** Logout */
   async function logout() {
     try {
-      await authApi.logout();
+      await $fetch("/api/auth/logout", { method: "POST" });
     } catch {
       // ignore
     }

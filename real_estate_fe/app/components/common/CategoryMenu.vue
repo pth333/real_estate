@@ -45,7 +45,7 @@
 </template>
 
 <script setup lang="ts">
-import { useMenuStore } from "~/app/stores/menu";
+import { useMenuStore } from "~/stores/menu";
 
 const menuStore = useMenuStore();
 

@@ -38,8 +38,8 @@
 </template>
 
 <script setup lang="ts">
-import { useAuthStore } from "~/app/stores/auth";
-import CategoryMenu from "~/app/components/common/CategoryMenu.vue";
+import { useAuthStore } from "~/stores/auth";
+import CategoryMenu from "~/components/common/CategoryMenu.vue";
 
 const auth = useAuthStore();
 

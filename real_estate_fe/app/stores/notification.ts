@@ -3,7 +3,6 @@ import type {
   NotificationItem,
   NotificationSSEPayload,
 } from "@/types/real_estate";
-import { notificationApi } from "~/server/notification.api";
 
 export const useNotificationStore = defineStore("notification", () => {
   const items = ref<NotificationItem[]>([]);
@@ -19,7 +18,9 @@ export const useNotificationStore = defineStore("notification", () => {
   async function fetchList(userID: number) {
     loading.value = true;
     try {
-      const res = await notificationApi.getList(userID);
+      const res = await $fetch("/api/notifications", {
+        params: { user_id: userID, page: 1, limit: 20 },
+      });
       items.value = res.data.data;
       total.value = res.data.total;
       unreadCount.value = res.data.data.filter((n: any) => !n.is_read).length;
@@ -32,7 +33,7 @@ export const useNotificationStore = defineStore("notification", () => {
 
   async function markAsRead(id: number) {
     try {
-      await notificationApi.markAsRead(id);
+      await $fetch(`/api/notifications/${id}/read`, { method: "PATCH" });
       const notif = items.value.find((n) => n.id === id);
       if (notif && !notif.is_read) {
         notif.is_read = true;
