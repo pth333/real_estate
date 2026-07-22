@@ -15,7 +15,7 @@ type PriceBucket = '< 1 tỷ' | '1-2 tỷ' | '2-3 tỷ' | '3-5 tỷ' | '5-10 t�
 
 const chartData = computed(() => {
   const items = store.items
-  if (!items.length) return null
+  if (items && !items.length) return null
 
   const buckets: Record<PriceBucket, number> = {
     '< 1 tỷ': 0,
@@ -25,8 +25,8 @@ const chartData = computed(() => {
     '5-10 tỷ': 0,
     '≥ 10 tỷ': 0,
   }
-
-  items.forEach((item) => {
+  if (!items) return null
+  items.forEach((item: any) => {
     const priceInBillion = item.PriceVND / 1_000_000_000
     let key: PriceBucket
     if (priceInBillion < 1) key = '< 1 tỷ'

@@ -30,7 +30,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Category } from "~/stores/menu";
+import type { Category } from '~/types/menu';
 
 defineProps<{ item: Category }>();
 

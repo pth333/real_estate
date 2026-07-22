@@ -100,6 +100,7 @@ const avgPrice = computed(() => {
   return avg > 0 ? `${(avg / 1000).toFixed(1)}K` : "—";
 });
 const totalDistricts = computed(() => {
+  if (!store.items) return 0;
   const districts = new Set(store.items.map((item: any) => item.District));
   return districts.size;
 });

@@ -1,11 +1,8 @@
 import { defineStore } from "pinia";
-import type {
-  DashboardSummary,
-  Filter,
-  RealEstateModel,
-} from "@/types/real_estate";
+import type { DashboardSummary, Filter, PaginatedResponse, RealEstateResponse } from "@/types/real_estate";
+
 export const useRealEstateStore = defineStore("realEstate", () => {
-  const items = ref<RealEstateModel[]>([]);
+  const items = ref<RealEstateResponse[]>([]);
   const total = ref(0);
   const loading = ref(false);
   const summary = ref<DashboardSummary | null>(null);
@@ -14,7 +11,6 @@ export const useRealEstateStore = defineStore("realEstate", () => {
   const pageSize = ref(50);
   const filter = ref<Filter>({});
 
-  // Chuyển price từ VND sang tỷ
   function formattedPrice(priceVND: number): string {
     return (priceVND / 1_000_000_000).toFixed(2) + " tỷ";
   }
@@ -28,9 +24,13 @@ export const useRealEstateStore = defineStore("realEstate", () => {
   async function fetchList() {
     loading.value = true;
     try {
-      const res = await $fetch("/api/real-estate/list", { method: "POST", body: payload.value });
-      items.value = res.data.data;
-      total.value = res.data.total;
+      const { $api } = useNuxtApp();
+      const res = await $api.post<PaginatedResponse<RealEstateResponse>>(
+        "/real-estate/list",
+        payload.value,
+      );
+      items.value = res.data;
+      total.value = res.total;
     } catch (e) {
       console.error("Lỗi tải danh sách BĐS:", e);
     } finally {
@@ -41,8 +41,12 @@ export const useRealEstateStore = defineStore("realEstate", () => {
   async function fetchSummary(from?: string, to?: string) {
     summaryLoading.value = true;
     try {
-      const res = await $fetch("/api/dashboard/summary", { params: { from, to } });
-      summary.value = res.data;
+      const { $api } = useNuxtApp();
+      const res = await $api.get<{ data: DashboardSummary }>(
+        "/dashboard/summary",
+        { params: { from, to } },
+      );
+      summary.value = (res as any).data;
     } catch (e) {
       console.error("Lỗi tải summary:", e);
     } finally {
@@ -68,19 +72,7 @@ export const useRealEstateStore = defineStore("realEstate", () => {
   }
 
   return {
-    items,
-    total,
-    loading,
-    summary,
-    summaryLoading,
-    page,
-    pageSize,
-    filter,
-    formattedPrice,
-    fetchList,
-    fetchSummary,
-    setFilter,
-    setPage,
-    setPageSize,
+    items, total, loading, summary, summaryLoading, page, pageSize, filter,
+    formattedPrice, fetchList, fetchSummary, setFilter, setPage, setPageSize,
   };
 });

@@ -13,10 +13,11 @@ const store = useRealEstateStore()
 
 const chartData = computed(() => {
   const items = store.items
-  if (!items.length) return null
+  if (items && !items.length) return null
 
   const districtMap: Record<string, number> = {}
-  items.forEach((item) => {
+  if (!items) return null
+  items.forEach((item: any) => {
     const d = item.District || 'Không xác định'
     districtMap[d] = (districtMap[d] || 0) + 1
   })

@@ -45,11 +45,6 @@ func (h *RealEstateHandler) ListRealEsateByCategory(c *fiber.Ctx) error {
 		})
 	}
 
-	page, err := c.ParamsInt("page", 1)
-	if err != nil || page < 1 {
-		page = 1
-	}
-
 	var req dto.RealEstateSearchRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{
@@ -57,7 +52,6 @@ func (h *RealEstateHandler) ListRealEsateByCategory(c *fiber.Ctx) error {
 		})
 	}
 	req.Slug = slug
-	req.Page = page
 	data, total, err := h.service.ListRealEstateByCategory(req)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{

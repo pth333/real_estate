@@ -1,109 +1,164 @@
-import axios from 'axios'
+/**
+ * $fetch wrapper có interceptor:
+ * - Tự động gắn Authorization header từ auth store
+ * - Tự động refresh token khi 401
+ * - Retry request sau khi refresh thành công
+ * - Queue các request bị 401 trong lúc đang refresh
+ */
 
-export default defineNuxtPlugin(() => {
-  const config = useRuntimeConfig()
-  const apiBaseUrl = config.public.apiBaseUrl
+interface RequestConfig {
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
+  body?: any
+  params?: Record<string, any>
+  headers?: Record<string, string>
+  timeout?: number
+}
 
-  const api = axios.create({
-    baseURL: apiBaseUrl,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    withCredentials: true,
-    timeout: 5000,
+type QueueItem = {
+  resolve: (value: unknown) => void
+  reject: (err: unknown) => void
+  retry: () => Promise<unknown>
+}
+
+// ✅ FIX 1: Dùng useState thay vì module-level variable → SSR-safe, scoped per request
+const useRefreshState = () => useState<boolean>("api:isRefreshing", () => false)
+const useFailedQueue = () => useState<QueueItem[]>("api:failedQueue", () => [])
+
+function processQueue(error: unknown) {
+  const queue = useFailedQueue()
+  const items = [...queue.value]
+  queue.value = []
+
+  items.forEach(({ resolve, reject, retry }) => {
+    if (error) reject(error)
+    else retry().then(resolve).catch(reject)
   })
+}
 
-  /** Flag ngăn vòng lặp refresh vô hạn */
-  let isRefreshing = false
-  /** Hàng đợi các request đang chờ refresh xong */
-  let failedQueue: Array<{
-    resolve: (token: string) => void
-    reject: (err: unknown) => void
-  }> = []
-
-  function processQueue(error: unknown, token: string | null) {
-    failedQueue.forEach((prom) => {
-      if (error) {
-        prom.reject(error)
-      } else {
-        prom.resolve(token!)
-      }
-    })
-    failedQueue = []
-  }
-
-  api.interceptors.request.use(
-    (config) => {
-      // Chỉ chạy phía client
-      if (import.meta.client) {
-        const authStore = useAuthStore()
-        if (authStore.token) {
-          config.headers.Authorization = `Bearer ${authStore.token}`
-        }
-      }
-      return config
-    },
-    (error) => Promise.reject(error),
+async function refreshAuthToken(): Promise<void> {
+  const config = useRuntimeConfig()
+  const res = await $fetch<{ success: boolean; data?: { token?: string } }>(
+    `${config.public.apiBaseUrl}/auth/refresh`,
+    { method: "POST", credentials: "include" },
   )
 
-  api.interceptors.response.use(
-    (response) => response,
-    async (error) => {
-      const originalRequest = error.config
+  if (!res.success || !res.data?.token) {
+    throw new Error("Refresh token failed")
+  }
 
-      if (error.response?.status !== 401 || originalRequest._retry) {
-        return Promise.reject(error)
+  const authStore = useAuthStore()
+  authStore.token = res.data.token
+}
+
+// ✅ FIX 2: Extract doFetch helper → tránh lặp code ở 3 nơi
+function doFetch<T>(
+  url: string,
+  config: RequestConfig,
+  headers: Record<string, string>,
+): Promise<T> {
+  return $fetch<T>(url, {
+    method: config.method || "GET",
+    body: config.body,
+    params: config.params,
+    headers,
+    credentials: "include",
+    timeout: config.timeout ?? 15_000,
+  })
+}
+
+function buildHeaders(config: RequestConfig): Record<string, string> {
+  const authStore = useAuthStore()
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...config.headers,
+  }
+  if (authStore.token) {
+    headers["Authorization"] = `Bearer ${authStore.token}`
+  }
+  return headers
+}
+
+function getFullUrl(url: string): string {
+  console.log("getFullUrl called with url:", url);
+  if (url.startsWith("http")) return url
+  const config = useRuntimeConfig()
+  return `${config.public.apiBaseUrl}${url}`
+}
+
+export const api = {
+  async request<T = unknown>(url: string, config: RequestConfig = {}): Promise<T> {
+    const fullUrl = getFullUrl(url)
+    const headers = buildHeaders(config)
+    const isRefreshing = useRefreshState()
+    const failedQueue = useFailedQueue()
+
+    try {
+      return await doFetch<T>(fullUrl, config, headers)
+    } catch (err: any) {
+      // Không xử lý 401 cho auth endpoints → tránh vòng lặp vô tận
+      if (err?.response?.status !== 401 || url.includes("/auth/")) {
+        throw err
       }
 
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedQueue.push({
-            resolve: (token: string) => {
-              originalRequest.headers.Authorization = `Bearer ${token}`
-              resolve(api(originalRequest))
-            },
+      // ✅ FIX 3: Queue đúng cách — resolve/reject sau khi retry() thật sự chạy xong
+      if (isRefreshing.value) {
+        return new Promise<T>((resolve, reject) => {
+          failedQueue.value.push({
+            resolve: resolve as (value: unknown) => void,
             reject,
+            // retry dùng lại token mới (đã được set trong authStore bởi refreshAuthToken)
+            retry: () => {
+              const freshHeaders = buildHeaders(config)
+              return doFetch<T>(fullUrl, config, freshHeaders)
+            },
           })
         })
       }
 
-      isRefreshing = true
-      originalRequest._retry = true
-
+      // Bắt đầu refresh
+      isRefreshing.value = true
       try {
-        const res = await axios.post(
-          `${apiBaseUrl}/auth/refresh`,
-          {},
-          { withCredentials: true },
-        )
-
-        const newToken: string = res.data.data?.token
-        if (!newToken) {
-          throw new Error('No token in refresh response')
-        }
-
-        // Cập nhật token trong store
-        const authStore = useAuthStore()
-        authStore.token = newToken
-
-        processQueue(null, newToken)
-
-        originalRequest.headers.Authorization = `Bearer ${newToken}`
-        return api(originalRequest)
-      } catch (refreshError) {
-        processQueue(refreshError, null)
+        await refreshAuthToken()
+        processQueue(null) // ✅ Cho queue chạy lại với token mới
+        // Retry chính request này
+        const freshHeaders = buildHeaders(config)
+        return await doFetch<T>(fullUrl, config, freshHeaders)
+      } catch (refreshErr) {
+        processQueue(refreshErr)
         const authStore = useAuthStore()
         authStore.clearSession()
-        return Promise.reject(refreshError)
+        navigateTo("/login")
+        throw refreshErr
       } finally {
-        isRefreshing = false
+        isRefreshing.value = false
       }
-    },
-  )
+    }
+  },
 
+  // ✅ FIX 4: Shorthand methods nhận đủ config (params, headers, timeout)
+  get<T = unknown>(url: string, config?: Omit<RequestConfig, "method" | "body">) {
+    return this.request<T>(url, { method: "GET", ...config })
+  },
+
+  post<T = unknown>(url: string, body?: unknown, config?: Omit<RequestConfig, "method" | "body">) {
+    return this.request<T>(url, { method: "POST", body, ...config })
+  },
+
+  put<T = unknown>(url: string, body?: unknown, config?: Omit<RequestConfig, "method" | "body">) {
+    return this.request<T>(url, { method: "PUT", body, ...config })
+  },
+
+  patch<T = unknown>(url: string, body?: unknown, config?: Omit<RequestConfig, "method" | "body">) {
+    return this.request<T>(url, { method: "PATCH", body, ...config })
+  },
+
+  delete<T = unknown>(url: string, config?: Omit<RequestConfig, "method" | "body">) {
+    return this.request<T>(url, { method: "DELETE", ...config })
+  },
+}
+
+export default defineNuxtPlugin(() => {
   return {
-    provide: {
-      api,
-    },
+    provide: { api },
   }
 })

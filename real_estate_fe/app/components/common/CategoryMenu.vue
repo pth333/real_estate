@@ -48,7 +48,6 @@
 import { useMenuStore } from "~/stores/menu";
 
 const menuStore = useMenuStore();
-
 onMounted(() => {
   menuStore.fetchMenuItems();
 });

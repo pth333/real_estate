@@ -1,99 +1,97 @@
 <template>
-  <div class="flex min-h-screen bg-limestone">
-    <div
-      class="flex w-full items-center justify-center bg-foundation px-8 py-12 lg:w-2/5"
-    >
+  <div class="flex h-screen overflow-hidden bg-limestone">
+    <!-- Left panel -->
+    <div class="flex w-full shrink-0 items-center justify-center bg-foundation px-8 lg:w-2/5">
       <div class="w-full max-w-sm">
         <h1 class="mb-2 font-semibold tracking-tight text-limestone text-3xl">
           Đăng ký
         </h1>
         <p class="mb-8 text-sm text-patina/80">Tạo tài khoản mới</p>
 
-        <form @submit.prevent="handleRegister" class="space-y-5">
-          <div>
-            <label class="mb-2 block text-sm font-medium text-limestone/90"
-              >Họ và tên</label
+        <form @submit.prevent="handleRegister">
+          <n-form :model="form" label-placement="top">
+            <n-form-item
+              label="Họ và tên"
+              :feedback="errors.name"
+              :validation-status="errors.name ? 'error' : undefined"
             >
-            <div class="plot-input-wrapper">
-              <input
-                v-model="form.name"
+              <n-input
+                v-model:value="form.name"
                 type="text"
                 placeholder="Nguyễn Văn A"
-                class="w-full border border-limestone/20 bg-foundation px-4 py-3 text-sm text-limestone placeholder:text-limestone/40 focus:border-patina focus:outline-none"
-                :class="{ '!border-red-400': errors.name }"
+                clearable
               />
-            </div>
-            <p v-if="errors.name" class="mt-1.5 text-xs text-red-400">
-              {{ errors.name }}
-            </p>
-          </div>
-          <div>
-            <label class="mb-2 block text-sm font-medium text-limestone/90"
-              >Email</label
+            </n-form-item>
+
+            <n-form-item
+              label="Email"
+              :feedback="errors.email"
+              :validation-status="errors.email ? 'error' : undefined"
             >
-            <div class="plot-input-wrapper">
-              <input
-                v-model="form.email"
-                type="email"
+              <n-input
+                v-model:value="form.email"
+                type="text"
                 placeholder="your@email.com"
-                class="w-full border border-limestone/20 bg-foundation px-4 py-3 text-sm text-limestone placeholder:text-limestone/40 focus:border-patina focus:outline-none"
-                :class="{ '!border-red-400': errors.email }"
+                clearable
               />
-            </div>
-            <p v-if="errors.email" class="mt-1.5 text-xs text-red-400">
-              {{ errors.email }}
-            </p>
-          </div>
-          <div>
-            <label class="mb-2 block text-sm font-medium text-limestone/90"
-              >Mật khẩu</label
+            </n-form-item>
+
+            <n-form-item
+              label="Mật khẩu"
+              :feedback="errors.password"
+              :validation-status="errors.password ? 'error' : undefined"
             >
-            <div class="plot-input-wrapper">
-              <input
-                v-model="form.password"
+              <n-input
+                v-model:value="form.password"
                 type="password"
                 placeholder="••••••••"
-                class="w-full border border-limestone/20 bg-foundation px-4 py-3 text-sm text-limestone placeholder:text-limestone/40 focus:border-patina focus:outline-none"
-                :class="{ '!border-red-400': errors.password }"
+                show-password-on="click"
+                clearable
               />
-            </div>
-            <p v-if="errors.password" class="mt-1.5 text-xs text-red-400">
-              {{ errors.password }}
-            </p>
-          </div>
-          <div>
-            <label class="mb-2 block text-sm font-medium text-limestone/90"
-              >Xác nhận mật khẩu</label
+            </n-form-item>
+
+            <n-form-item
+              label="Xác nhận mật khẩu"
+              :feedback="errors.confirmPassword"
+              :validation-status="errors.confirmPassword ? 'error' : undefined"
             >
-            <div class="plot-input-wrapper">
-              <input
-                v-model="form.confirmPassword"
+              <n-input
+                v-model:value="form.confirmPassword"
                 type="password"
                 placeholder="••••••••"
-                class="w-full border border-limestone/20 bg-foundation px-4 py-3 text-sm text-limestone placeholder:text-limestone/40 focus:border-patina focus:outline-none"
-                :class="{ '!border-red-400': errors.confirmPassword }"
+                show-password-on="click"
+                clearable
               />
-            </div>
-            <p
-              v-if="errors.confirmPassword"
-              class="mt-1.5 text-xs text-red-400"
+            </n-form-item>
+
+            <n-button
+              type="primary"
+              attr-type="submit"
+              :loading="loading"
+              :disabled="loading"
+              size="large"
+              block
             >
-              {{ errors.confirmPassword }}
-            </p>
-          </div>
-          <button
-            type="submit"
-            :disabled="loading"
-            class="w-full bg-patina px-4 py-3 text-sm font-semibold tracking-tight text-foundation transition hover:bg-patina/90 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <span v-if="loading">Đang xử lý…</span>
-            <span v-else>Đăng ký</span>
-          </button>
+              Đăng ký
+            </n-button>
+          </n-form>
         </form>
-        <p v-if="apiError" class="mt-4 text-sm text-red-400">{{ apiError }}</p>
-        <p v-if="successMsg" class="mt-4 text-sm text-success">
-          {{ successMsg }}
-        </p>
+
+        <n-alert
+          v-if="apiError"
+          type="error"
+          :title="apiError"
+          class="mt-4"
+          closable
+        />
+        <n-alert
+          v-if="successMsg"
+          type="success"
+          :title="successMsg"
+          class="mt-4"
+          closable
+        />
+
         <p class="mt-8 text-sm text-limestone/60">
           Đã có tài khoản?
           <NuxtLink to="/login" class="font-medium text-oak hover:underline"
@@ -102,6 +100,8 @@
         </p>
       </div>
     </div>
+
+    <!-- Right panel -->
     <div class="hidden lg:block lg:w-3/5">
       <div class="relative h-full w-full">
         <svg class="h-full w-full" xmlns="http://www.w3.org/2000/svg">
@@ -141,9 +141,7 @@
         </svg>
         <div class="absolute inset-0 flex items-center justify-center">
           <div class="text-center">
-            <div
-              class="mb-4 text-6xl font-bold tracking-tighter text-foundation/10"
-            >
+            <div class="mb-4 text-6xl font-bold tracking-tighter text-foundation/10">
               BĐS
             </div>
             <p class="text-sm font-medium tracking-wide text-foundation/30">
@@ -156,24 +154,9 @@
   </div>
 </template>
 
-<style scoped>
-.plot-input-wrapper {
-  position: relative;
-}
-.plot-input-wrapper::after {
-  content: "";
-  position: absolute;
-  right: -12px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 8px;
-  height: 1px;
-  background: #f8f5f0;
-  opacity: 0.3;
-}
-</style>
-
 <script setup lang="ts">
+definePageMeta({ layout: false });
+
 import { useAuthStore } from "~/stores/auth";
 
 const auth = useAuthStore();

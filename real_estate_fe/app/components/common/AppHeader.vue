@@ -7,28 +7,17 @@
       <CategoryMenu />
       <nav class="flex items-center gap-6 text-gray-700 whitespace-nowrap">
         <template v-if="auth.isAuthenticated">
-          <span class="text-sm font-medium text-gray-600">{{
-            auth.userName || auth.userEmail
-          }}</span>
           <NotificationBell />
-          <button
-            @click="handleLogout"
-            class="text-sm text-red-500 hover:text-red-700 transition cursor-pointer"
-          >
+          <button @click="handleLogout" class="text-sm text-red-500 hover:text-red-700 transition cursor-pointer">
             Đăng xuất
           </button>
         </template>
         <template v-else>
-          <NuxtLink
-            to="/login"
-            class="text-sm text-gray-600 hover:text-blue-600 transition"
-          >
+          <NuxtLink to="/login" class="text-sm text-gray-600 hover:text-blue-600 transition">
             Đăng nhập
           </NuxtLink>
-          <NuxtLink
-            to="/register"
-            class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
-          >
+          <NuxtLink to="/register"
+            class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700">
             Đăng ký
           </NuxtLink>
         </template>
@@ -43,8 +32,9 @@ import CategoryMenu from "~/components/common/CategoryMenu.vue";
 
 const auth = useAuthStore();
 
-function handleLogout() {
-  auth.logout();
+async function handleLogout() {
+  console.log("Logging out...");
+  await auth.logout();
   navigateTo("/login");
 }
 </script>

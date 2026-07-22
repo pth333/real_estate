@@ -1,0 +1,190 @@
+<template>
+  <div class="group relative overflow-hidden rounded-lg bg-white shadow-sm transition-shadow duration-300 hover:shadow-md">
+    <!-- Badge VIP -->
+    <div v-if="estate.badge" class="absolute left-3 top-3 z-10 rounded bg-red-600 px-3 py-1 text-xs font-bold uppercase text-white">
+      {{ estate.badge }}
+    </div>
+
+    <!-- Grid ảnh: 1 ảnh lớn + 3 ảnh nhỏ -->
+    <div class="grid h-60 grid-cols-[2fr_1fr] gap-0.5 bg-gray-100">
+      <div class="col-span-2 row-span-2">
+        <img :src="mainImage" :alt="estate.title" class="h-full w-full object-cover" @error="handleImageError" />
+      </div>
+
+      <div class="grid grid-rows-2 gap-0.5">
+        <div v-for="(img, idx) in thumbnails" :key="idx" class="overflow-hidden bg-gray-200">
+          <img :src="img" :alt="`${estate.title} ${idx + 2}`" class="h-full w-full object-cover" @error="handleImageError" />
+        </div>
+        <div v-if="remainingImagesCount > 0" class="flex items-center justify-center bg-black/60 text-2xl font-bold text-white">
+          <span>{{ remainingImagesCount }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Thông tin chính -->
+    <div class="space-y-3 p-4">
+      <h3 class="line-clamp-2 text-base font-semibold uppercase leading-tight text-gray-800">
+        {{ estate.title }}
+      </h3>
+
+      <div class="flex flex-wrap items-center gap-3 text-sm text-gray-500">
+        <span class="text-lg font-bold text-red-600">{{ formattedPrice }}</span>
+        <span>{{ formattedArea }}</span>
+        <span>{{ formattedPricePerM2 }}</span>
+
+        <div class="flex gap-3">
+          <span v-if="estate.bedrooms" class="flex items-center gap-1">
+            <IconBed /> {{ estate.bedrooms }}
+          </span>
+          <span v-if="estate.bathrooms" class="flex items-center gap-1">
+            <IconBath /> {{ estate.bathrooms }}
+          </span>
+        </div>
+
+        <span class="text-gray-500">{{ fullLocation }}</span>
+      </div>
+
+      <p v-if="estate.description" class="line-clamp-2 text-sm leading-relaxed text-gray-500">
+        {{ truncatedDescription }}
+      </p>
+
+      <!-- Footer -->
+      <div class="flex items-center justify-between border-t border-gray-200 pt-3">
+        <div class="flex items-center gap-2">
+          <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500 text-lg font-bold text-white">
+            {{ agentInitial }}
+          </div>
+          <div>
+            <div class="text-sm font-semibold text-gray-800">{{ estate.agent_name || 'Người đăng' }}</div>
+            <div class="text-xs text-gray-400">{{ postTime }}</div>
+          </div>
+        </div>
+
+        <div class="flex gap-2">
+          <button
+            v-if="estate.agent_phone"
+            class="flex cursor-pointer items-center gap-1.5 rounded bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600"
+            @click="handleCall"
+          >
+            <IconPhone /> {{ formattedPhone }}
+          </button>
+          <button
+            class="flex h-10 w-10 cursor-pointer items-center justify-center rounded border-2 border-gray-300 bg-transparent transition hover:border-red-500"
+            :class="{ 'border-red-500 bg-red-500 text-white': isFavorite }"
+            @click="handleToggleFavorite"
+          >
+            <IconHeart />
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import type { RealEstateResponse } from '@/types/real_estate'
+
+interface Props {
+  estate: RealEstateResponse
+}
+
+const props = defineProps<Props>()
+
+const emit = defineEmits<{
+  call: [phone: string]
+  toggleFavorite: [id: number]
+}>()
+
+const DEFAULT_IMAGE = ''
+
+const isFavorite = ref(props.estate.is_favorite || false)
+
+const mainImage = computed(() => {
+  return props.estate.images?.[0] || DEFAULT_IMAGE
+})
+
+const thumbnails = computed(() => {
+  const images = props.estate.images || []
+  return images.slice(1, 4)
+})
+
+const remainingImagesCount = computed(() => {
+  const total = props.estate.images?.length || 0
+  return Math.max(0, total - 4)
+})
+
+const formattedPrice = computed(() => {
+  const price = props.estate.price_vnd
+  if (price >= 1_000_000_000) {
+    return `${(price / 1_000_000_000).toFixed(1)} tỷ`
+  }
+  if (price >= 1_000_000) {
+    return `${(price / 1_000_000).toFixed(0)} triệu`
+  }
+  return `${price.toLocaleString('vi-VN')} đ`
+})
+
+const formattedArea = computed(() => {
+  return `${props.estate.acreage.toFixed(1)} m²`
+})
+
+const formattedPricePerM2 = computed(() => {
+  const pricePerM2 = props.estate.price_per_m2
+  if (pricePerM2 >= 1_000_000) {
+    return `${(pricePerM2 / 1_000_000).toFixed(2)} tr/m²`
+  }
+  return `${pricePerM2.toLocaleString('vi-VN')} đ/m²`
+})
+
+const fullLocation = computed(() => {
+  const parts = [props.estate.district, props.estate.city].filter(Boolean)
+  return parts.join(', ')
+})
+
+const truncatedDescription = computed(() => {
+  const desc = props.estate.description || ''
+  return desc.length > 150 ? desc.substring(0, 150) + '...' : desc
+})
+
+const agentInitial = computed(() => {
+  const name = props.estate.agent_name || 'Q'
+  return name.charAt(0).toUpperCase()
+})
+
+const postTime = computed(() => {
+  const created = new Date(props.estate.created_at)
+  const now = new Date()
+  const diffMs = now.getTime() - created.getTime()
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+  const diffDays = Math.floor(diffHours / 24)
+
+  if (diffDays === 0) return 'Đăng hôm nay'
+  if (diffDays === 1) return 'Đăng hôm qua'
+  if (diffDays < 7) return `Đăng ${diffDays} ngày trước`
+  return created.toLocaleDateString('vi-VN')
+})
+
+const formattedPhone = computed(() => {
+  const phone = props.estate.agent_phone || ''
+  if (phone.length >= 10) {
+    return `${phone.substring(0, 4)} ${phone.substring(4, 7)} *** - Hiện số`
+  }
+  return phone
+})
+
+const handleImageError = (event: Event) => {
+  const img = event.target as HTMLImageElement
+  img.src = DEFAULT_IMAGE
+}
+
+const handleCall = () => {
+  if (props.estate.agent_phone) {
+    emit('call', props.estate.agent_phone)
+  }
+}
+
+const handleToggleFavorite = () => {
+  isFavorite.value = !isFavorite.value
+  emit('toggleFavorite', props.estate.id)
+}
+</script>

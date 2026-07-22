@@ -16,7 +16,7 @@ type RealEstateRepository interface {
 	Create(item *model.RealEstate) error
 	CreateBatch(items []*model.RealEstate) error
 	GetList(req dto.RealEstateSearchRequest, offset, limit int) ([]model.RealEstate, int64, error)
-	GetListByCategoryID(categoryID int64, req dto.RealEstateSearchRequest, limit int) ([]model.RealEstate, int64, error)
+	GetListByCategory(offset int, req dto.RealEstateSearchRequest, limit int) ([]model.RealEstate, int64, error)
 }
 
 func NewRealEstateRepository(db *gorm.DB) RealEstateRepository {
@@ -101,28 +101,15 @@ func (r *realEstateRepo) GetList(req dto.RealEstateSearchRequest, offset, limit 
 	return items, total, err
 }
 
-// GetMaxID lấy id lớn nhất của BĐS theo category_id
-func (r *realEstateRepo) GetMaxID(categoryID int64) (int64, error) {
-	var maxID int64
-	if err := r.db.Model(&model.RealEstate{}).
-		Select("MAX(id)").
-		Where("category_id = ?", categoryID).
-		Scan(&maxID).Error; err != nil {
-		return 0, err
-	}
-	return maxID, nil
-}
-
-// GetListByCategoryID query BĐS theo category_id với filter và keyset pagination
-func (r *realEstateRepo) GetListByCategoryID(categoryID int64, req dto.RealEstateSearchRequest, limit int) ([]model.RealEstate, int64, error) {
+// GetListByCategory query BĐS theo category_id với filter và offset-based pagination
+func (r *realEstateRepo) GetListByCategory(offset int, req dto.RealEstateSearchRequest, limit int) ([]model.RealEstate, int64, error) {
 	var (
 		items []model.RealEstate
 		total int64
 	)
-
 	db := r.db.Model(&model.RealEstate{}).
-		Where("category_id = ?", categoryID)
-
+		Joins("JOIN categories ON categories.id = real_estates.category_id").
+		Where("categories.slug = ?", req.Slug)
 	if req.Filter.District != "" {
 		db = db.Where("district = ?", req.Filter.District)
 	}
@@ -137,13 +124,9 @@ func (r *realEstateRepo) GetListByCategoryID(categoryID int64, req dto.RealEstat
 		return nil, 0, err
 	}
 
-	// Keyset pagination: dùng cursorID (id bản ghi cuối trang trước)
-	if req.CursorID > 0 {
-		db = db.Where("id < ?", req.CursorID)
-	}
-
 	err := db.
-		Order("id DESC").
+		Order("created_at DESC").
+		Offset(offset).
 		Limit(limit).
 		Find(&items).
 		Error

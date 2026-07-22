@@ -1,29 +1,25 @@
-// Mirror từ backend model
-export interface RealEstateModel {
-  ID: number
-  Title: string
-  PriceVND: number
-  Address: string
-  District: string
-  City: string
-  Acreage: number
-  PricePerM2: number
-  TypeOfRealEstate: string
-  Source: string
-  SourceURL: string
-  CrawledAt: string
-  CreatedAt: string
-  UpdatedAt: string
+// Mirror từ backend DTO response — field names khớp JSON snake_case
+export interface RealEstateResponse {
+  id: number
+  title: string
+  price_vnd: number
+  address: string
+  district: string
+  city: string
+  acreage: number
+  price_per_m2: number
+  type_of_real_estate: string
+  created_at: string
 
-  // Optional fields - có thể có hoặc không từ backend
-  Images?: string[] // Danh sách URL ảnh
-  Bedrooms?: number // Số phòng ngủ
-  Bathrooms?: number // Số toilet/phòng tắm
-  Description?: string // Mô tả chi tiết
-  AgentName?: string // Tên người đăng
-  AgentPhone?: string // Số điện thoại liên hệ
-  Badge?: string // Badge đặc biệt: VIP, HOT, etc.
-  IsFavorite?: boolean // Đã yêu thích chưa
+  // Optional fields
+  images?: string[]
+  bedrooms?: number
+  bathrooms?: number
+  description?: string
+  agent_name?: string
+  agent_phone?: string
+  badge?: string
+  is_favorite?: boolean
 }
 
 export interface DashboardSummary {
@@ -68,4 +64,10 @@ export interface NotificationSSEPayload {
   acreage: number
   address: string
   source_url: string
+}
+
+export interface FilterRealEstate {
+  min_price?: number
+  max_price?: number
+  district?: string
 }

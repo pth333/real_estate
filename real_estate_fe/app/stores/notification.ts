@@ -1,29 +1,26 @@
 import { defineStore } from "pinia";
-import type {
-  NotificationItem,
-  NotificationSSEPayload,
-} from "@/types/real_estate";
+import type { NotificationItem, NotificationSSEPayload } from "@/types/real_estate";
 
 export const useNotificationStore = defineStore("notification", () => {
   const items = ref<NotificationItem[]>([]);
   const total = ref(0);
   const unreadCount = ref(0);
   const loading = ref(false);
-  /** Toast queue — các notification mới nhận qua SSE */
   const toasts = ref<NotificationSSEPayload[]>([]);
-  /** EventSource instance */
   const eventSource = ref<EventSource | null>(null);
   const connected = ref(false);
 
   async function fetchList(userID: number) {
     loading.value = true;
     try {
-      const res = await $fetch("/api/notifications", {
-        params: { user_id: userID, page: 1, limit: 20 },
-      });
-      items.value = res.data.data;
+      const { $api } = useNuxtApp();
+      const res = await $api.get<{ data: { data: NotificationItem[]; total: number } }>(
+        "/notifications",
+        { params: { user_id: userID, page: 1, limit: 20 } },
+      );
+      items.value = (res as any).data.data;
       total.value = res.data.total;
-      unreadCount.value = res.data.data.filter((n: any) => !n.is_read).length;
+      unreadCount.value = res.data.data.filter((n) => !n.is_read).length;
     } catch (e) {
       console.error("Lỗi tải notifications:", e);
     } finally {
@@ -33,7 +30,8 @@ export const useNotificationStore = defineStore("notification", () => {
 
   async function markAsRead(id: number) {
     try {
-      await $fetch(`/api/notifications/${id}/read`, { method: "PATCH" });
+      const { $api } = useNuxtApp();
+      await $api.patch(`/notifications/${id}/read`);
       const notif = items.value.find((n) => n.id === id);
       if (notif && !notif.is_read) {
         notif.is_read = true;
@@ -44,49 +42,31 @@ export const useNotificationStore = defineStore("notification", () => {
     }
   }
 
-  /** Kết nối SSE stream để nhận notification real-time */
   function connectSSE(userID: number) {
-    // Tránh tạo nhiều kết nối
     if (eventSource.value) return;
 
-    const url = `${
-      import.meta.env.VITE_API_URL || "http://localhost:8000"
-    }/api/2026/notifications/stream?user_id=${userID}`;
+    const config = useRuntimeConfig()
+    const url = `${config.public.apiBaseUrl}/notifications/stream?user_id=${userID}`;
     const es = new EventSource(url);
 
-    es.onopen = () => {
-      connected.value = true;
-    };
+    es.onopen = () => { connected.value = true; };
 
     es.onmessage = (event) => {
       try {
         const payload: NotificationSSEPayload = JSON.parse(event.data);
         if (payload.type === "new_listing") {
-          // Thêm vào toast queue
           toasts.value.push(payload);
-
-          // Tự động xoá toast sau 5s
           setTimeout(() => {
             const idx = toasts.value.indexOf(payload);
             if (idx !== -1) toasts.value.splice(idx, 1);
           }, 5000);
-
-          // Tăng unread count
           unreadCount.value++;
-
-          // Refresh danh sách notification
           fetchList(userID);
         }
-      } catch {
-        // ignore parse error
-      }
+      } catch { /* ignore */ }
     };
 
-    es.onerror = () => {
-      connected.value = false;
-      // EventSource sẽ tự động reconnect
-    };
-
+    es.onerror = () => { connected.value = false; };
     eventSource.value = es;
   }
 
@@ -98,24 +78,13 @@ export const useNotificationStore = defineStore("notification", () => {
     }
   }
 
-  /** Xoá toast khỏi queue */
   function dismissToast(payload: NotificationSSEPayload) {
     const idx = toasts.value.indexOf(payload);
     if (idx !== -1) toasts.value.splice(idx, 1);
   }
 
   return {
-    items,
-    total,
-    unreadCount,
-    loading,
-    toasts,
-    eventSource,
-    connected,
-    fetchList,
-    markAsRead,
-    connectSSE,
-    disconnectSSE,
-    dismissToast,
+    items, total, unreadCount, loading, toasts, connected,
+    fetchList, markAsRead, connectSSE, disconnectSSE, dismissToast,
   };
 });

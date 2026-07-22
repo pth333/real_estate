@@ -1,4 +1,8 @@
-// https://nuxt.com/docs/api/configuration/nuxt-config
+import { defineNuxtConfig } from "nuxt/config";
+import tailwindcss from "@tailwindcss/vite";
+import Components from "unplugin-vue-components/vite";
+import { NaiveUiResolver } from "unplugin-vue-components/resolvers";
+
 export default defineNuxtConfig({
   compatibilityDate: "2026-07-21",
   devtools: { enabled: true },
@@ -22,17 +26,30 @@ export default defineNuxtConfig({
     autoImport: true,
   },
 
-  ssr: true,
+  ssr: false,
 
   // Components auto-import
-  components: [{ path: "~/components", pathPrefix: false }],
+  components: [
+    { path: "~/components", pathPrefix: false },
+    { path: "~/icons", pathPrefix: false },
+  ],
+
+  build: {
+    transpile: ["naive-ui", "vueuc"],
+  },
 
   // Vite config (Nuxt dùng Vite bên trong)
   vite: {
     plugins: [
-      // @ts-ignore
-      (await import("@tailwindcss/vite")).default,
+      tailwindcss(),
+      Components({
+        resolvers: [NaiveUiResolver()],
+        dts: false,
+      }),
     ],
+    optimizeDeps: {
+      include: ["vueuc"],
+    },
     vue: {
       script: {
         propsDestructure: true,

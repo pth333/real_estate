@@ -1,8 +1,6 @@
 package usecase
 
 import (
-	"errors"
-
 	"real_estate_be/internal/dto"
 	model "real_estate_be/internal/models"
 	"real_estate_be/internal/repo"
@@ -14,27 +12,56 @@ type RealEstateService struct {
 }
 
 type IRealEstateService interface {
-	ListRealEstate(req dto.RealEstateSearchRequest) ([]model.RealEstate, int64, error)
-	ListRealEstateByCategory(req dto.RealEstateSearchRequest) ([]model.RealEstate, int64, error)
+	ListRealEstate(req dto.RealEstateSearchRequest) ([]dto.RealEstateResponse, int64, error)
+	ListRealEstateByCategory(req dto.RealEstateSearchRequest) ([]dto.RealEstateResponse, int64, error)
 }
 
 func NewRealEstateService(repo repo.RealEstateRepository, categoryRepo repo.ICategoryRepository) IRealEstateService {
 	return &RealEstateService{repo: repo, categoryRepo: categoryRepo}
 }
 
-func (s *RealEstateService) ListRealEstate(req dto.RealEstateSearchRequest) ([]model.RealEstate, int64, error) {
-	offset := (req.Page - 1) * req.Size
-	return s.repo.GetList(req, offset, req.Size)
+// mapToResponse chuyển model.RealEstate → dto.RealEstateResponse
+func mapSliceToResponse(data []model.RealEstate) []dto.RealEstateResponse {
+	result := make([]dto.RealEstateResponse, len(data))
+	for i, m := range data {
+		result[i] = dto.RealEstateResponse{
+			ID:               m.ID,
+			Title:            m.Title,
+			PriceVND:         m.PriceVND,
+			Address:          m.Address,
+			District:         m.District,
+			City:             m.City,
+			Acreage:          m.Acreage,
+			PricePerM2:       m.PricePerM2,
+			TypeOfRealEstate: m.TypeOfRealEstate,
+		}
+	}
+	return result
+}
+
+func (s *RealEstateService) ListRealEstate(req dto.RealEstateSearchRequest) ([]dto.RealEstateResponse, int64, error) {
+	limit := req.Size
+	if limit < 1 {
+		limit = 10
+	}
+	offset := (req.Page - 1) * limit
+	data, total, err := s.repo.GetList(req, offset, limit)
+	if err != nil {
+		return nil, 0, err
+	}
+	return mapSliceToResponse(data), total, nil
 }
 
 // ListRealEstateByCategory lấy category từ slug, sau đó query BĐS theo category_id
-func (s *RealEstateService) ListRealEstateByCategory(req dto.RealEstateSearchRequest) ([]model.RealEstate, int64, error) {
-	// 1. Lấy category từ slug
-
-	categoryID, err := s.categoryRepo.GetCategoryIdBySlug(req.Slug)
-
-	if err != nil {
-		return nil, 0, errors.New("Category not found")
+func (s *RealEstateService) ListRealEstateByCategory(req dto.RealEstateSearchRequest) ([]dto.RealEstateResponse, int64, error) {
+	limit := req.Size
+	if limit < 1 {
+		limit = 10
 	}
-	return s.repo.GetListByCategoryID(categoryID, req, req.Size)
+	offset := (req.Page - 1) * limit
+	data, total, err := s.repo.GetListByCategory(offset, req, limit)
+	if err != nil {
+		return nil, 0, err
+	}
+	return mapSliceToResponse(data), total, nil
 }
