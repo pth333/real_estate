@@ -9,16 +9,18 @@
 <script setup lang="ts">
 import { Bar } from 'vue-chartjs'
 
+import type { RealEstateResponse } from '~/types/real_estate'
+
 const store = useRealEstateStore()
 
 const chartData = computed(() => {
-  const items = store.items
+  const items = store.items as RealEstateResponse[]
   if (items && !items.length) return null
 
   const districtMap: Record<string, number> = {}
   if (!items) return null
-  items.forEach((item: any) => {
-    const d = item.District || 'Không xác định'
+  items.forEach((item) => {
+    const d = item.district || 'Không xác định'
     districtMap[d] = (districtMap[d] || 0) + 1
   })
 

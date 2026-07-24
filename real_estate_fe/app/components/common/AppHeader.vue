@@ -1,16 +1,17 @@
 <template>
   <header class="bg-white shadow-sm border-b border-gray-200">
-    <div class="container mx-auto flex justify-between items-center p-4 gap-8">
-      <h1 class="text-xl font-bold text-blue-600 whitespace-nowrap">
+    <div class="container mx-auto flex justify-between items-center p-2 gap-4">
+      <!-- <h1 class="text-xl font-bold text-blue-600 whitespace-nowrap">
         RealEstate
-      </h1>
+      </h1> -->
       <CategoryMenu />
       <nav class="flex items-center gap-6 text-gray-700 whitespace-nowrap">
         <template v-if="auth.isAuthenticated">
           <NotificationBell />
-          <button @click="handleLogout" class="text-sm text-red-500 hover:text-red-700 transition cursor-pointer">
+          <n-button @click="handleLogout">
             Đăng xuất
-          </button>
+          </n-button>
+
         </template>
         <template v-else>
           <NuxtLink to="/login" class="text-sm text-gray-600 hover:text-blue-600 transition">
@@ -22,19 +23,22 @@
           </NuxtLink>
         </template>
       </nav>
+      <n-button type="primary" @click="handlePushlishPost">Đăng tin</n-button>
     </div>
   </header>
 </template>
 
 <script setup lang="ts">
 import { useAuthStore } from "~/stores/auth";
-import CategoryMenu from "~/components/common/CategoryMenu.vue";
 
 const auth = useAuthStore();
 
 async function handleLogout() {
-  console.log("Logging out...");
   await auth.logout();
   navigateTo("/login");
+}
+
+const handlePushlishPost = () => {
+  navigateTo("/nguoi-ban/dang-tin");
 }
 </script>

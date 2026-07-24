@@ -7,6 +7,16 @@ export default defineNuxtConfig({
   compatibilityDate: "2026-07-21",
   devtools: { enabled: true },
 
+  hooks: {
+    "pages:extend"(pages) {
+      pages.push({
+        name: "create-post",
+        path: "/nguoi-ban/dang-tin",
+        file: "~/pages/seller/create-post.vue",
+      });
+    },
+  },
+
   // Modules
   modules: ["@pinia/nuxt"],
 

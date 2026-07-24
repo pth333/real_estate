@@ -1,8 +1,11 @@
 <template>
   <div class="mx-auto max-w-[1200px] px-6 py-6">
-    <FilterManager @apply-filters="fetchData" />
+    <div class="mb-4 flex flex-col gap-3">
+      <SearchBar @search="fetchDataRealEstate" />
+      <FilterManager />
+    </div>
 
-    <!-- Loading: skeleton cards -->
+    <!-- Loading -->
     <SkeletonCard v-if="loading" :count="pageSize" />
 
     <!-- Empty -->
@@ -17,7 +20,7 @@
     </div>
 
     <!-- Pagination -->
-    <Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="goToPage" />
+    <Pagination :current-page="realEstateStore.currentPage" :total-pages="totalPages" @page-change="goToPage" />
   </div>
 </template>
 
@@ -27,34 +30,45 @@
 import type { RealEstateResponse, PaginatedResponse } from "~/types/real_estate";
 import { useToast } from "~/composables/useToast";
 import { useFilterStore } from "~/stores/filter";
+import { useRealEstateStore } from "~/stores/real_estate";
 
 const route = useRoute();
 const { $api } = useNuxtApp();
 const { showToast } = useToast();
 const filterStore = useFilterStore();
+const realEstateStore = useRealEstateStore()
 
 const realEstates = ref<RealEstateResponse[]>([]);
 const loading = ref(false);
-const currentPage = ref(Number(route.query.page) || 1);
 const pageSize = ref(10);
 const totalRecords = ref(0);
+
+// Slug = segment đầu, page = segment thứ 2 (nếu có)
+const slugSegments = computed(() => {
+  const s = route.params.slug;
+  return Array.isArray(s) ? s : [s];
+});
+
+const slug = computed(() => slugSegments.value[0] || "");
 
 const totalPages = computed(() =>
   Math.ceil(totalRecords.value / pageSize.value),
 );
 
-async function fetchData() {
+const payload = computed(() => ({
+  page: realEstateStore.currentPage,
+  size: pageSize.value,
+  filter: filterStore.filters,
+  search: filterStore.searchKeyword,
+}))
+
+const fetchDataRealEstate = async () => {
   loading.value = true;
 
   try {
-    const payload = {
-      page: currentPage.value,
-      size: pageSize.value,
-      filter: filterStore.filters,
-    };
     const res = await $api.post<PaginatedResponse<RealEstateResponse>>(
-      `/real-estate/${route.params.slug as string}/${currentPage.value}`,
-      payload,
+      `/real-estate/${slug.value}/${realEstateStore.currentPage}`,
+      payload.value,
     );
 
     realEstates.value = res.data || [];
@@ -70,11 +84,15 @@ async function fetchData() {
 }
 
 function goToPage(page: number) {
-  if (page < 1 || page > totalPages.value) return;
-  currentPage.value = page;
-  fetchData();
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  realEstateStore.currentPage = page
+  if (realEstateStore.currentPage < 1 || realEstateStore.currentPage > totalPages.value) return;
+  if (realEstateStore.currentPage === 1) {
+    navigateTo(`/${slug.value}`);
+  } else {
+    navigateTo(`/${slug.value}/${realEstateStore.currentPage}`);
+  }
 }
+
 
 function handleCall(phone: string) {
   window.open(`tel:${phone}`, "_self");
@@ -88,6 +106,6 @@ function handleToggleFavorite(id: number) {
 }
 
 onMounted(() => {
-  fetchData();
+  fetchDataRealEstate();
 });
 </script>

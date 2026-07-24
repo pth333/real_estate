@@ -10,7 +10,7 @@ export const useRealEstateStore = defineStore("realEstate", () => {
   const page = ref(1);
   const pageSize = ref(50);
   const filter = ref<Filter>({});
-
+const currentPage = ref(1)
   function formattedPrice(priceVND: number): string {
     return (priceVND / 1_000_000_000).toFixed(2) + " tỷ";
   }
@@ -72,7 +72,7 @@ export const useRealEstateStore = defineStore("realEstate", () => {
   }
 
   return {
-    items, total, loading, summary, summaryLoading, page, pageSize, filter,
+    items, total, loading, summary, summaryLoading, page, pageSize, filter,currentPage,
     formattedPrice, fetchList, fetchSummary, setFilter, setPage, setPageSize,
   };
 });

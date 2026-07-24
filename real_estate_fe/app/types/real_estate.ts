@@ -20,6 +20,8 @@ export interface RealEstateResponse {
   agent_phone?: string
   badge?: string
   is_favorite?: boolean
+  source?: string
+  source_url?: string
 }
 
 export interface DashboardSummary {
@@ -30,9 +32,22 @@ export interface DashboardSummary {
 }
 
 export interface Filter {
+  acreage?: number
+  type_of_real_estate?: string
+  location?: FilterLocation
+  price_range?: FilterPriceRange
+}
+
+export interface FilterPriceRange {
   min_price?: number
   max_price?: number
+}
+
+export interface FilterLocation {
   district?: string
+  city?: string
+  ward?: string
+  street?: string
 }
 
 export interface RealEstateSearchRequest {
@@ -66,8 +81,17 @@ export interface NotificationSSEPayload {
   source_url: string
 }
 
-export interface FilterRealEstate {
-  min_price?: number
-  max_price?: number
-  district?: string
+export interface CityOption {
+  name: string,
+  code: string
+}
+
+export interface DistrictOption {
+  name: string,
+  code: string
+}
+
+export interface WardOption {
+  name: string,
+  code: string
 }

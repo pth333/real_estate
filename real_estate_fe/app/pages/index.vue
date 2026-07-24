@@ -74,7 +74,7 @@
     <!-- Content zones -->
     <div class="px-8">
       <div class="mx-auto max-w-7xl">
-        <SummaryCards />
+        <SummaryCards :loading="store.summaryLoading" :error="errorSummary" />
         <!-- Charts -->
         <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
           <ClientOnly><PriceChart /></ClientOnly>
@@ -91,22 +91,29 @@
 
 <script setup lang="ts">
 import { useRealEstateStore } from "~/stores/real_estate";
+import type { RealEstateResponse } from "~/types/real_estate";
+import { usePriceFormatter } from "~/composables/usePriceFormatter";
 
 const store = useRealEstateStore();
+const { formatPriceCompact } = usePriceFormatter();
+
+const errorSummary = ref<string | null>(null);
 
 const totalProperties = computed(() => store.summary?.total_posts ?? 0);
 const avgPrice = computed(() => {
   const avg = store.summary?.avg_price_m2 ?? 0;
-  return avg > 0 ? `${(avg / 1000).toFixed(1)}K` : "—";
+  return avg > 0 ? formatPriceCompact(avg) : "—";
 });
 const totalDistricts = computed(() => {
   if (!store.items) return 0;
-  const districts = new Set(store.items.map((item: any) => item.District));
+  const districts = new Set((store.items as RealEstateResponse[]).map((item) => item.district));
   return districts.size;
 });
 
 onMounted(() => {
   store.fetchList();
-  store.fetchSummary();
+  store.fetchSummary().catch(() => {
+    errorSummary.value = "Không thể tải dữ liệu thống kê";
+  });
 });
 </script>

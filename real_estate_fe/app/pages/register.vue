@@ -160,13 +160,13 @@ definePageMeta({ layout: false });
 import { useAuthStore } from "~/stores/auth";
 
 const auth = useAuthStore();
-const form = reactive({
+const form = ref({
   name: "",
   email: "",
   password: "",
   confirmPassword: "",
 });
-const errors = reactive({
+const errors = ref({
   name: "",
   email: "",
   password: "",
@@ -178,30 +178,30 @@ const successMsg = ref("");
 
 function validate(): boolean {
   let ok = true;
-  errors.name = "";
-  errors.email = "";
-  errors.password = "";
-  errors.confirmPassword = "";
-  if (!form.name.trim()) {
-    errors.name = "Họ tên không được để trống";
+  errors.value.name = "";
+  errors.value.email = "";
+  errors.value.password = "";
+  errors.value.confirmPassword = "";
+  if (!form.value.name.trim()) {
+    errors.value.name = "Họ tên không được để trống";
     ok = false;
   }
-  if (!form.email.trim()) {
-    errors.email = "Email không được để trống";
+  if (!form.value.email.trim()) {
+    errors.value.email = "Email không được để trống";
     ok = false;
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-    errors.email = "Email không hợp lệ";
-    ok = false;
-  }
-  if (!form.password) {
-    errors.password = "Mật khẩu không được để trống";
-    ok = false;
-  } else if (form.password.length < 6) {
-    errors.password = "Mật khẩu phải có ít nhất 6 ký tự";
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.value.email)) {
+    errors.value.email = "Email không hợp lệ";
     ok = false;
   }
-  if (form.password !== form.confirmPassword) {
-    errors.confirmPassword = "Mật khẩu xác nhận không khớp";
+  if (!form.value.password) {
+    errors.value.password = "Mật khẩu không được để trống";
+    ok = false;
+  } else if (form.value.password.length < 6) {
+    errors.value.password = "Mật khẩu phải có ít nhất 6 ký tự";
+    ok = false;
+  }
+  if (form.value.password !== form.value.confirmPassword) {
+    errors.value.confirmPassword = "Mật khẩu xác nhận không khớp";
     ok = false;
   }
   return ok;
@@ -214,9 +214,9 @@ async function handleRegister() {
   loading.value = true;
   try {
     await auth.register({
-      name: form.name,
-      email: form.email,
-      password: form.password,
+      name: form.value.name,
+      email: form.value.email,
+      password: form.value.password,
     });
     successMsg.value = "Đăng ký thành công! Đang chuyển đến trang đăng nhập…";
     setTimeout(() => navigateTo("/login"), 1500);

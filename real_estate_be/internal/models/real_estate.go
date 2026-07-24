@@ -15,7 +15,7 @@ type RealEstate struct {
 	Acreage    float64 `gorm:"column:acreage"`
 	PricePerM2 float64 `gorm:"column:price_per_m2"`
 
-	CategoryID *uint64 `gorm:"column:category_id"`
+	CategoryID *uint64   `gorm:"column:category_id"`
 	Category   *Category `gorm:"foreignKey:CategoryID"`
 
 	TypeOfRealEstate string `gorm:"column:type_of_real_estate"`
@@ -40,4 +40,15 @@ type DistrictStat struct {
 	District   string  `json:"district"`
 	TotalPosts int64   `json:"total_posts"`
 	AvgPriceM2 float64 `json:"avg_price_m2"`
+}
+
+type Province struct {
+	Code string `gorm:"column:code" json:"code"`
+	Name string `gorm:"column:name" json:"name"`
+}
+
+type Ward struct {
+	Code         string `gorm:"column:code" json:"code"`
+	Name         string `gorm:"column:name" json:"name"`
+	ProvinceCode string `gorm:"column:province_code" json:"province_code"`
 }

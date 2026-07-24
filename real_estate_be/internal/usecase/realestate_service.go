@@ -14,6 +14,8 @@ type RealEstateService struct {
 type IRealEstateService interface {
 	ListRealEstate(req dto.RealEstateSearchRequest) ([]dto.RealEstateResponse, int64, error)
 	ListRealEstateByCategory(req dto.RealEstateSearchRequest) ([]dto.RealEstateResponse, int64, error)
+	GetListCity() ([]model.Province, error)
+	GetListWard(provinceCode string) ([]model.Ward, error)
 }
 
 func NewRealEstateService(repo repo.RealEstateRepository, categoryRepo repo.ICategoryRepository) IRealEstateService {
@@ -64,4 +66,12 @@ func (s *RealEstateService) ListRealEstateByCategory(req dto.RealEstateSearchReq
 		return nil, 0, err
 	}
 	return mapSliceToResponse(data), total, nil
+}
+
+func (s *RealEstateService) GetListCity() ([]model.Province, error) {
+	return s.repo.GetListCity()
+}
+
+func (s *RealEstateService) GetListWard(provinceCode string) ([]model.Ward, error) {
+	return s.repo.GetListWard(provinceCode)
 }

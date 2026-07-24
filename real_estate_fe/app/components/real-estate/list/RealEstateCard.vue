@@ -1,7 +1,9 @@
 <template>
-  <div class="group relative overflow-hidden rounded-lg bg-white shadow-sm transition-shadow duration-300 hover:shadow-md">
+  <div
+    class="group relative overflow-hidden rounded-lg bg-white shadow-sm transition-shadow duration-300 hover:shadow-md">
     <!-- Badge VIP -->
-    <div v-if="estate.badge" class="absolute left-3 top-3 z-10 rounded bg-red-600 px-3 py-1 text-xs font-bold uppercase text-white">
+    <div v-if="estate.badge"
+      class="absolute left-3 top-3 z-10 rounded bg-red-600 px-3 py-1 text-xs font-bold uppercase text-white">
       {{ estate.badge }}
     </div>
 
@@ -13,9 +15,11 @@
 
       <div class="grid grid-rows-2 gap-0.5">
         <div v-for="(img, idx) in thumbnails" :key="idx" class="overflow-hidden bg-gray-200">
-          <img :src="img" :alt="`${estate.title} ${idx + 2}`" class="h-full w-full object-cover" @error="handleImageError" />
+          <img :src="img" :alt="`${estate.title} ${idx + 2}`" class="h-full w-full object-cover"
+            @error="handleImageError" />
         </div>
-        <div v-if="remainingImagesCount > 0" class="flex items-center justify-center bg-black/60 text-2xl font-bold text-white">
+        <div v-if="remainingImagesCount > 0"
+          class="flex items-center justify-center bg-black/60 text-2xl font-bold text-white">
           <span>{{ remainingImagesCount }}</span>
         </div>
       </div>
@@ -61,18 +65,14 @@
         </div>
 
         <div class="flex gap-2">
-          <button
-            v-if="estate.agent_phone"
+          <button v-if="estate.agent_phone"
             class="flex cursor-pointer items-center gap-1.5 rounded bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600"
-            @click="handleCall"
-          >
+            @click="handleCall">
             <IconPhone /> {{ formattedPhone }}
           </button>
           <button
             class="flex h-10 w-10 cursor-pointer items-center justify-center rounded border-2 border-gray-300 bg-transparent transition hover:border-red-500"
-            :class="{ 'border-red-500 bg-red-500 text-white': isFavorite }"
-            @click="handleToggleFavorite"
-          >
+            :class="{ 'border-red-500 bg-red-500 text-white': isFavorite }" @click="handleToggleFavorite">
             <IconHeart />
           </button>
         </div>
@@ -82,7 +82,10 @@
 </template>
 
 <script setup lang="ts">
-import type { RealEstateResponse } from '@/types/real_estate'
+import type { RealEstateResponse } from '~/types/real_estate'
+import { usePriceFormatter } from '~/composables/usePriceFormatter'
+import { useRelativeTime } from '~/composables/useRelativeTime'
+import { useImageGrid } from '~/composables/useImageGrid'
 
 interface Props {
   estate: RealEstateResponse
@@ -95,46 +98,19 @@ const emit = defineEmits<{
   toggleFavorite: [id: number]
 }>()
 
-const DEFAULT_IMAGE = ''
+const { formatPrice, formatPricePerM2 } = usePriceFormatter()
+const { fromNow } = useRelativeTime()
+const { mainImage, thumbnails, remainingImagesCount, handleImageError } = useImageGrid(computed(() => props.estate.images))
 
 const isFavorite = ref(props.estate.is_favorite || false)
 
-const mainImage = computed(() => {
-  return props.estate.images?.[0] || DEFAULT_IMAGE
-})
-
-const thumbnails = computed(() => {
-  const images = props.estate.images || []
-  return images.slice(1, 4)
-})
-
-const remainingImagesCount = computed(() => {
-  const total = props.estate.images?.length || 0
-  return Math.max(0, total - 4)
-})
-
-const formattedPrice = computed(() => {
-  const price = props.estate.price_vnd
-  if (price >= 1_000_000_000) {
-    return `${(price / 1_000_000_000).toFixed(1)} tỷ`
-  }
-  if (price >= 1_000_000) {
-    return `${(price / 1_000_000).toFixed(0)} triệu`
-  }
-  return `${price.toLocaleString('vi-VN')} đ`
-})
+const formattedPrice = computed(() => formatPrice(props.estate.price_vnd))
 
 const formattedArea = computed(() => {
   return `${props.estate.acreage.toFixed(1)} m²`
 })
 
-const formattedPricePerM2 = computed(() => {
-  const pricePerM2 = props.estate.price_per_m2
-  if (pricePerM2 >= 1_000_000) {
-    return `${(pricePerM2 / 1_000_000).toFixed(2)} tr/m²`
-  }
-  return `${pricePerM2.toLocaleString('vi-VN')} đ/m²`
-})
+const formattedPricePerM2 = computed(() => formatPricePerM2(props.estate.price_per_m2))
 
 const fullLocation = computed(() => {
   const parts = [props.estate.district, props.estate.city].filter(Boolean)
@@ -151,18 +127,7 @@ const agentInitial = computed(() => {
   return name.charAt(0).toUpperCase()
 })
 
-const postTime = computed(() => {
-  const created = new Date(props.estate.created_at)
-  const now = new Date()
-  const diffMs = now.getTime() - created.getTime()
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-  const diffDays = Math.floor(diffHours / 24)
-
-  if (diffDays === 0) return 'Đăng hôm nay'
-  if (diffDays === 1) return 'Đăng hôm qua'
-  if (diffDays < 7) return `Đăng ${diffDays} ngày trước`
-  return created.toLocaleDateString('vi-VN')
-})
+const postTime = computed(() => fromNow(props.estate.created_at))
 
 const formattedPhone = computed(() => {
   const phone = props.estate.agent_phone || ''
@@ -171,11 +136,6 @@ const formattedPhone = computed(() => {
   }
   return phone
 })
-
-const handleImageError = (event: Event) => {
-  const img = event.target as HTMLImageElement
-  img.src = DEFAULT_IMAGE
-}
 
 const handleCall = () => {
   if (props.estate.agent_phone) {

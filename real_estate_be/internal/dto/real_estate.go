@@ -5,6 +5,7 @@ type RealEstateSearchRequest struct {
 	Page   int    `json:"page"`
 	Size   int    `json:"size"`
 	Filter Filter `json:"filter,omitempty"`
+	Search string `json:"search,omitempty"`
 }
 
 type Filter struct {
@@ -32,4 +33,9 @@ type RealEstateResponse struct {
 	AgentPhone       string   `json:"agent_phone,omitempty"`
 	Badge            string   `json:"badge,omitempty"`
 	CreatedAt        string   `json:"created_at"`
+}
+
+type ProvinceResponse struct {
+	Name string `json:"name"`
+	Code string `json:"code"`
 }

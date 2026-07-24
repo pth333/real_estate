@@ -9,12 +9,14 @@
 <script setup lang="ts">
 import { Bar } from 'vue-chartjs'
 
+import type { RealEstateResponse } from '~/types/real_estate'
+
 const store = useRealEstateStore()
 
 type PriceBucket = '< 1 tỷ' | '1-2 tỷ' | '2-3 tỷ' | '3-5 tỷ' | '5-10 tỷ' | '≥ 10 tỷ'
 
 const chartData = computed(() => {
-  const items = store.items
+  const items = store.items as RealEstateResponse[]
   if (items && !items.length) return null
 
   const buckets: Record<PriceBucket, number> = {
@@ -26,8 +28,8 @@ const chartData = computed(() => {
     '≥ 10 tỷ': 0,
   }
   if (!items) return null
-  items.forEach((item: any) => {
-    const priceInBillion = item.PriceVND / 1_000_000_000
+  items.forEach((item) => {
+    const priceInBillion = item.price_vnd / 1_000_000_000
     let key: PriceBucket
     if (priceInBillion < 1) key = '< 1 tỷ'
     else if (priceInBillion < 2) key = '1-2 tỷ'

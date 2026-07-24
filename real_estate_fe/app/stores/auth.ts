@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import type { LoginRequest, RegisterRequest, AuthResponse } from "@/types/auth";
+import type { LoginRequest, RegisterRequest, AuthResponse } from "~/types/auth";
 
 export const useAuthStore = defineStore("auth", () => {
   const tokenCookie = useCookie<string | null>("auth_token", {

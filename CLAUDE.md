@@ -11,4 +11,5 @@
 - Không dùng `any` trong TypeScript
 - Trong vuejs luôn viết theo kiểu composition api
 - Sử dụng tên biến tường minh, chuẩn quy tắc
+- Frontend luôn viết dưới dạng class object
 

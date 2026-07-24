@@ -1,39 +1,53 @@
 <template>
-    <div class="mb-8">
-        <n-card :bordered="true" embedded size="small">
-            <div class="flex flex-wrap items-end gap-4">
-                <n-form-item label="Giá tối thiểu" :show-feedback="false" label-placement="top">
-                    <n-input v-model:value="filterStore.filters.min_price" placeholder="VD: 1,000,000,000" :min="0"
-                        clearable style="width: 180px" />
-                </n-form-item>
-                <n-form-item label="Giá tối đa" :show-feedback="false" label-placement="top">
-                    <n-input v-model:value="filterStore.filters.max_price" placeholder="VD: 5,000,000,000" :min="0"
-                        clearable style="width: 180px" />
-                </n-form-item>
-                <n-form-item label="Quận/Huyện" :show-feedback="false" label-placement="top">
-                    <n-input v-model:value="filterStore.filters.district" placeholder="VD: Quận 1" clearable
-                        style="width: 180px" />
-                </n-form-item>
-                <n-button tertiary type="warning" @click="resetFilters">
-                    Reset
-                </n-button>
-                <n-button type="primary" @click="$emit('apply-filters')">
-                    Áp dụng
-                </n-button>
-            </div>
-        </n-card>
+    <div>
+        <!-- Nút mở filter -->
+        <div class="flex items-center gap-2">
+            <n-button type="primary" ghost size="small" @click="openModal">
+                <template #icon>
+                    <IconFilter class="h-4 w-4" />
+                </template>
+                Bộ lọc
+                <!-- <span v-if="activeFilterCount > 0"
+                class="ml-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-[11px] text-white">
+                {{ activeFilterCount }}
+            </span> -->
+            </n-button>
+
+            <!-- Filter price range -->
+            <FilterPriceRange />
+            <!-- <FilterTypwOfRealEstate />
+        <FilterAreaRange /> -->
+        </div>
+        <!-- Badge filter đang active -->
+        <!-- <div v-if="hasActiveFilters" class="mt-2 flex flex-wrap items-center gap-2">
+            <span class="text-xs text-gray-400">Đang lọc:</span>
+            <n-tag v-if="filterStore.filters.min_price != null" closable size="small"
+                @close="removeFilter('min_price')">
+                Từ {{ formatFilterPrice(filterStore.filters.min_price) }}
+            </n-tag>
+            <n-tag v-if="filterStore.filters.max_price != null" closable size="small"
+                @close="removeFilter('max_price')">
+                Đến {{ formatFilterPrice(filterStore.filters.max_price) }}
+            </n-tag>
+            <n-tag v-if="filterStore.filters.district" closable size="small" @close="removeFilter('district')">
+                {{ filterStore.filters.district }}
+            </n-tag>
+            <n-button size="tiny" text type="warning" @click="resetFilters">
+                Xoá tất cả
+            </n-button>
+        </div> -->
+
+        <!-- Modal filter -->
+        <FilterAdvanceModal v-model:showModalAll="filterStore.showModalAll" />
     </div>
 </template>
 
 <script setup lang="ts">
 import { useFilterStore } from '~/stores/filter';
-const filterStore = useFilterStore();
-const resetFilters = () => {
-    filterStore.filters = {
-        min_price: undefined,
-        max_price: undefined,
-        district: undefined,
-    };
-};
 
+const filterStore = useFilterStore();
+const openModal = () => {
+    filterStore.showModalAll = true
+    filterStore.showPopover = false
+}
 </script>

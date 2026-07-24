@@ -38,7 +38,7 @@
 
           <p class="mt-0.5 truncate text-xs text-gray-500"> {{ notif.message }} </p>
 
-          <p class="mt-1 text-[10px] text-gray-400"> {{ formatTime(notif.created_at) }} </p>
+          <p class="mt-1 text-[10px] text-gray-400"> {{ fromNow(notif.created_at) }} </p>
 
         </div>
 
@@ -51,15 +51,18 @@
 </template>
 
 <script setup lang="ts">
-import type { NotificationItem } from '@/types/real_estate'
-import { useNotificationStore } from '@/stores/notification'
+import type { NotificationItem } from '~/types/real_estate'
+import { useNotificationStore } from '~/stores/notification'
+import { useAuthStore } from '~/stores/auth'
 
 defineEmits<{ close: [] }>()
 
 const store = useNotificationStore()
+const authStore = useAuthStore()
+const { fromNow } = useRelativeTime()
 
 onMounted(() => {
-  store.fetchList(1)
+  store.fetchList(authStore.user?.id ?? 1)
 })
 
 function handleClick(notif: NotificationItem) {
@@ -68,18 +71,5 @@ function handleClick(notif: NotificationItem) {
   }
 }
 
-function formatTime(dateStr: string): string {
-  if (!dateStr) return ''
-  const d = new Date(dateStr)
-  const now = new Date()
-  const diffMs = now.getTime() - d.getTime()
-  const diffMin = Math.floor(diffMs / 60000)
-
-  if (diffMin < 1) return 'Vừa xong'
-  if (diffMin < 60) return `${diffMin} phút trước`
-  const diffHour = Math.floor(diffMin / 60)
-  if (diffHour < 24) return `${diffHour} giờ trước`
-  return d.toLocaleDateString('vi-VN')
-}
 </script>
 

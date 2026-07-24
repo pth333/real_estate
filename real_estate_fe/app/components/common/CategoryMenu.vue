@@ -30,14 +30,11 @@
           v-if="cat.children?.length"
           class="absolute left-0 top-full z-50 hidden group-hover:block bg-white shadow-lg border rounded-lg py-1 min-w-[200px]"
         >
-          <li v-for="child in cat.children" :key="child.ID">
-            <button
-              @click="handleClick(child.Slug)"
-              class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 whitespace-nowrap"
-            >
-              {{ child.Name }}
-            </button>
-          </li>
+          <CategoryMenuItem
+            v-for="child in cat.children"
+            :key="child.ID"
+            :item="child"
+          />
         </ul>
       </li>
     </ul>

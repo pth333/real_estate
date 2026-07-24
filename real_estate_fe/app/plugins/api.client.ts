@@ -50,7 +50,6 @@ async function refreshAuthToken(): Promise<void> {
   authStore.token = res.data.token
 }
 
-// ✅ FIX 2: Extract doFetch helper → tránh lặp code ở 3 nơi
 function doFetch<T>(
   url: string,
   config: RequestConfig,
@@ -79,7 +78,6 @@ function buildHeaders(config: RequestConfig): Record<string, string> {
 }
 
 function getFullUrl(url: string): string {
-  console.log("getFullUrl called with url:", url);
   if (url.startsWith("http")) return url
   const config = useRuntimeConfig()
   return `${config.public.apiBaseUrl}${url}`
@@ -135,7 +133,6 @@ export const api = {
     }
   },
 
-  // ✅ FIX 4: Shorthand methods nhận đủ config (params, headers, timeout)
   get<T = unknown>(url: string, config?: Omit<RequestConfig, "method" | "body">) {
     return this.request<T>(url, { method: "GET", ...config })
   },

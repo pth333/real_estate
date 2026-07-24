@@ -6,7 +6,22 @@
         Trang {{ realEstateStore.page }}/{{ pageCount }} - Tổng: {{ realEstateStore.total }}
       </span>
     </div>
+
+    <!-- Loading overlay -->
+    <div v-if="realEstateStore.loading" class="flex items-center justify-center rounded-lg bg-white py-20 shadow-sm">
+      <div class="flex flex-col items-center gap-2">
+        <div class="size-8 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600"></div>
+        <span class="text-sm text-gray-400">Đang tải dữ liệu...</span>
+      </div>
+    </div>
+
+    <!-- Error state -->
+    <div v-else-if="error" class="rounded-lg bg-red-50 p-6 text-center text-sm text-red-600">
+      {{ error }}
+    </div>
+
     <ag-grid-vue
+      v-else
       :theme="themeBalham"
       style="height: 500px"
       :column-defs="columnDefs"
@@ -52,6 +67,7 @@ import { themeBalham } from 'ag-grid-community'
 import type { ColDef } from 'ag-grid-community'
 
 const realEstateStore = useRealEstateStore()
+const error = ref<string | null>(null)
 
 const pageCount = computed(() => Math.ceil(realEstateStore.total / realEstateStore.pageSize))
 
@@ -72,16 +88,16 @@ const defaultColDef: ColDef = {
 const columnDefs: ColDef[] = [
   {
     headerName: 'Tiêu đề',
-    field: 'Title',
+    field: 'title',
     flex: 2,
     minWidth: 250,
-    cellRenderer: (params: { data: { SourceURL: string; Title: string } }) => {
-      return `<a href="${params.data.SourceURL}" target="_blank" class="text-blue-600 hover:underline">${params.data.Title}</a>`
+    cellRenderer: (params: { data: { source_url: string; title: string } }) => {
+      return `<a href="${params.data.source_url}" target="_blank" class="text-blue-600 hover:underline">${params.data.title}</a>`
     },
   },
   {
     headerName: 'Giá (tỷ)',
-    field: 'PriceVND',
+    field: 'price_vnd',
     width: 130,
     valueFormatter: (params: { value: number }) => {
       if (params.value == null) return ''
@@ -91,7 +107,7 @@ const columnDefs: ColDef[] = [
   },
   {
     headerName: 'Diện tích (m²)',
-    field: 'Acreage',
+    field: 'acreage',
     width: 140,
     valueFormatter: (params: { value: number }) => {
       if (params.value == null) return ''
@@ -101,7 +117,7 @@ const columnDefs: ColDef[] = [
   },
   {
     headerName: 'Giá / m²',
-    field: 'PricePerM2',
+    field: 'price_per_m2',
     width: 130,
     valueFormatter: (params: { value: number }) => {
       if (params.value == null) return ''
@@ -110,23 +126,23 @@ const columnDefs: ColDef[] = [
   },
   {
     headerName: 'Địa chỉ',
-    field: 'Address',
+    field: 'address',
     flex: 1,
     minWidth: 200,
   },
   {
     headerName: 'Quận',
-    field: 'District',
+    field: 'district',
     width: 120,
   },
   {
     headerName: 'Nguồn',
-    field: 'Source',
+    field: 'source',
     width: 150,
   },
   {
     headerName: 'Ngày crawl',
-    field: 'CrawledAt',
+    field: 'created_at',
     width: 160,
     valueFormatter: (params: { value: string }) => {
       if (!params.value) return ''

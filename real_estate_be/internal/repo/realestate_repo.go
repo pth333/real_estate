@@ -17,6 +17,8 @@ type RealEstateRepository interface {
 	CreateBatch(items []*model.RealEstate) error
 	GetList(req dto.RealEstateSearchRequest, offset, limit int) ([]model.RealEstate, int64, error)
 	GetListByCategory(offset int, req dto.RealEstateSearchRequest, limit int) ([]model.RealEstate, int64, error)
+	GetListCity() ([]model.Province, error)
+	GetListWard(provinceCode string) ([]model.Ward, error)
 }
 
 func NewRealEstateRepository(db *gorm.DB) RealEstateRepository {
@@ -120,6 +122,13 @@ func (r *realEstateRepo) GetListByCategory(offset int, req dto.RealEstateSearchR
 		db = db.Where("price_vnd <= ?", req.Filter.MaxPrice)
 	}
 
+	if req.Search != "" {
+		db = db.Where(
+			"MATCH(title, address) AGAINST(? IN BOOLEAN MODE)",
+			req.Search,
+		)
+	}
+
 	if err := db.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
@@ -132,4 +141,24 @@ func (r *realEstateRepo) GetListByCategory(offset int, req dto.RealEstateSearchR
 		Error
 
 	return items, total, err
+}
+
+func (r *realEstateRepo) GetListCity() ([]model.Province, error) {
+	var provinces []model.Province
+	result := r.db.Select("code, name").Find(&provinces)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return provinces, nil
+}
+
+func (r *realEstateRepo) GetListWard(provinceCode string) ([]model.Ward, error) {
+	var wards []model.Ward
+	result := r.db.Where("province_code = ?", provinceCode).
+		Select("code, name").
+		Find(&wards)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return wards, nil
 }

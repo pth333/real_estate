@@ -1,12 +1,11 @@
 import { defineStore } from "pinia";
-import type { NotificationItem, NotificationSSEPayload } from "@/types/real_estate";
+import type { NotificationItem, NotificationSSEPayload } from "~/types/real_estate";
 
 export const useNotificationStore = defineStore("notification", () => {
   const items = ref<NotificationItem[]>([]);
   const total = ref(0);
   const unreadCount = ref(0);
   const loading = ref(false);
-  const toasts = ref<NotificationSSEPayload[]>([]);
   const eventSource = ref<EventSource | null>(null);
   const connected = ref(false);
 
@@ -55,11 +54,9 @@ export const useNotificationStore = defineStore("notification", () => {
       try {
         const payload: NotificationSSEPayload = JSON.parse(event.data);
         if (payload.type === "new_listing") {
-          toasts.value.push(payload);
-          setTimeout(() => {
-            const idx = toasts.value.indexOf(payload);
-            if (idx !== -1) toasts.value.splice(idx, 1);
-          }, 5000);
+          // Show toast thông qua useToast system
+          const { showToast } = useToast()
+          showToast('success', `BĐS mới: ${payload.title} - ${payload.price_vnd ? (payload.price_vnd / 1_000_000_000).toFixed(1) + ' tỷ' : ''}`)
           unreadCount.value++;
           fetchList(userID);
         }
@@ -78,13 +75,8 @@ export const useNotificationStore = defineStore("notification", () => {
     }
   }
 
-  function dismissToast(payload: NotificationSSEPayload) {
-    const idx = toasts.value.indexOf(payload);
-    if (idx !== -1) toasts.value.splice(idx, 1);
-  }
-
   return {
-    items, total, unreadCount, loading, toasts, connected,
-    fetchList, markAsRead, connectSSE, disconnectSSE, dismissToast,
+    items, total, unreadCount, loading, connected,
+    fetchList, markAsRead, connectSSE, disconnectSSE,
   };
 });

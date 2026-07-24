@@ -1,7 +1,7 @@
 <template>
   <li class="relative group">
     <button
-      @click="go(item.Slug)"
+      @click="handleClick(item.Slug)"
       class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 whitespace-nowrap"
     >
       {{ item.Name }}
@@ -24,7 +24,11 @@
       v-if="item.children?.length"
       class="absolute left-full top-0 z-50 hidden group-hover:block bg-white shadow-lg border rounded-lg py-1 min-w-[200px]"
     >
-      <MenuItem v-for="child in item.children" :key="child.ID" :item="child" />
+      <CategoryMenuItem
+        v-for="child in item.children"
+        :key="child.ID"
+        :item="child"
+      />
     </ul>
   </li>
 </template>
@@ -34,7 +38,7 @@ import type { Category } from '~/types/menu';
 
 defineProps<{ item: Category }>();
 
-function go(slug: string) {
+function handleClick(slug: string) {
   navigateTo(`/${slug}`);
 }
 </script>

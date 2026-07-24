@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import type { Category, MenuResponse } from "@/types/menu";
+import type { Category, MenuResponse } from "~/types/menu";
 
 export const useMenuStore = defineStore("menu", () => {
   const categories = ref<Category[]>([]);
