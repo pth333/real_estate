@@ -1,28 +1,44 @@
 package usecase
 
 import (
+	"context"
 	"errors"
+	"fmt"
+	"math/rand"
+	"time"
+
 	"real_estate_be/internal/dto"
+	"real_estate_be/internal/global"
 	model "real_estate_be/internal/models"
 	"real_estate_be/internal/repo"
 	"real_estate_be/pkg/jwt"
+	"real_estate_be/pkg/sms"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
+const (
+	otpTTL      = 5 * time.Minute
+	otpRedisKey = "otp:%s"
+)
+
 type AuthService struct {
 	repo repo.IUserRepository
+	sms  sms.Provider
 }
 
 type AuthServiceInterface interface {
 	Register(req dto.CreateUserRequest) error
 	Login(req dto.LoginRequest) (string, string, error)
 	RefreshToken(refreshToken string) (string, string, error)
+	SendOTP(req dto.SendOTPRequest) error
+	VerifyOTP(req dto.VerifyOTPRequest) error
 }
 
-func NewAuthService(repo repo.IUserRepository) AuthServiceInterface {
+func NewAuthService(repo repo.IUserRepository, smsProvider sms.Provider) AuthServiceInterface {
 	return &AuthService{
 		repo: repo,
+		sms:  smsProvider,
 	}
 }
 
@@ -65,7 +81,6 @@ func (h *AuthService) RefreshToken(refreshToken string) (string, string, error) 
 		return "", "", errors.New("invalid or expired refresh token")
 	}
 
-	// Tạo cặp token mới
 	newAccess, err := jwt.GenerateAccessToken(claims.Email)
 	if err != nil {
 		return "", "", err
@@ -77,4 +92,59 @@ func (h *AuthService) RefreshToken(refreshToken string) (string, string, error) 
 	}
 
 	return newAccess, newRefresh, nil
+}
+
+func (s *AuthService) SendOTP(req dto.SendOTPRequest) error {
+	ctx := context.Background()
+
+	// Sinh mã OTP ngẫu nhiên
+	otp := fmt.Sprintf("%06d", rand.Intn(1000000))
+
+	// Lưu vào Redis với TTL 5 phút
+	key := fmt.Sprintf(otpRedisKey, req.Phone)
+	if err := global.RedisClient.Set(ctx, key, otp, otpTTL).Err(); err != nil {
+		return fmt.Errorf("failed to cache OTP: %w", err)
+	}
+
+	// Gửi OTP qua SMS
+	if err := s.sms.Send(req.Phone, otp); err != nil {
+		return fmt.Errorf("failed to send OTP: %w", err)
+	}
+
+	return nil
+}
+
+func (s *AuthService) VerifyOTP(req dto.VerifyOTPRequest) error {
+	ctx := context.Background()
+
+	// Lấy OTP từ Redis
+	key := fmt.Sprintf(otpRedisKey, req.Phone)
+	cachedOTP, err := global.RedisClient.Get(ctx, key).Result()
+	if err != nil {
+		return fmt.Errorf("OTP không hợp lệ hoặc đã hết hạn")
+	}
+
+	if cachedOTP != req.OTP {
+		return fmt.Errorf("OTP không đúng")
+	}
+
+	// Xoá OTP khỏi Redis (chỉ dùng 1 lần)
+	global.RedisClient.Del(ctx, key)
+
+	// Kiểm tra user đã tồn tại chưa
+	_, findErr := s.repo.FindByPhone(req.Phone)
+	if findErr != nil {
+		// Chưa có → tạo mới
+		_, err = s.repo.CreateUserByPhone(req.Phone)
+		if err != nil {
+			return fmt.Errorf("không thể tạo tài khoản: %w", err)
+		}
+	} else {
+		// Đã có → đánh dấu verified
+		if err := s.repo.MarkPhoneVerified(req.Phone); err != nil {
+			return fmt.Errorf("không thể xác thực số điện thoại: %w", err)
+		}
+	}
+
+	return nil
 }

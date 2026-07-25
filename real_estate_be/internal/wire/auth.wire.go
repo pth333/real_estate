@@ -15,6 +15,7 @@ func InitializeAuthHandler() (*controller.UserHandler, error) {
 	// Auth
 	wire.Build(
 		providerDB,
+		providerSMS,
 		repo.NewUserRepository,
 		usecase.NewAuthService,
 		controller.NewUserHandler,

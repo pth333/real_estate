@@ -2,7 +2,9 @@
   <div id="app" class="min-h-screen bg-limestone text-graphite">
     <NuxtErrorBoundary>
       <NuxtLayout>
-        <NuxtPage />
+        <NMessageProvider>
+          <NuxtPage />
+        </NMessageProvider>
       </NuxtLayout>
       <ToastDisplay />
 
@@ -22,6 +24,7 @@
 
 <script setup lang="ts">
 import { useNotificationStore } from "~/stores/notification";
+import { useMessage } from "naive-ui";
 
 const notifStore = useNotificationStore();
 
@@ -33,6 +36,8 @@ onMounted(() => {
 onUnmounted(() => {
   notifStore.disconnectSSE();
 });
+
+
 </script>
 
 <style>

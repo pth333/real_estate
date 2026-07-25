@@ -15,3 +15,6 @@ kafka:
     real_estate_crawled: real_estate.crawled.v1
     real_estate_enriched: real_estate.enriched.v1
     real_estate_notified: real_estate.notified.v1
+redis:
+  addr: localhost:6379
+  db: 0

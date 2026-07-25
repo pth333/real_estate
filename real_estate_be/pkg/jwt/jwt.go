@@ -80,3 +80,4 @@ func ParseRefreshToken(tokenStr string) (*RefreshClaims, error) {
 
 	return token.Claims.(*RefreshClaims), nil
 }
+

@@ -5,7 +5,7 @@
     <template #trigger>
       <n-button ghost size="small">
         <template #icon>
-          <IconChevronDown class="h-4 w-4" />
+          <IconChevronDownOutline class="h-4 w-4" />
         </template>
         {{ buttonLabel }}
       </n-button>

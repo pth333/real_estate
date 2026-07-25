@@ -103,3 +103,39 @@ func (h *UserHandler) Logout(c *fiber.Ctx) error {
 		"message": "Logged out",
 	})
 }
+
+func (h *UserHandler) SendOTP(c *fiber.Ctx) error {
+	var req dto.SendOTPRequest
+
+	if err := c.BodyParser(&req); err != nil {
+		return response.BadRequest(c, "Invalid request body", err.Error())
+	}
+
+	if req.Phone == "" {
+		return response.BadRequest(c, "Số điện thoại không được để trống", nil)
+	}
+
+	if err := h.service.SendOTP(req); err != nil {
+		return response.InternalServerError(c, "Gửi OTP thất bại", err.Error())
+	}
+
+	return response.OK(c, fiber.Map{
+		"message": "Mã OTP đã được gửi",
+	})
+}
+
+func (h *UserHandler) VerifyOTP(c *fiber.Ctx) error {
+	var req dto.VerifyOTPRequest
+
+	if err := c.BodyParser(&req); err != nil {
+		return response.BadRequest(c, "Invalid request body", err.Error())
+	}
+
+	if err := h.service.VerifyOTP(req); err != nil {
+		return response.Unauthorized(c, "Xác thực OTP thất bại", err.Error())
+	}
+
+	return response.OK(c, fiber.Map{
+		"message": "Xác thực số điện thoại thành công",
+	})
+}

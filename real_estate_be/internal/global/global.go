@@ -16,6 +16,7 @@ type ConfigSettings struct {
 	Server ServerConfig `mapstructure:"server"`
 	Mysql  MysqlConfig  `mapstructure:"mysql"`
 	Kafka  KafkaConfig  `mapstructure:"kafka"`
+	Redis  RedisConfig  `mapstructure:"redis"`
 }
 
 type ServerConfig struct {
@@ -41,4 +42,9 @@ type KafkaTopics struct {
 	RealEstateCrawled  string `mapstructure:"real_estate_crawled"`
 	RealEstateEnriched string `mapstructure:"real_estate_enriched"`
 	RealEstateNotified string `mapstructure:"real_estate_notified"`
+}
+
+type RedisConfig struct {
+	Addr string `mapstructure:"addr"`
+	DB   int    `mapstructure:"db"`
 }

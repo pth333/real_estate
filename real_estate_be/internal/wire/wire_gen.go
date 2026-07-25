@@ -17,7 +17,8 @@ import (
 func InitializeAuthHandler() (*controller.UserHandler, error) {
 	db := providerDB()
 	iUserRepository := repo.NewUserRepository(db)
-	authServiceInterface := usecase.NewAuthService(iUserRepository)
+	provider := providerSMS()
+	authServiceInterface := usecase.NewAuthService(iUserRepository, provider)
 	userHandler := controller.NewUserHandler(authServiceInterface)
 	return userHandler, nil
 }

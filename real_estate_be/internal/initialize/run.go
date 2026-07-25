@@ -3,6 +3,7 @@ package initialize
 func Run() {
 	LoadConfig()
 	InitMysql()
+	InitRedis()
 
 	// Migrate DB
 	// MigrateDb(global.DB)
