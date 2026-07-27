@@ -27,10 +27,11 @@
         <div class="flex-1 px-6 py-6 w-full max-w-2xl mx-auto flex flex-col gap-4">
 
             <!-- Section: Nhu cầu -->
-            <DemandSection />
             <!-- Bước 1. Thông tin BĐS -->
             <!-- Section: Địa chỉ -->
             <div class="flex flex-col gap-4" v-if="postStore.tab === 'information'">
+                <DemandSection />
+
                 <AddressSection />
                 <!-- Section: Thông tin chính -->
                 <MainInformationSection />

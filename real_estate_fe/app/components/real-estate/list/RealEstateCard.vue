@@ -83,8 +83,8 @@
 
 <script setup lang="ts">
 import type { RealEstateResponse } from '~/types/real_estate'
-import { usePriceFormatter } from '~/composables/usePriceFormatter'
-import { useRelativeTime } from '~/composables/useRelativeTime'
+import { usePriceFormatter } from '~/utils/usePriceFormatter'
+import { useRelativeTime } from '~/utils/useRelativeTime'
 import { useImageGrid } from '~/composables/useImageGrid'
 
 interface Props {
