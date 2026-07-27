@@ -93,6 +93,21 @@ function goToPage(page: number) {
   }
 }
 
+watch(
+  () => [route.params.slug, route.params.page],
+  async ([newSlug, newPage]) => {
+    // Reset state
+    realEstates.value = [];
+    totalRecords.value = 0;
+
+    // Đồng bộ page từ route
+    realEstateStore.currentPage = newPage ? Number(newPage) : 1;
+
+    await fetchDataRealEstate();
+  },
+  { immediate: true },
+);
+
 
 function handleCall(phone: string) {
   window.open(`tel:${phone}`, "_self");
@@ -105,7 +120,4 @@ function handleToggleFavorite(id: number) {
   }
 }
 
-onMounted(() => {
-  fetchDataRealEstate();
-});
 </script>

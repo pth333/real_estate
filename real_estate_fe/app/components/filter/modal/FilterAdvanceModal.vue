@@ -70,7 +70,6 @@ const locationLabel = computed(() => {
   if (district) parts.push(district.label as string);
   if (ward) parts.push(ward.label as string);
 
-
   if (parts.length === 0) return 'Chọn khu vực';
   return parts.join(', ');
 });

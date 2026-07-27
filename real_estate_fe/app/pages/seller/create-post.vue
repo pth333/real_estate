@@ -19,59 +19,34 @@
 
         <!-- Progress -->
         <div class="px-6 pb-3 border-b border-gray-200">
-            <span class="text-xs text-red-500 font-medium block mb-1.5 mt-1.5">Bước 1. Thông tin BĐS</span>
-            <n-progress type="line" :percentage="33" :show-indicator="false" color="#ef4444" rail-color="#f3f4f6" />
-
+            <span class="text-xs text-red-500 font-medium block mb-1.5 mt-1.5">{{ postStore.currentStepLabel }}</span>
+            <n-progress type="line" :percentage="postStore.currentStepProgress" :show-indicator="false" color="#ef4444"
+                rail-color="#f3f4f6" />
         </div>
 
-        <!-- Form body -->
         <div class="flex-1 px-6 py-6 w-full max-w-2xl mx-auto flex flex-col gap-4">
 
             <!-- Section: Nhu cầu -->
-            <n-card title="Nhu cầu" size="small" :segmented="{ content: true }">
-                <template #header-extra>
-                    <n-icon class="text-gray-500">
-                        <IconChevronDownOutline />
-                    </n-icon>
-                </template>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <!-- Bán: active -->
-                    <div @click="listingType = 'sell'" :class="[
-                        'flex items-center gap-2.5 px-5 py-3.5 rounded-lg cursor-pointer text-sm border transition-colors',
-                        listingType === 'sell'
-                            ? 'border-gray-900 text-gray-900 font-semibold'
-                            : 'border-gray-300 text-gray-600 hover:border-red-500 hover:text-red-500'
-                    ]">
-                        <n-icon size="20">
-                            <IconPricetagOutline />
-                        </n-icon>
-                        <span>Bán</span>
-                    </div>
-                    <!-- Cho thuê -->
-                    <div @click="listingType = 'rent'" :class="[
-                        'flex items-center gap-2.5 px-5 py-3.5 rounded-lg cursor-pointer text-sm border transition-colors',
-                        listingType === 'rent'
-                            ? 'border-gray-900 text-gray-900 font-semibold'
-                            : 'border-gray-300 text-gray-600 hover:border-red-500 hover:text-red-500'
-                    ]">
-                        <n-icon size="20">
-                            <IconKeyOutline />
-                        </n-icon>
-                        <span>Cho thuê</span>
-                    </div>
-                </div>
-            </n-card>
+            <DemandSection />
+            <!-- Bước 1. Thông tin BĐS -->
             <!-- Section: Địa chỉ -->
-            <AddressSection />
-            <!-- Section: Thông tin chính -->
-            <MainInformationSection />
-
+            <div class="flex flex-col gap-4" v-if="postStore.tab === 'information'">
+                <AddressSection />
+                <!-- Section: Thông tin chính -->
+                <MainInformationSection />
+            </div>
+            <!-- Bước 2. Upload ảnh, video -->
+            <div v-else-if="postStore.tab === 'upload'">
+                <UploadImageVideo />
+            </div>
         </div>
 
         <!-- Footer -->
-        <div class="flex justify-end px-6 py-4 border-t border-gray-200">
-            <n-button size="large" class="!bg-red-500 !border-red-500 !text-white !rounded-full !px-8 !font-semibold">
+        <div class="sticky bottom-0 flex justify-between px-6 py-4 border-t border-gray-200 bg-white">
+            <n-button size="large" @click="prevPage">
+                Quay lại
+            </n-button>
+            <n-button size="large" type="error" @click="nextPage">
                 Tiếp tục
             </n-button>
         </div>
@@ -81,9 +56,45 @@
     </div>
 </template>
 <script setup lang="ts">
+import { useCreatePost } from '~/stores/create-post'
+definePageMeta({
+    alias: "/nguoi-ban/dang-tin",
+})
 const { phoneVerified } = usePhoneVerification()
+const postStore = useCreatePost()
+const { showToast } = useToast();
+const { validate } = useFormValidation()
 const showOTPModal = ref(false)
-const listingType = ref<'sell' | 'rent'>('sell')
+
+const validateInformation = () => {
+    const error = validate({
+        province: { value: postStore.province, label: 'tỉnh/thành' },
+        ward: { value: postStore.ward, label: 'phường/xã' },
+        detail_address: { value: postStore.detail_address?.trim(), label: 'địa chỉ chi tiết' },
+    })
+    if (error) {
+        showToast('error', `Vui lòng nhập ${error}`)
+    }
+    return error
+}
+
+const nextPage = () => {
+    if (postStore.tab === 'information') {
+        if (validateInformation()) return
+        postStore.tab = 'upload'
+    }
+    if (postStore.tab === 'upload') { }
+
+}
+
+const prevPage = () => {
+    if (postStore.tab === 'upload') {
+        postStore.tab = 'information'
+    } else if (postStore.tab === 'review') {
+        postStore.tab = 'upload'
+    }
+}
+
 onMounted(() => {
     if (!phoneVerified.value) {
         showOTPModal.value = true

@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <ClientOnly>
-      <div class="fixed right-4 top-4 z-[9999] flex max-w-[400px] flex-col gap-2">
+      <div class="fixed left-1/2 top-4 z-[9999] flex max-w-[400px] -translate-x-1/2 flex-col gap-2">
         <TransitionGroup name="toast-pop">
           <div
             v-for="toast in toasts"
