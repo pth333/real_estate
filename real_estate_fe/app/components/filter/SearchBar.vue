@@ -15,8 +15,11 @@
 <script setup lang="ts">
 import { useFilterStore } from '~/stores/filter';
 
+const emit = defineEmits<{
+  (e: 'search'): void;
+}>();
+
 const filterStore = useFilterStore();
-const emit = defineEmits<{ search: [] }>();
 
 function handleSearch() {
   emit('search');
