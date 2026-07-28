@@ -3,6 +3,7 @@ package initialize
 import (
 	"fmt"
 	"real_estate_be/internal/global"
+	model "real_estate_be/internal/models"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -22,6 +23,7 @@ func InitMysql() {
 	// db.AutoMigrate(&model.RealEstate{})
 	// db.AutoMigrate(&model.User{})
 	// db.AutoMigrate(&model.Category{})
+	db.AutoMigrate(&model.Image{})
 
 	if err != nil {
 		panic(err)

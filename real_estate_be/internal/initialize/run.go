@@ -4,6 +4,7 @@ func Run() {
 	LoadConfig()
 	InitMysql()
 	InitRedis()
+	InitS3()
 
 	// Migrate DB
 	// MigrateDb(global.DB)

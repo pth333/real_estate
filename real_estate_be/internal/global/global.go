@@ -3,13 +3,18 @@ package global
 import (
 	"real_estate_be/internal/sse"
 
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/redis/go-redis/v9"
+
 	"gorm.io/gorm"
 )
 
 var (
-	Config ConfigSettings
-	DB     *gorm.DB
-	SSEHub *sse.Hub
+	Config      ConfigSettings
+	DB          *gorm.DB
+	SSEHub      *sse.Hub
+	S3Client    *s3.Client
+	RedisClient *redis.Client
 )
 
 type ConfigSettings struct {
@@ -17,6 +22,16 @@ type ConfigSettings struct {
 	Mysql  MysqlConfig  `mapstructure:"mysql"`
 	Kafka  KafkaConfig  `mapstructure:"kafka"`
 	Redis  RedisConfig  `mapstructure:"redis"`
+	R2     R2Config     `mapstructure:"r2"`
+}
+
+type R2Config struct {
+	Endpoint        string `mapstructure:"endpoint"`
+	Region          string `mapstructure:"region"`
+	AccessKeyID     string `mapstructure:"access_key_id"`
+	SecretAccessKey string `mapstructure:"secret_access_key"`
+	Bucket          string `mapstructure:"bucket"`
+	PublicURL       string `mapstructure:"public_url"`
 }
 
 type ServerConfig struct {
@@ -32,10 +47,10 @@ type MysqlConfig struct {
 }
 
 type KafkaConfig struct {
-	Brokers     []string      `mapstructure:"brokers"`
-	ClientID    string        `mapstructure:"client_id"`
-	GroupPrefix string        `mapstructure:"group_prefix"`
-	Topics      KafkaTopics   `mapstructure:"topics"`
+	Brokers     []string    `mapstructure:"brokers"`
+	ClientID    string      `mapstructure:"client_id"`
+	GroupPrefix string      `mapstructure:"group_prefix"`
+	Topics      KafkaTopics `mapstructure:"topics"`
 }
 
 type KafkaTopics struct {

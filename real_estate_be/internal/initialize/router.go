@@ -1,6 +1,7 @@
 package initialize
 
 import (
+	"real_estate_be/internal/global"
 	"real_estate_be/internal/routers"
 
 	"github.com/gofiber/fiber/v2"
@@ -29,6 +30,8 @@ func InitRouter() *fiber.App {
 		routers.InitRealEstateRoutes(MainGroup)
 		// Notifications + SSE
 		routers.InitNotificationRoutes(MainGroup)
+		// Upload
+		routers.InitUploadRoutes(MainGroup, global.S3Client)
 	}
 
 	return app

@@ -74,7 +74,7 @@ const validateInformation = () => {
         detail_address: { value: postStore.detail_address?.trim(), label: 'địa chỉ chi tiết' },
     })
     if (error) {
-        showToast('error', `Vui lòng nhập ${error}`)
+        window.message?.error(`Vui lòng nhập ${error}`)
     }
     return error
 }
