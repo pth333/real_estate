@@ -32,15 +32,15 @@
             <div class="flex flex-col gap-4" v-show="postStore.tab === 'information'">
                 <DemandSection />
 
-                <AddressSection ref="addressComponent" />
+                <AddressSection />
                 <!-- Section: Thông tin chính -->
-                <MainInformationSection ref="mainInfoComponent" />
+                <MainInformationSection />
                 <!-- Section: Thông tin khác -->
                 <InformationOther />
                 <!-- Section: Thông tin liên hệ -->
-                <ContactInformationSection ref="contactComponent" />
+                <ContactInformationSection />
                 <!-- Section: Tiêu đề & mô tả -->
-                <DescriptionSection ref="descriptionComponent" />
+                <DescriptionSection />
             </div>
             <!-- Bước 2. Upload ảnh, video -->
             <div v-show="postStore.tab === 'upload'">
@@ -74,21 +74,11 @@ const { phoneVerified } = usePhoneVerification()
 const postStore = useCreatePost()
 const showOTPModal = ref(false)
 const uploadComponent = ref()
-const addressComponent = ref()
-const mainInfoComponent = ref()
-const contactComponent = ref()
-const descriptionComponent = ref()
 
 const nextPage = () => {
 
     if (postStore.tab === 'information') {
-        const validations = [
-            addressComponent.value?.validate?.(),
-            mainInfoComponent.value?.validate?.(),
-            contactComponent.value?.validate?.(),
-            descriptionComponent.value?.validate?.(),
-        ]
-        if (!validations.every(Boolean)) {
+        if (!postStore.validateInformation()) {
             window.message?.warning('Vui lòng nhập đầy đủ thông tin')
             return
         }

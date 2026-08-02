@@ -35,19 +35,18 @@ func (r *AIRepository) GenerateContent(ctx context.Context, prompt string) (dto.
 		return dto.AIContentResponse{}, fmt.Errorf("AI API key chưa được cấu hình (RE_AI_API_KEY)")
 	}
 
+	// Request Gemini: { contents: [{ parts: [{ text }] }] }
 	body := map[string]any{
-		"model": global.Config.AI.Model,
-		"messages": []map[string]string{
+		"contents": []map[string]any{
 			{
-				"role":    "system",
-				"content": "Bạn là trợ lý viết tin đăng bất động sản tiếng Việt.",
-			},
-			{
-				"role":    "user",
-				"content": prompt,
+				"parts": []map[string]string{
+					{"text": prompt},
+				},
 			},
 		},
-		"temperature": 0.7,
+		"generationConfig": map[string]any{
+			"temperature": 0.7,
+		},
 	}
 
 	jsonBody, err := json.Marshal(body)
@@ -55,12 +54,17 @@ func (r *AIRepository) GenerateContent(ctx context.Context, prompt string) (dto.
 		return dto.AIContentResponse{}, fmt.Errorf("marshal request: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.openai.com/v1/chat/completions", bytes.NewReader(jsonBody))
+	// Endpoint Gemini (free tier), API key truyền qua query param ?key=
+	endpoint := fmt.Sprintf(
+		"https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s",
+		global.Config.AI.Model, global.Config.AI.APIKey,
+	)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(jsonBody))
 	if err != nil {
 		return dto.AIContentResponse{}, fmt.Errorf("tạo request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+global.Config.AI.APIKey)
 
 	resp, err := r.httpClient.Do(req)
 	if err != nil {
@@ -73,23 +77,25 @@ func (r *AIRepository) GenerateContent(ctx context.Context, prompt string) (dto.
 		return dto.AIContentResponse{}, fmt.Errorf("API AI trả lỗi %d: %s", resp.StatusCode, string(respBody))
 	}
 
-	// Parse response OpenAI: choices[0].message.content
-	var chatResp struct {
-		Choices []struct {
-			Message struct {
-				Content string `json:"content"`
-			} `json:"message"`
-		} `json:"choices"`
+	// Parse response Gemini: candidates[0].content.parts[0].text
+	var geminiResp struct {
+		Candidates []struct {
+			Content struct {
+				Parts []struct {
+					Text string `json:"text"`
+				} `json:"parts"`
+			} `json:"content"`
+		} `json:"candidates"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&chatResp); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&geminiResp); err != nil {
 		return dto.AIContentResponse{}, fmt.Errorf("parse response AI: %w", err)
 	}
-	if len(chatResp.Choices) == 0 {
+	if len(geminiResp.Candidates) == 0 || len(geminiResp.Candidates[0].Content.Parts) == 0 {
 		return dto.AIContentResponse{}, fmt.Errorf("API AI trả về không có nội dung")
 	}
 
 	// Prompt yêu cầu AI trả JSON { title, description } — parse nếu có
-	return parseAIContent(chatResp.Choices[0].Message.Content)
+	return parseAIContent(geminiResp.Candidates[0].Content.Parts[0].Text)
 }
 
 // parseAIContent tách nội dung AI trả về thành title + description riêng biệt.

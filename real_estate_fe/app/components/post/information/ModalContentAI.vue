@@ -1,7 +1,7 @@
 <template>
     <div>
-        <!-- Nút mở modal, đặt bên phải ô tiêu đề -->
-        <n-button size="medium" type="primary" ghost @click="showModal = true">
+        <!-- Nút mở modal: validate trước, hợp lệ mới mở -->
+        <n-button size="medium" type="primary" ghost @click="handleOpenModal">
             <template #icon>
                 <n-icon>
                     <IconCreateOutline />
@@ -84,13 +84,42 @@ const contentAI = ref<AIContent>({
     description: '',
 })
 
+// Payload gửi lên AI, đóng gói toàn bộ thông tin BĐS đang nhập dở
+const payload = computed(() => {
+    return {
+        tone: tone.value,
+        listing_type: postStore.form.listingType,
+        real_estate_type: postStore.customValueRealEstateType?.name ?? undefined,
+        address: postStore.form.detail_address ?? undefined,
+        area: postStore.form.area ?? undefined,
+        price: postStore.form.price ?? undefined,
+        unit: postStore.form.unit ?? undefined,
+        bedrooms: postStore.form.bedroom_count ?? undefined,
+        bathrooms: postStore.form.bathroom_count ?? undefined,
+        legal_docs: postStore.form.legal_docs ?? undefined,
+        interior: postStore.form.interior ?? undefined,
+        house_direction: postStore.form.house_direction ?? undefined,
+        balcony_direction: postStore.form.balcony_direction ?? undefined,
+        contact_name: postStore.form.contact_name ?? undefined,
+        contact_phone: postStore.form.contact_phone ?? undefined,
+    }
+})
+
+const handleOpenModal = () => {
+    if (!postStore.validateForAI()) {
+        window.message?.warning('Vui lòng nhập đầy đủ thông tin bắt buộc trước khi tạo với AI')
+        return
+    }
+    showModal.value = true
+}
+
 const generateContent = async () => {
     generating.value = true
     try {
-        const response = await $api.post<{ data: AIContent }>('/ai/generate-content', {
-            tone: tone.value,
-        })
+        const response = await $api.post<{ data: AIContent }>('/ai/generate-content', payload.value)
         contentAI.value = response.data
+    } catch (error) {
+        window.message?.error('Không thể tạo nội dung, vui lòng thử lại')
     } finally {
         generating.value = false
     }

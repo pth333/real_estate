@@ -118,21 +118,6 @@ const clearError = (field: keyof typeof postStore.errorsMainInfo) => {
     postStore.errorsMainInfo[field] = ''
 }
 
-// Validate phần Thông tin chính, hiển thị lỗi dưới từng ô input
-const validate = (): boolean => {
-    postStore.errorsMainInfo = {
-        real_estate_type: postStore.form.real_estate_type
-            ? ""
-            : "Vui lòng chọn loại bất động sản",
-        area: postStore.form.area ? "" : "Vui lòng nhập diện tích",
-        price: postStore.form.price ? "" : "Vui lòng nhập mức giá",
-        unit: postStore.form.unit ? "" : "Vui lòng chọn đơn vị giá",
-    }
-    return Object.values(postStore.errorsMainInfo).every((msg) => msg === "")
-}
-
-defineExpose({ validate })
-
 const fetchRealEstateTypes = async () => {
     try {
 
@@ -140,10 +125,9 @@ const fetchRealEstateTypes = async () => {
         realEstateTypes.value = response.data.map((item) => {
             const normalizedName = item.name.replace('Bán', '').trim()
             const capitalizedName = normalizedName.charAt(0).toUpperCase() + normalizedName.slice(1)
-
             return {
                 label: capitalizedName,
-                value: item.id,
+                value: `${item.id}-${item.name}`,
             }
         })
     } catch (error) {

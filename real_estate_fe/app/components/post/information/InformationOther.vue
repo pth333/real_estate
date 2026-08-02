@@ -114,8 +114,8 @@ const internet = useNumberInput(toRef(postStore.form, 'price_internet'))
 // Giấy tờ pháp lý
 const legalDocOptions = ref<SelectOption[]>([
     { label: 'Sổ đỏ/ Sổ hồng', value: 'so_do' },
-    { label: 'Giấy tờ hợp lệ', value: 'giay_to_hop_le' },
-    { label: 'Chưa có giấy tờ', value: 'chua_co_giay_to' },
+    { label: 'Hợp đồng mua bán', value: 'hop_dong_mua_ban' },
+    { label: 'Đang chờ sổ', value: 'dang_cho_so' },
 ])
 
 // Nội thất

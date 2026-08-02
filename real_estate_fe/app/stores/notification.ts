@@ -54,9 +54,8 @@ export const useNotificationStore = defineStore("notification", () => {
       try {
         const payload: NotificationSSEPayload = JSON.parse(event.data);
         if (payload.type === "new_listing") {
-          // Show toast thông qua useToast system
-          const { showToast } = useToast()
-          showToast('success', `BĐS mới: ${payload.title} - ${payload.price_vnd ? (payload.price_vnd / 1_000_000_000).toFixed(1) + ' tỷ' : ''}`)
+          // Hiển thị thông báo qua window.message (naive-ui message thống nhất)
+          window.message?.success(`BĐS mới: ${payload.title} - ${payload.price_vnd ? (payload.price_vnd / 1_000_000_000).toFixed(1) + ' tỷ' : ''}`)
           unreadCount.value++;
           fetchList(userID);
         }

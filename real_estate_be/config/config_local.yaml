@@ -22,4 +22,4 @@ r2:
   region: auto
   bucket: real-estate-files
 ai:
-  model: gpt-4o-mini
+  model: gemini-2.0-flash

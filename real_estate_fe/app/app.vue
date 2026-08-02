@@ -10,7 +10,6 @@
           </NMessageProvider>
         </NNotificationProvider>
       </NuxtLayout>
-      <ToastDisplay />
     </NuxtErrorBoundary>
   </div>
 </template>

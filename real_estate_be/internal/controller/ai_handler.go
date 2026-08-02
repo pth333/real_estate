@@ -26,7 +26,7 @@ func (h *AIHandler) GenerateContent(c *fiber.Ctx) error {
 		return response.BadRequest(c, "Thiếu văn phong (tone)", nil)
 	}
 
-	content, err := h.service.GenerateContent(req.Tone)
+	content, err := h.service.GenerateContent(req)
 	if err != nil {
 		return response.BadRequest(c, err.Error(), nil)
 	}

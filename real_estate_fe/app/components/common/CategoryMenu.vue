@@ -28,7 +28,7 @@
         </button>
         <ul
           v-if="cat.children?.length"
-          class="absolute left-0 top-full z-50 hidden group-hover:block bg-white shadow-lg border rounded-lg py-1 min-w-[200px]"
+          class="absolute left-0 top-full z-50 hidden group-hover:block bg-white shadow-lg py-1 min-w-[200px]"
         >
           <CategoryMenuItem
             v-for="child in cat.children"

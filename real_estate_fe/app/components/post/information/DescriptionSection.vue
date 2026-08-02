@@ -55,25 +55,4 @@ const collapsed = ref(false)
 const clearError = (field: keyof typeof postStore.errorsDescription) => {
     postStore.errorsDescription[field] = ''
 }
-
-// Validate phần Tiêu đề & mô tả (bắt buộc + độ dài), hiển thị lỗi dưới từng ô input
-const validate = (): boolean => {
-    const titleLen = postStore.form.title?.length ?? 0
-    const descLen = postStore.form.description?.length ?? 0
-    postStore.errorsDescription = {
-        title: titleLen
-            ? titleLen < 30
-                ? `Tiêu đề tối thiểu 30 ký tự (hiện ${titleLen})`
-                : ""
-            : "Vui lòng nhập tiêu đề",
-        description: descLen
-            ? descLen < 30
-                ? `Mô tả tối thiểu 30 ký tự (hiện ${descLen})`
-                : ""
-            : "Vui lòng nhập mô tả",
-    }
-    return Object.values(postStore.errorsDescription).every((msg) => msg === "")
-}
-
-defineExpose({ validate })
 </script>

@@ -68,33 +68,12 @@ const openModal = () => {
 
 // Áp dụng địa chỉ: nếu thiếu field bắt buộc thì hiện lỗi ngay trong modal, không tắt
 const applyAddress = () => {
-    postStore.errorsAddress = {
-        province: postStore.form.province ? "" : "Vui lòng chọn tỉnh/thành phố",
-        ward: postStore.form.ward ? "" : "Vui lòng chọn phường/xã",
-        detail_address: postStore.form.detail_address?.trim()
-            ? ""
-            : "Vui lòng nhập địa chỉ chi tiết",
-    }
-
-    const hasError = Object.values(postStore.errorsAddress).some((message) => message !== "")
-    if (hasError) return // Giữ modal mở để người dùng sửa
+    // Validate qua store để hiển thị lỗi dưới từng ô
+    const valid = postStore.validateAddress()
+    if (!valid) return // Giữ modal mở để người dùng sửa
 
     showLocationModal.value = false
 }
-
-// Validate phần Địa chỉ, hiển thị lỗi dưới từng ô input
-const validate = (): boolean => {
-    postStore.errorsAddress = {
-        province: postStore.form.province ? "" : "Vui lòng chọn tỉnh/thành phố",
-        ward: postStore.form.ward ? "" : "Vui lòng chọn phường/xã",
-        detail_address: postStore.form.detail_address?.trim()
-            ? ""
-            : "Vui lòng nhập địa chỉ chi tiết",
-    }
-    return Object.values(postStore.errorsAddress).every((msg) => msg === "")
-}
-
-defineExpose({ validate })
 
 const loadingWard = ref(false)
 const provinceOption = ref<SelectOption[]>([])

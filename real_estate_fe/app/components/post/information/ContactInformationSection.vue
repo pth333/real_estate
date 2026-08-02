@@ -58,16 +58,4 @@ const collapsed = ref(false)
 const clearError = (field: keyof typeof postStore.errorsContact) => {
     postStore.errorsContact[field] = ''
 }
-
-// Validate phần Thông tin liên hệ, hiển thị lỗi dưới từng ô input
-const validate = (): boolean => {
-    postStore.errorsContact = {
-        contact_name: postStore.form.contact_name ? "" : "Vui lòng nhập tên liên hệ",
-        contact_email: postStore.form.contact_email ? "" : "Vui lòng nhập email",
-        contact_phone: postStore.form.contact_phone ? "" : "Vui lòng nhập số điện thoại",
-    }
-    return Object.values(postStore.errorsContact).every((msg) => msg === "")
-}
-
-defineExpose({ validate })
 </script>

@@ -28,13 +28,11 @@
 
 <script setup lang="ts">
 import type { RealEstateResponse, PaginatedResponse } from "~/types/real_estate";
-import { useToast } from "~/composables/useToast";
 import { useFilterStore } from "~/stores/filter";
 import { useRealEstateStore } from "~/stores/real_estate";
 
 const route = useRoute();
 const { $api } = useNuxtApp();
-const { showToast } = useToast();
 const filterStore = useFilterStore();
 const realEstateStore = useRealEstateStore()
 
@@ -76,7 +74,7 @@ const fetchDataRealEstate = async () => {
   } catch (err) {
     const msg =
       err instanceof Error ? err.message : "Có lỗi xảy ra khi tải dữ liệu";
-    showToast("error", msg);
+    window.message?.error(msg);
     console.error("Error fetching real estates:", err);
   } finally {
     loading.value = false;
