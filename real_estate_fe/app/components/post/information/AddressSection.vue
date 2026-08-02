@@ -1,38 +1,47 @@
 <template>
     <n-card title="Địa chỉ" size="small" :segmented="{ content: true }">
         <template #header-extra>
-            <n-icon class="text-gray-500 rotate-180">
-                <IconChevronDownOutline />
-            </n-icon>
+            <div class="cursor-pointer" @click="collapsed = !collapsed">
+                <n-icon class="text-gray-500 transition-transform duration-200" :class="{ 'rotate-180': !collapsed }">
+                    <IconChevronDownOutline />
+                </n-icon>
+            </div>
         </template>
-        <n-form-item label="Khu vực">
-            <n-input readonly :value="locationLabel" placeholder="Chọn khu vực..." class="cursor-pointer"
-                @click="openModal">
-                <template #suffix>
-                    <IconChevronRight class="h-4 w-4" />
-                </template>
-            </n-input>
-        </n-form-item>
+        <div v-show="!collapsed">
+            <n-form-item label="Khu vực"
+                :feedback="postStore.errorsAddress.province || postStore.errorsAddress.detail_address"
+                :validation-status="hasAddressError ? 'error' : undefined">
+                <n-input readonly :value="locationLabel" placeholder="Chọn khu vực..." class="cursor-pointer"
+                    @click="openModal">
+                    <template #suffix>
+                        <IconChevronRight class="h-4 w-4" />
+                    </template>
+                </n-input>
+            </n-form-item>
+        </div>
     </n-card>
     <n-modal v-model:show="showLocationModal" title="Nhập địa chỉ" style="width: 600px; max-height: 800px;">
         <n-card title="Nhập địa chỉ">
-            <n-form-item label="Tỉnh / Thành phố" path="province">
-                <n-select v-model:value="postStore.province" placeholder="Chọn tỉnh/thành phố" clearable filterable
+            <n-form-item label="Tỉnh / Thành phố" path="province" :feedback="postStore.errorsAddress.province"
+                :validation-status="postStore.errorsAddress.province ? 'error' : undefined">
+                <n-select v-model:value="postStore.form.province" placeholder="Chọn tỉnh/thành phố" clearable filterable
                     :options="provinceOption" @update:value="onWardChange" />
             </n-form-item>
 
-            <n-form-item label="Phường / Xã" path="ward">
-                <n-select v-model:value="postStore.ward" placeholder="Chọn phường/xã" clearable filterable
-                    :options="wardOptions" :loading="loadingWard" />
+            <n-form-item label="Phường / Xã" path="ward" :feedback="postStore.errorsAddress.ward"
+                :validation-status="postStore.errorsAddress.ward ? 'error' : undefined">
+                <n-select v-model:value="postStore.form.ward" placeholder="Chọn phường/xã" clearable filterable
+                    :options="wardOptions" :loading="loadingWard" @update:value="clearError('ward')" />
             </n-form-item>
 
             <!-- <n-form-item label="Đường / Phố" path="street">
                 <n-select placeholder="Chọn đường/phố" clearable filterable />
             </n-form-item> -->
 
-            <n-form-item label="Địa chỉ chi tiết" path="detail">
-                <n-input v-model:value="postStore.detail_address" placeholder="Nhập số nhà, khu phố, ngõ hẻm..."
-                    clearable />
+            <n-form-item label="Địa chỉ chi tiết" path="detail" :feedback="postStore.errorsAddress.detail_address"
+                :validation-status="postStore.errorsAddress.detail_address ? 'error' : undefined">
+                <n-input v-model:value="postStore.form.detail_address" placeholder="Nhập số nhà, khu phố, ngõ hẻm..."
+                    clearable @update:value="clearError('detail_address')" />
             </n-form-item>
             <template #action>
                 <div class="flex justify-end">
@@ -50,26 +59,65 @@ import { useCreatePost } from '~/stores/create-post'
 
 const { $api } = useNuxtApp()
 const postStore = useCreatePost()
+const collapsed = ref(false)
 const showLocationModal = ref(false)
+
 const openModal = () => {
     showLocationModal.value = true
 }
+
+// Áp dụng địa chỉ: nếu thiếu field bắt buộc thì hiện lỗi ngay trong modal, không tắt
 const applyAddress = () => {
+    postStore.errorsAddress = {
+        province: postStore.form.province ? "" : "Vui lòng chọn tỉnh/thành phố",
+        ward: postStore.form.ward ? "" : "Vui lòng chọn phường/xã",
+        detail_address: postStore.form.detail_address?.trim()
+            ? ""
+            : "Vui lòng nhập địa chỉ chi tiết",
+    }
+
+    const hasError = Object.values(postStore.errorsAddress).some((message) => message !== "")
+    if (hasError) return // Giữ modal mở để người dùng sửa
+
     showLocationModal.value = false
 }
+
+// Validate phần Địa chỉ, hiển thị lỗi dưới từng ô input
+const validate = (): boolean => {
+    postStore.errorsAddress = {
+        province: postStore.form.province ? "" : "Vui lòng chọn tỉnh/thành phố",
+        ward: postStore.form.ward ? "" : "Vui lòng chọn phường/xã",
+        detail_address: postStore.form.detail_address?.trim()
+            ? ""
+            : "Vui lòng nhập địa chỉ chi tiết",
+    }
+    return Object.values(postStore.errorsAddress).every((msg) => msg === "")
+}
+
+defineExpose({ validate })
 
 const loadingWard = ref(false)
 const provinceOption = ref<SelectOption[]>([])
 const wardOptions = ref<SelectOption[]>([])
 
+// Có lỗi địa chỉ hay không (để hiện status error dưới ô Khu vực)
+const hasAddressError = computed(() =>
+    Object.values(postStore.errorsAddress).some((message) => message !== '')
+)
+
+// Xóa lỗi của 1 field địa chỉ khi người dùng sửa
+const clearError = (field: keyof typeof postStore.errorsAddress) => {
+    postStore.errorsAddress[field] = ''
+}
+
 const locationLabel = computed(() => {
-    const city = provinceOption.value.find(item => item.value === postStore.province)
-    const ward = wardOptions.value.find(item => item.value === postStore.ward)
+    const city = provinceOption.value.find(item => item.value === postStore.form.province)
+    const ward = wardOptions.value.find(item => item.value === postStore.form.ward)
 
     const parts: string[] = [];
     if (city) parts.push(city.label as string);
     if (ward) parts.push(ward.label as string);
-    if (postStore.detail_address) parts.push(postStore.detail_address);
+    if (postStore.form.detail_address) parts.push(postStore.form.detail_address);
     if (parts.length === 0) return 'Chọn khu vực';
     return parts.join(', ');
 });
@@ -88,8 +136,9 @@ const fetchListProvice = async () => {
 }
 
 const onWardChange = async (provinceCode: string | null) => {
-    postStore.ward = null
+    postStore.form.ward = null
     wardOptions.value = []
+    clearError('province')
 
     if (!provinceCode) return
 
@@ -109,6 +158,9 @@ const onWardChange = async (provinceCode: string | null) => {
         loadingWard.value = false
     }
 }
+
+
+
 onMounted(() => {
     fetchListProvice()
 })

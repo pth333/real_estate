@@ -29,16 +29,22 @@
             <!-- Section: Nhu cầu -->
             <!-- Bước 1. Thông tin BĐS -->
             <!-- Section: Địa chỉ -->
-            <div class="flex flex-col gap-4" v-if="postStore.tab === 'information'">
+            <div class="flex flex-col gap-4" v-show="postStore.tab === 'information'">
                 <DemandSection />
 
-                <AddressSection />
+                <AddressSection ref="addressComponent" />
                 <!-- Section: Thông tin chính -->
-                <MainInformationSection />
+                <MainInformationSection ref="mainInfoComponent" />
+                <!-- Section: Thông tin khác -->
+                <InformationOther />
+                <!-- Section: Thông tin liên hệ -->
+                <ContactInformationSection ref="contactComponent" />
+                <!-- Section: Tiêu đề & mô tả -->
+                <DescriptionSection ref="descriptionComponent" />
             </div>
             <!-- Bước 2. Upload ảnh, video -->
-            <div v-else-if="postStore.tab === 'upload'">
-                <UploadImageVideo />
+            <div v-show="postStore.tab === 'upload'">
+                <UploadImageVideo ref="uploadComponent" />
             </div>
         </div>
 
@@ -49,6 +55,9 @@
             </n-button>
             <n-button size="large" type="error" @click="nextPage">
                 Tiếp tục
+            </n-button>
+            <n-button v-show="postStore.tab === 'review'" size="large" type="error" @click="submitCreatePost">
+                Đăng tin
             </n-button>
         </div>
 
@@ -63,29 +72,32 @@ definePageMeta({
 })
 const { phoneVerified } = usePhoneVerification()
 const postStore = useCreatePost()
-const { showToast } = useToast();
-const { validate } = useFormValidation()
 const showOTPModal = ref(false)
-
-const validateInformation = () => {
-    const error = validate({
-        province: { value: postStore.province, label: 'tỉnh/thành' },
-        ward: { value: postStore.ward, label: 'phường/xã' },
-        detail_address: { value: postStore.detail_address?.trim(), label: 'địa chỉ chi tiết' },
-    })
-    if (error) {
-        window.message?.error(`Vui lòng nhập ${error}`)
-    }
-    return error
-}
+const uploadComponent = ref()
+const addressComponent = ref()
+const mainInfoComponent = ref()
+const contactComponent = ref()
+const descriptionComponent = ref()
 
 const nextPage = () => {
-    if (postStore.tab === 'information') {
-        if (validateInformation()) return
-        postStore.tab = 'upload'
-    }
-    if (postStore.tab === 'upload') { }
 
+    if (postStore.tab === 'information') {
+        const validations = [
+            addressComponent.value?.validate?.(),
+            mainInfoComponent.value?.validate?.(),
+            contactComponent.value?.validate?.(),
+            descriptionComponent.value?.validate?.(),
+        ]
+        if (!validations.every(Boolean)) {
+            window.message?.warning('Vui lòng nhập đầy đủ thông tin')
+            return
+        }
+        postStore.tab = 'upload'
+    } else if (postStore.tab === 'upload') {
+        if (!uploadComponent.value.validateImageCount()) return
+        postStore.tab = 'review'
+    } else if (postStore.tab === 'review') {
+    }
 }
 
 const prevPage = () => {
@@ -95,6 +107,9 @@ const prevPage = () => {
         postStore.tab = 'upload'
     }
 }
+
+const submitCreatePost = () => {
+};
 
 onMounted(() => {
     if (!phoneVerified.value) {

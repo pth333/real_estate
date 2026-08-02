@@ -19,9 +19,7 @@ redis:
   addr: localhost:6379
   db: 0
 r2:
-  endpoint: https://9cadf69fd5ff4053170f9ae153efddaa.r2.cloudflarestorage.com
   region: auto
-  access_key_id: aa0f538c2ed4608af88db877c7a6f643
-  secret_access_key: 1022a4ee0d07f6060e0a74253dad147b267d9ad3c01fd5b90e50c5db0e587c8b
   bucket: real-estate-files
-  public_url: https://pub-5eb4e976c2fe4062ba3cdabce48568cc.r2.dev
+ai:
+  model: gpt-4o-mini

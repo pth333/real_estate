@@ -2,6 +2,7 @@ package controller
 
 import (
 	"real_estate_be/internal/dto"
+	"real_estate_be/internal/response"
 	"real_estate_be/internal/usecase"
 
 	"github.com/gofiber/fiber/v2"
@@ -112,4 +113,23 @@ func (h *RealEstateHandler) ListWard(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"data": options,
 	})
+}
+
+func (h *RealEstateHandler) ListRealEstateTypes(c *fiber.Ctx) error {
+	types, err := h.service.GetListRealEstateTypes()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	options := make([]dto.CategoryResponse, len(types))
+	for i, t := range types {
+		options[i] = dto.CategoryResponse{
+			ID:   t.ID,
+			Name: t.Name,
+		}
+	}
+
+	return response.OK(c, options)
 }

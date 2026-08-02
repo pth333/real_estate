@@ -12,6 +12,15 @@ import (
 	"real_estate_be/internal/usecase"
 )
 
+// Injectors from ai.wire.go:
+
+func InitializeAIHandler() (*controller.AIHandler, error) {
+	iaiRepository := repo.NewAIRepository()
+	iaiService := usecase.NewAIService(iaiRepository)
+	aiHandler := controller.NewAIHandler(iaiService)
+	return aiHandler, nil
+}
+
 // Injectors from auth.wire.go:
 
 func InitializeAuthHandler() (*controller.UserHandler, error) {

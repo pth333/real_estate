@@ -19,6 +19,7 @@ func InitRealEstateRoutes(Router fiber.Router) {
 		realEstateRouter.Get("/list/city", realEstateHandler.ListCity)
 		// realEstateRouter.Get("/list/district", realEstateHandler.ListDistrict)
 		realEstateRouter.Get("/list/ward", realEstateHandler.ListWard)
+		realEstateRouter.Get("/list/types", realEstateHandler.ListRealEstateTypes)
 
 	}
 }

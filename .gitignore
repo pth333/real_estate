@@ -34,3 +34,8 @@ coverage
 
 # Vitest
 __screenshots__/
+
+# Environment variables (chứa secret, không commit)
+.env
+.env.*
+!.env.example

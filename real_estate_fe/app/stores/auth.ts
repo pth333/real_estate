@@ -5,38 +5,41 @@ export const useAuthStore = defineStore("auth", () => {
   const tokenCookie = useCookie<string | null>("auth_token", {
     maxAge: 60 * 60 * 24 * 7,
     sameSite: "lax",
+    path: "/",
   });
-  const emailCookie = useCookie<string | null>("auth_email", {
-    maxAge: 60 * 60 * 24 * 7,
-    sameSite: "lax",
-  });
-  const nameCookie = useCookie<string | null>("auth_name", {
-    maxAge: 60 * 60 * 24 * 7,
-    sameSite: "lax",
-  });
+  // const emailCookie = useCookie<string | null>("auth_email", {
+  //   maxAge: 60 * 60 * 24 * 7,
+  //   sameSite: "lax",
+  //   path: "/",
+  // });
+  // const nameCookie = useCookie<string | null>("auth_name", {
+  //   maxAge: 60 * 60 * 24 * 7,
+  //   sameSite: "lax",
+  //   path: "/",
+  // });
 
   const token = ref<string | null>(tokenCookie.value ?? null);
-  const email = ref<string | null>(emailCookie.value ?? null);
-  const name = ref<string | null>(nameCookie.value ?? null);
+  // const email = ref<string | null>(emailCookie.value ?? null);
+  // const name = ref<string | null>(nameCookie.value ?? null);
 
-  watch(token, (val) => { tokenCookie.value = val; });
-  watch(email, (val) => { emailCookie.value = val; });
-  watch(name, (val) => { nameCookie.value = val; });
+  watch(token, (val) => {
+    tokenCookie.value = val;
+  });
+  // watch(email, (val) => {
+  //   emailCookie.value = val;
+  // });
+  // watch(name, (val) => {
+  //   nameCookie.value = val;
+  // });
 
   const isAuthenticated = computed(() => !!token.value);
-  const userName = computed(() => name.value ?? "");
-  const userEmail = computed(() => email.value ?? "");
 
   function setSession(tok: string, userEmail?: string, userName?: string) {
     token.value = tok;
-    email.value = userEmail ?? null;
-    name.value = userName ?? null;
   }
 
   function clearSession() {
     token.value = null;
-    email.value = null;
-    name.value = null;
   }
 
   async function login(payload: LoginRequest) {
@@ -47,7 +50,7 @@ export const useAuthStore = defineStore("auth", () => {
       throw new Error(res.message || "Đăng nhập thất bại");
     }
 
-    setSession(res.data.token, payload.email);
+    setSession(res.data.token);
     return res;
   }
 
@@ -87,7 +90,13 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   return {
-    token, email, name, isAuthenticated, userName, userEmail,
-    login, register, refreshToken, logout, clearSession,
+    token,
+    isAuthenticated,
+
+    login,
+    register,
+    refreshToken,
+    logout,
+    clearSession,
   };
 });

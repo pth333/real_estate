@@ -16,7 +16,8 @@ type ConfirmUploadRequest struct {
 }
 
 type ConfirmUploadResponse struct {
-	ImageID   uint64 `json:"image_id"`
-	PublicURL string `json:"public_url"`
-	Key       string `json:"key"`
+	ImageID     uint64 `json:"image_id"`
+	PublicURL   string `json:"public_url"`
+	Key         string `json:"key"`
+	ThumbnailURL string `json:"thumbnail_url,omitempty"`
 }

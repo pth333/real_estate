@@ -9,10 +9,10 @@ export function usePriceFormatter() {
    */
   function formatPrice(priceVND: number): string {
     if (priceVND >= 1_000_000_000) {
-      return `${(priceVND / 1_000_000_000).toFixed(1)} tỷ`
+      return `${(priceVND / 1_000_000_000).toLocaleString('vi-VN', { maximumFractionDigits: 2 })} tỷ`
     }
     if (priceVND >= 1_000_000) {
-      return `${(priceVND / 1_000_000).toFixed(0)} triệu`
+      return `${(priceVND / 1_000_000).toLocaleString('vi-VN', { maximumFractionDigits: 2 })} triệu`
     }
     return `${priceVND.toLocaleString('vi-VN')} đ`
   }
@@ -22,7 +22,7 @@ export function usePriceFormatter() {
    */
   function formatPricePerM2(pricePerM2: number): string {
     if (pricePerM2 >= 1_000_000) {
-      return `${(pricePerM2 / 1_000_000).toFixed(2)} tr/m²`
+      return `${(pricePerM2 / 1_000_000).toLocaleString('vi-VN', { maximumFractionDigits: 2 })} tr/m²`
     }
     return `${pricePerM2.toLocaleString('vi-VN')} đ/m²`
   }

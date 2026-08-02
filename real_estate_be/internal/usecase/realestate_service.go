@@ -16,6 +16,7 @@ type IRealEstateService interface {
 	ListRealEstateByCategory(req dto.RealEstateSearchRequest) ([]dto.RealEstateResponse, int64, error)
 	GetListCity() ([]model.Province, error)
 	GetListWard(provinceCode string) ([]model.Ward, error)
+	GetListRealEstateTypes() ([]model.Category, error)
 }
 
 func NewRealEstateService(repo repo.RealEstateRepository, categoryRepo repo.ICategoryRepository) IRealEstateService {
@@ -74,4 +75,7 @@ func (s *RealEstateService) GetListCity() ([]model.Province, error) {
 
 func (s *RealEstateService) GetListWard(provinceCode string) ([]model.Ward, error) {
 	return s.repo.GetListWard(provinceCode)
+}
+func (s *RealEstateService) GetListRealEstateTypes() ([]model.Category, error) {
+	return s.repo.GetListRealEstateTypes()
 }

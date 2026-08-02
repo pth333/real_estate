@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"real_estate_be/internal/dto"
+	"strings"
 	"real_estate_be/internal/global"
 	"real_estate_be/internal/helpers"
 	model "real_estate_be/internal/models"
@@ -95,7 +96,7 @@ func (s *uploadService) ConfirmUpload(req dto.ConfirmUploadRequest) (*dto.Confir
 		return nil, fiber.NewError(fiber.StatusNotFound, "File không tồn tại trên R2 hoặc đã hết hạn")
 	}
 
-	// Xác định content_type từ kết quả HeadObject (fallback về empty string nếu nil)
+	// Xác định content_type từ kết quả HeadObject
 	contentType := ""
 	if headObj.ContentType != nil {
 		contentType = *headObj.ContentType
@@ -104,13 +105,21 @@ func (s *uploadService) ConfirmUpload(req dto.ConfirmUploadRequest) (*dto.Confir
 	// Xác định filename từ key
 	filename := filepath.Base(req.Key)
 
+	// Tạo thumbnail URL cho video
+	var thumbnailURL string
+	if strings.HasPrefix(contentType, "video/") {
+		thumbnailKey := fmt.Sprintf("thumbnails/%s.jpg", strings.TrimSuffix(filepath.Base(req.Key), filepath.Ext(req.Key)))
+		thumbnailURL = global.Config.R2.PublicURL + "/" + thumbnailKey
+	}
+
 	// Lưu record vào DB
 	image := &model.Image{
-		Key:      req.Key,
-		Filename: filename,
-		FileType: contentType,
-		FileSize: aws.ToInt64(headObj.ContentLength),
-		URL:      global.Config.R2.PublicURL + "/" + req.Key,
+		Key:          req.Key,
+		Filename:     filename,
+		FileType:     contentType,
+		FileSize:     aws.ToInt64(headObj.ContentLength),
+		URL:          global.Config.R2.PublicURL + "/" + req.Key,
+		ThumbnailURL: thumbnailURL,
 	}
 
 	if err := s.imageRepo.Create(image); err != nil {
@@ -118,8 +127,9 @@ func (s *uploadService) ConfirmUpload(req dto.ConfirmUploadRequest) (*dto.Confir
 	}
 
 	return &dto.ConfirmUploadResponse{
-		ImageID:   image.ID,
-		PublicURL: image.URL,
-		Key:       req.Key,
+		ImageID:      image.ID,
+		PublicURL:    image.URL,
+		Key:          req.Key,
+		ThumbnailURL: thumbnailURL,
 	}, nil
 }

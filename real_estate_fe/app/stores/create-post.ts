@@ -1,14 +1,26 @@
+import { refElement } from 'vuetify/lib/util/helpers.mjs';
+import { InformationRealestate } from '~/types/real_estate'
+
 export const useCreatePost = defineStore("create-post", () => {
   type Tab = "information" | "upload" | "review";
-  const province = ref<string | null>(null);
-  const ward = ref<string | null>(null);
-  const detail_address = ref<string | null>(null);
+
+  // Dữ liệu tin đăng tổ chức trong class InformationRealestate
+  const form = ref(new InformationRealestate())
+
+  // Lỗi hiển thị dưới từng ô input, nhóm theo section.
+  // Mỗi section component tự cập nhật lỗi khi validate.
+  const errors = ref({
+    address: { province: "", ward: "", detail_address: "" },
+    mainInfo: { real_estate_type: "", area: "", price: "", unit: "" },
+    contact: { contact_name: "", contact_email: "", contact_phone: "" },
+    description: { title: "", description: "" },
+  })
+
   const tab = ref<Tab>("information");
-  const listingType = ref<"sell" | "rent">("sell");
+  const next = ref(false);
 
-  const payload = computed(() => {});
-
-  const submitCreatePost = () => {};
+  // ── Payload: chính là class InformationRealestate ──
+  const payload = computed(() => form.value)
 
   const stepLabels: Record<Tab, string> = {
     information: "Bước 1. Thông tin BĐS",
@@ -26,12 +38,16 @@ export const useCreatePost = defineStore("create-post", () => {
   const currentStepProgress = computed(() => stepProgress[tab.value]);
 
   return {
-    province,
-    ward,
-    detail_address,
+    form,
+    payload,
+    errors,
+    errorsMainInfo: errors.value.mainInfo,
+    errorsAddress: errors.value.address,
+    errorsContact: errors.value.contact,
+    errorsDescription: errors.value.description,
     tab,
+    next,
     currentStepLabel,
     currentStepProgress,
-    listingType,
   };
 });

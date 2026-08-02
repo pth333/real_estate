@@ -3,6 +3,7 @@ export interface FileItem {
     file: File
     fileType: 'image' | 'video'
     previewUrl: string
+    thumbnailUrl?: string
     status: 'pending' | 'gettingPresign' | 'uploading' | 'confirming' | 'done' | 'error'
     progress: number
     key?: string
@@ -29,6 +30,7 @@ export interface ConfirmResponse {
         image_id: number
         public_url: string
         key: string
+        thumbnail_url?: string
     }
     message?: string
 }

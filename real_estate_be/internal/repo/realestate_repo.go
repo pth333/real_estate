@@ -19,6 +19,7 @@ type RealEstateRepository interface {
 	GetListByCategory(offset int, req dto.RealEstateSearchRequest, limit int) ([]model.RealEstate, int64, error)
 	GetListCity() ([]model.Province, error)
 	GetListWard(provinceCode string) ([]model.Ward, error)
+	GetListRealEstateTypes() ([]model.Category, error)
 }
 
 func NewRealEstateRepository(db *gorm.DB) RealEstateRepository {
@@ -161,4 +162,13 @@ func (r *realEstateRepo) GetListWard(provinceCode string) ([]model.Ward, error) 
 		return nil, result.Error
 	}
 	return wards, nil
+}
+
+func (r *realEstateRepo) GetListRealEstateTypes() ([]model.Category, error) {
+	var types []model.Category
+	result := r.db.Select("id, name").Find(&types)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return types, nil
 }

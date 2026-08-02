@@ -32,6 +32,8 @@ func InitRouter() *fiber.App {
 		routers.InitNotificationRoutes(MainGroup)
 		// Upload
 		routers.InitUploadRoutes(MainGroup, global.S3Client)
+		// AI
+		routers.InitAIRoutes(MainGroup)
 	}
 
 	return app

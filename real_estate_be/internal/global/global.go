@@ -23,6 +23,12 @@ type ConfigSettings struct {
 	Kafka  KafkaConfig  `mapstructure:"kafka"`
 	Redis  RedisConfig  `mapstructure:"redis"`
 	R2     R2Config     `mapstructure:"r2"`
+	AI     AIConfig     `mapstructure:"ai"`
+}
+
+type AIConfig struct {
+	APIKey string `mapstructure:"api_key"`
+	Model  string `mapstructure:"model"`
 }
 
 type R2Config struct {

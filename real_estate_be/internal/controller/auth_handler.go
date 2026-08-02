@@ -50,7 +50,7 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 		HTTPOnly: true,
 		Secure:   false, // true nếu dùng HTTPS
 		SameSite: "Lax",
-		Path:     "/api/2026/auth",
+		Path:     "/",
 		MaxAge:   7 * 24 * 3600, // 7 ngày
 	})
 
@@ -78,7 +78,7 @@ func (h *UserHandler) RefreshToken(c *fiber.Ctx) error {
 		HTTPOnly: true,
 		Secure:   false,
 		SameSite: "Lax",
-		Path:     "/api/2026/auth",
+		Path:     "/",
 		MaxAge:   7 * 24 * 3600,
 	})
 
@@ -95,7 +95,7 @@ func (h *UserHandler) Logout(c *fiber.Ctx) error {
 		HTTPOnly: true,
 		Secure:   false,
 		SameSite: "Lax",
-		Path:     "/api/2026/auth",
+		Path:     "/",
 		MaxAge:   -1,
 	})
 

@@ -67,8 +67,8 @@
             @change="onVideoInputChange" />
 
         <!-- Preview grid -->
-        <div v-if="allFiles.length > 0" class="grid grid-cols-4 gap-2.5">
-            <div v-for="(item, index) in allFiles" :key="item.id"
+        <div v-if="files.length > 0" class="grid grid-cols-4 gap-2.5">
+            <div v-for="(item, index) in files" :key="item.id"
                 class="relative aspect-[4/3] rounded-lg overflow-hidden bg-gray-100 group">
 
                 <!-- Badge ảnh đại diện -->
@@ -79,6 +79,8 @@
 
                 <!-- Preview -->
                 <img v-if="item.fileType === 'image'" :src="item.previewUrl" :alt="item.file.name"
+                    class="w-full h-full object-cover" />
+                <img v-else-if="item.thumbnailUrl" :src="item.thumbnailUrl" alt="Video thumbnail"
                     class="w-full h-full object-cover" />
                 <div v-else class="w-full h-full flex items-center justify-center bg-gray-100">
                     <n-icon size="28" color="#9ca3af">
@@ -107,11 +109,6 @@
                     </n-icon>
                 </div>
 
-                <!-- Spinner khi đang lấy presign / confirming -->
-                <div v-if="item.status === 'gettingPresign' || item.status === 'confirming'"
-                    class="absolute inset-0 bg-black/30 flex items-center justify-center">
-                    <n-spin size="small" />
-                </div>
 
                 <!-- Nút xoá -->
                 <button
@@ -124,9 +121,7 @@
             </div>
         </div>
 
-        <p v-if="showError" class="text-xs text-red-500 -mt-2">
-            Vui lòng tải lên ít nhất 3 ảnh.
-        </p>
+
 
         <!-- Tiêu chuẩn -->
         <div>
@@ -170,30 +165,17 @@
 </template>
 
 <script setup lang="ts">
-import type { ConfirmResponse, FileItem, PresignResponse } from '~/types/uploadmedia'
-
-
-
-const { $api } = useNuxtApp()
-const { showToast } = useToast()
+import type { FileItem } from '~/types/uploadmedia'
+import { uploadFile } from '~/composables/upload'
 
 const imageInputRef = ref<HTMLInputElement | null>(null)
 const videoInputRef = ref<HTMLInputElement | null>(null)
 
 const isDragging = ref(false)
-const imageFiles = ref<FileItem[]>([])
-const videoFiles = ref<FileItem[]>([])
-const showError = ref(false)
+const files = ref<FileItem[]>([])
 
-const allFiles = computed(() => [...imageFiles.value, ...videoFiles.value])
-const totalCount = computed(() => allFiles.value.length)
-
-const uploadedImages = computed(() =>
-    imageFiles.value.filter((f) => f.status === 'done' && f.imageId != null)
-)
-const allUploaded = computed(() =>
-    [...imageFiles.value, ...videoFiles.value].filter((f) => f.status === 'done' && f.imageId != null)
-)
+const imageFiles = computed(() => files.value.filter(f => f.fileType === 'image'))
+const totalCount = computed(() => files.value.length)
 
 let fileIdCounter = 0
 function generateId(): string {
@@ -201,7 +183,7 @@ function generateId(): string {
 }
 
 const MAX_FILES = 25
-
+const MAX_VIDEOS = 3
 function triggerImageInput() {
     imageInputRef.value?.click()
 }
@@ -211,13 +193,23 @@ function triggerVideoInput() {
 }
 
 function addFiles(fileList: FileList, type: 'image' | 'video') {
-    showError.value = false
 
-    const remaining = MAX_FILES - totalCount.value
-    if (remaining <= 0) return
+    const currentVideos = files.value.filter(f => f.fileType === 'video').length
+    const remainingTotal = MAX_FILES - totalCount.value
+    const remainingVideo = MAX_VIDEOS - currentVideos
 
-    const files = Array.from(fileList).slice(0, remaining)
-    const newItems: FileItem[] = files.map((file) => ({
+    if (remainingTotal <= 0) return
+
+    if (type === 'video' && remainingVideo <= 0) {
+        window.message?.warning(`Chỉ được tải lên tối đa ${MAX_VIDEOS} video`)
+        return
+    }
+
+    const limit = type === 'video'
+        ? Math.min(remainingTotal, remainingVideo)
+        : remainingTotal
+
+    const newItems: FileItem[] = Array.from(fileList).slice(0, limit).map((file) => ({
         id: generateId(),
         file,
         fileType: type,
@@ -226,88 +218,9 @@ function addFiles(fileList: FileList, type: 'image' | 'video') {
         progress: 0,
     }))
 
-    if (type === 'image') {
-        imageFiles.value.push(...newItems)
-    } else {
-        videoFiles.value.push(...newItems)
-    }
-
-    // Step 1-5: Upload từng file theo luồng presigned URL
-    newItems.forEach((item) => {
-        uploadFile(item)
-    })
-}
-
-async function uploadFile(item: FileItem) {
-    try {
-        // Step 1: Lấy presigned URL
-        item.status = 'gettingPresign'
-        const presignRes = await $api.post<PresignResponse>('/upload/presign', {
-            filename: item.file.name,
-            content_type: item.file.type,
-        })
-
-        if (!presignRes.success || !presignRes.data) {
-            throw new Error(presignRes.message || 'Không thể lấy presigned URL')
-        }
-
-        const { upload_url, key, expires_at } = presignRes.data
-        item.key = key
-        item.uploadUrl = upload_url
-        item.expiresAt = new Date(expires_at).getTime()
-
-        // Step 4: Upload file trực tiếp lên R2 (không qua backend)
-        item.status = 'uploading'
-        await uploadToR2(item.file, upload_url, (progress) => {
-            item.progress = progress
-        })
-
-        // Step 5: Confirm upload → backend kiểm tra file trên R2 rồi lưu DB
-        item.status = 'confirming'
-        const confirmRes = await $api.post<ConfirmResponse>('/upload/confirm', { key })
-
-        if (!confirmRes.success || !confirmRes.data) {
-            throw new Error(confirmRes.message || 'Xác nhận upload thất bại')
-        }
-
-        item.imageId = confirmRes.data.image_id
-        item.publicUrl = confirmRes.data.public_url
-        item.status = 'done'
-        item.progress = 100
-    } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : 'Upload thất bại'
-        item.status = 'error'
-        item.errorMessage = msg
-        showToast('error', msg)
-        console.error('Upload error:', err)
-    }
-}
-
-async function uploadToR2(file: File, url: string, onProgress: (pct: number) => void): Promise<void> {
-    return new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest()
-        xhr.open('PUT', url, true)
-        xhr.setRequestHeader('Content-Type', file.type)
-
-        xhr.upload.onprogress = (e) => {
-            if (e.lengthComputable) {
-                onProgress(Math.round((e.loaded / e.total) * 100))
-            }
-        }
-
-        xhr.onload = () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-                onProgress(100)
-                resolve()
-            } else {
-                reject(new Error(`Upload R2 thất bại: ${xhr.status}`))
-            }
-        }
-
-        xhr.onerror = () => reject(new Error('Lỗi mạng khi upload lên R2'))
-        xhr.ontimeout = () => reject(new Error('Upload lên R2 đã hết thời gian'))
-
-        xhr.send(file)
+    files.value.push(...newItems)
+    newItems.forEach(({ id }) => {
+        uploadFile(files.value.find(f => f.id === id)!)
     })
 }
 
@@ -344,20 +257,20 @@ function onVideoInputChange(e: Event) {
 }
 
 function removeFile(id: string) {
-    imageFiles.value = imageFiles.value.filter((f) => f.id !== id)
-    videoFiles.value = videoFiles.value.filter((f) => f.id !== id)
+    const item = files.value.find(f => f.id === id)
+    if (item) URL.revokeObjectURL(item.previewUrl)
+    files.value = files.value.filter(f => f.id !== id)
 }
 
 function validateImageCount(): boolean {
     if (imageFiles.value.filter((f) => f.status === 'done').length < 3) {
-        showError.value = true
+        window.message?.warning('Vui lòng đăng ít nhất 3 ảnh')
         return false
     }
-    showError.value = false
     return true
 }
 
-defineExpose({ validateImageCount, uploadedImages, allUploaded })
+defineExpose({ validateImageCount })
 
 const videoStandards = [
     { label: 'Thời lượng', value: 'Tối thiểu 10 giây, tối đa 5 phút' },
