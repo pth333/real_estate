@@ -1,4 +1,50 @@
-import type { FileItem, PresignResponse, ConfirmResponse } from '~/types/uploadmedia'
+import type {
+  FileItem,
+  PresignResponse,
+  ConfirmResponse,
+} from "~/types/uploadmedia";
+interface ValidationResult {
+  valid: boolean;
+  message: string;
+}
+export function useValidate() {
+  function validateImage(file: File): ValidationResult {
+    const allowedFormats = [
+      "image/png",
+      "image/jpeg",
+      "image/jpg",
+      "image/gif",
+    ];
+    if (!allowedFormats.includes(file.type)) {
+      return {
+        valid: false,
+        message: `Định dạng không hợp lệ. Chỉ hỗ trợ PNG, JPG, JPEG, GIF`,
+      };
+    }
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      return { valid: false, message: `Dung lượng tối đa 10MB` };
+    }
+    return { valid: true, message: "" };
+  }
+
+  function validateVideo(file: File): ValidationResult {
+    const allowedFormats = ["video/mp4", "video/quicktime"];
+    if (!allowedFormats.includes(file.type)) {
+      return {
+        valid: false,
+        message: `Định dạng không hợp lệ. Chỉ hỗ trợ MP4, MOV`,
+      };
+    }
+    const maxSize = 200 * 1024 * 1024; // 200MB
+    if (file.size > maxSize) {
+      return { valid: false, message: `Dung lượng tối đa 200MB` };
+    }
+    return { valid: true, message: "" };
+  }
+
+  return { validateImage, validateVideo };
+}
 
 /**
  * Tạo presigned URL từ backend
@@ -7,17 +53,17 @@ export async function getPresignedUrl(
   filename: string,
   contentType: string,
 ): Promise<{ upload_url: string; key: string; expires_at: string }> {
-  const { $api } = useNuxtApp()
-  const res = await $api.post<PresignResponse>('/upload/presign', {
+  const { $api } = useNuxtApp();
+  const res = await $api.post<PresignResponse>("/upload/presign", {
     filename,
     content_type: contentType,
-  })
+  });
 
   if (!res.success || !res.data) {
-    throw new Error(res.message || 'Không thể lấy presigned URL')
+    throw new Error(res.message || "Không thể lấy presigned URL");
   }
 
-  return res.data
+  return res.data;
 }
 
 /**
@@ -29,29 +75,29 @@ export function uploadToR2(
   onProgress?: (pct: number) => void,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest()
-    xhr.open('PUT', url, true)
-    xhr.setRequestHeader('Content-Type', file.type)
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", url, true);
+    xhr.setRequestHeader("Content-Type", file.type);
 
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable && onProgress) {
-        onProgress(Math.round((e.loaded / e.total) * 100))
+        onProgress(Math.round((e.loaded / e.total) * 100));
       }
-    }
+    };
 
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
-        onProgress?.(100)
-        resolve()
+        onProgress?.(100);
+        resolve();
       } else {
-        reject(new Error(`Upload R2 thất bại: ${xhr.status}`))
+        reject(new Error(`Upload R2 thất bại: ${xhr.status}`));
       }
-    }
+    };
 
-    xhr.onerror = () => reject(new Error('Lỗi mạng khi upload lên R2'))
-    xhr.ontimeout = () => reject(new Error('Upload lên R2 đã hết thời gian'))
-    xhr.send(file)
-  })
+    xhr.onerror = () => reject(new Error("Lỗi mạng khi upload lên R2"));
+    xhr.ontimeout = () => reject(new Error("Upload lên R2 đã hết thời gian"));
+    xhr.send(file);
+  });
 }
 
 /**
@@ -60,14 +106,14 @@ export function uploadToR2(
 export async function confirmUpload(
   key: string,
 ): Promise<{ image_id: number; public_url: string; thumbnail_url?: string }> {
-  const { $api } = useNuxtApp()
-  const res = await $api.post<ConfirmResponse>('/upload/confirm', { key })
+  const { $api } = useNuxtApp();
+  const res = await $api.post<ConfirmResponse>("/upload/confirm", { key });
 
   if (!res.success || !res.data) {
-    throw new Error(res.message || 'Xác nhận upload thất bại')
+    throw new Error(res.message || "Xác nhận upload thất bại");
   }
 
-  return res.data
+  return res.data;
 }
 
 /**
@@ -75,39 +121,37 @@ export async function confirmUpload(
  */
 export async function uploadFile(item: FileItem): Promise<void> {
   try {
-    // Step 1: Lấy presigned URL
-    item.status = 'gettingPresign'
+    item.status = "gettingPresign";
     const { upload_url, key, expires_at } = await getPresignedUrl(
       item.file.name,
       item.file.type,
-    )
+    );
 
     Object.assign(item, {
       key,
       uploadUrl: upload_url,
       expiresAt: new Date(expires_at).getTime(),
-    })
+    });
 
-    // Step 4: Upload trực tiếp lên R2
-    item.status = 'uploading'
+    item.status = "uploading";
     await uploadToR2(item.file, upload_url, (pct) => {
-      item.progress = pct
-    })
+      item.progress = pct;
+    });
 
     // Step 5: Confirm với backend
-    item.status = 'confirming'
-    const result = await confirmUpload(key)
+    item.status = "confirming";
+    const result = await confirmUpload(key);
 
     Object.assign(item, {
       imageId: result.image_id,
       publicUrl: result.public_url,
       thumbnailUrl: result.thumbnail_url,
-      status: 'done',
+      status: "done",
       progress: 100,
-    })
+    });
   } catch (err: unknown) {
-    item.status = 'error'
-    item.errorMessage = err instanceof Error ? err.message : 'Upload thất bại'
-    console.error('Upload error:', err)
+    item.status = "error";
+    item.errorMessage = err instanceof Error ? err.message : "Upload thất bại";
+    console.error("Upload error:", err);
   }
 }

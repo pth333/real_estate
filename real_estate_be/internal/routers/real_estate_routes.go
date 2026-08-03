@@ -1,6 +1,7 @@
 package routers
 
 import (
+	"real_estate_be/internal/middleware"
 	"real_estate_be/internal/wire"
 
 	"github.com/gofiber/fiber/v2"
@@ -14,10 +15,15 @@ func InitRealEstateRoutes(Router fiber.Router) {
 
 	realEstateRouter := Router.Group("/real-estate")
 	{
-		realEstateRouter.Post("/list", realEstateHandler.List)
-		realEstateRouter.Post("/:slug/:page", realEstateHandler.ListRealEsateByCategory)
+		// Apply auth middleware cho tat ca routes trong group
+		authGroup := realEstateRouter.Group("/", middleware.AuthMiddleware)
+		{
+			authGroup.Post("/list", realEstateHandler.List)
+			authGroup.Post("/:slug/:page", realEstateHandler.ListRealEsateByCategory)
+		}
+
+		// Route khong can auth
 		realEstateRouter.Get("/list/city", realEstateHandler.ListCity)
-		// realEstateRouter.Get("/list/district", realEstateHandler.ListDistrict)
 		realEstateRouter.Get("/list/ward", realEstateHandler.ListWard)
 		realEstateRouter.Get("/list/types", realEstateHandler.ListRealEstateTypes)
 

@@ -7,30 +7,13 @@ export const useAuthStore = defineStore("auth", () => {
     sameSite: "lax",
     path: "/",
   });
-  // const emailCookie = useCookie<string | null>("auth_email", {
-  //   maxAge: 60 * 60 * 24 * 7,
-  //   sameSite: "lax",
-  //   path: "/",
-  // });
-  // const nameCookie = useCookie<string | null>("auth_name", {
-  //   maxAge: 60 * 60 * 24 * 7,
-  //   sameSite: "lax",
-  //   path: "/",
-  // });
+  const { $api } = useNuxtApp();
 
   const token = ref<string | null>(tokenCookie.value ?? null);
-  // const email = ref<string | null>(emailCookie.value ?? null);
-  // const name = ref<string | null>(nameCookie.value ?? null);
 
   watch(token, (val) => {
     tokenCookie.value = val;
   });
-  // watch(email, (val) => {
-  //   emailCookie.value = val;
-  // });
-  // watch(name, (val) => {
-  //   nameCookie.value = val;
-  // });
 
   const isAuthenticated = computed(() => !!token.value);
 
@@ -43,7 +26,6 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   async function login(payload: LoginRequest) {
-    const { $api } = useNuxtApp();
     const res = await $api.post<AuthResponse>("/auth/login", payload);
 
     if (!res.success || !res.data?.token) {
@@ -55,7 +37,6 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   async function register(payload: RegisterRequest) {
-    const { $api } = useNuxtApp();
     const res = await $api.post<AuthResponse>("/auth/register", payload);
 
     if (!res.success) {
@@ -67,21 +48,23 @@ export const useAuthStore = defineStore("auth", () => {
 
   async function refreshToken() {
     try {
-      const { $api } = useNuxtApp();
       const res = await $api.post<AuthResponse>("/auth/refresh");
-      if (res.success && res.data?.token) {
+      if (!res.success) {
+        throw new Error(res.message || "Refresh token failed");
+      }
+      if (res.data?.token) {
         token.value = res.data.token;
         return true;
       }
+      throw new Error("No token in response");
     } catch {
       clearSession();
+      return false;
     }
-    return false;
   }
 
   async function logout() {
     try {
-      const { $api } = useNuxtApp();
       await $api.post("/auth/logout");
     } catch {
       // ignore

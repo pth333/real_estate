@@ -1,6 +1,7 @@
 package routers
 
 import (
+	"real_estate_be/internal/middleware"
 	"real_estate_be/internal/wire"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -13,7 +14,7 @@ func InitUploadRoutes(Router fiber.Router, s3Client *s3.Client) {
 		panic(err)
 	}
 
-	uploadRouter := Router.Group("/upload")
+	uploadRouter := Router.Group("/upload", middleware.AuthMiddleware)
 	{
 		uploadRouter.Post("/presign", uploadController.Presign)
 		uploadRouter.Post("/confirm", uploadController.Confirm)

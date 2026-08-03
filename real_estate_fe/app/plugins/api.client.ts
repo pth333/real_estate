@@ -37,24 +37,15 @@ function processQueue(error: unknown) {
   });
 }
 
-async function refreshAuthToken(): Promise<void> {
-  const config = useRuntimeConfig();
-  const res = await $fetch<{ status?: boolean; data?: { token?: string } }>(
-    `${config.public.apiBaseUrl}/auth/refresh`,
-    { method: "POST", credentials: "include" },
-  );
-  if (!res?.data?.token) throw new Error("Refresh token failed");
-  const authStore = useAuthStore();
-  authStore.token = res.data.token;
-}
-
-function buildHeaders(config: RequestConfig): Record<string, string> {
-  const authStore = useAuthStore();
+function buildHeaders(
+  config: RequestConfig,
+  token?: string | null,
+): Record<string, string> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...config.headers,
   };
-  if (authStore.token) headers["Authorization"] = `Bearer ${authStore.token}`;
+  if (token) headers["Authorization"] = `Bearer ${token}`;
   return headers;
 }
 
@@ -70,8 +61,10 @@ export const api = {
     url: string,
     config: RequestConfig = {},
   ): Promise<T> {
+    const authStore = useAuthStore();
     const fullUrl = getFullUrl(url);
-    const headers = buildHeaders(config);
+    const token = authStore.token ?? undefined;
+    const headers = buildHeaders(config, token);
     const isRefreshing = useRefreshState();
     const failedQueue = useFailedQueue();
 
@@ -91,7 +84,6 @@ export const api = {
         if (r.status === false) {
           const msg = r.message || r.error || "Yêu cầu thất bại";
           if (!config.silent) window.message?.warning(msg);
-          // throw để catch bên ngoài biết là có lỗi
           const bizErr: any = new Error(msg);
           bizErr.__business = true;
           bizErr.data = result;
@@ -112,12 +104,7 @@ export const api = {
               resolve: resolve as (value: unknown) => void,
               reject,
               retry: () => {
-                const freshHeaders = buildHeaders(config);
-                return $fetch<T>(fullUrl, {
-                  ...config,
-                  headers: freshHeaders,
-                  credentials: "include",
-                });
+                return this.request<T>(url, config);
               },
             });
           });
@@ -125,9 +112,14 @@ export const api = {
 
         isRefreshing.value = true;
         try {
-          await refreshAuthToken();
+          // Gọi refresh token qua store
+          await authStore.refreshToken();
+
+          // Retry tất cả request trong queue
           processQueue(null);
-          const freshHeaders = buildHeaders(config);
+
+          // Retry request hiện tại với token mới
+          const freshHeaders = buildHeaders(config, authStore.token);
           return await $fetch<T>(fullUrl, {
             method: config.method || "GET",
             body: config.body,
@@ -138,12 +130,9 @@ export const api = {
           });
         } catch (refreshErr) {
           processQueue(refreshErr);
-          const authStore = useAuthStore();
-          authStore.clearSession();
-          if (!config.silent)
-            window.message?.warning(
-              "Phiên đăng nhập hết hạn, vui lòng đăng nhập lại",
-            );
+          window.message?.warning(
+            "Phiên đăng nhập hết hạn, vui lòng đăng nhập lại",
+          );
           navigateTo("/login");
           throw refreshErr;
         } finally {

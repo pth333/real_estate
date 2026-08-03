@@ -168,6 +168,8 @@
 import type { FileItem } from '~/types/uploadmedia'
 import { uploadFile } from '~/composables/upload'
 
+const { validateImage, validateVideo } = useValidate()
+
 const imageInputRef = ref<HTMLInputElement | null>(null)
 const videoInputRef = ref<HTMLInputElement | null>(null)
 
@@ -243,7 +245,20 @@ function onDrop(e: DragEvent) {
 function onImageInputChange(e: Event) {
     const target = e.target as HTMLInputElement
     if (target.files && target.files.length > 0) {
-        addFiles(target.files, 'image')
+        const validFiles: File[] = []
+        for (const file of Array.from(target.files)) {
+            const result = validateImage(file)
+            if (!result.valid) {
+                window.message?.warning(`Ảnh "${file.name}": ${result.message}`)
+                continue
+            }
+            validFiles.push(file)
+        }
+        if (validFiles.length > 0) {
+            const dt = new DataTransfer()
+            validFiles.forEach(f => dt.items.add(f))
+            addFiles(dt.files, 'image')
+        }
     }
     target.value = ''
 }
@@ -251,7 +266,20 @@ function onImageInputChange(e: Event) {
 function onVideoInputChange(e: Event) {
     const target = e.target as HTMLInputElement
     if (target.files && target.files.length > 0) {
-        addFiles(target.files, 'video')
+        const validFiles: File[] = []
+        for (const file of Array.from(target.files)) {
+            const result = validateVideo(file)
+            if (!result.valid) {
+                window.message?.warning(`Video "${file.name}": ${result.message}`)
+                continue
+            }
+            validFiles.push(file)
+        }
+        if (validFiles.length > 0) {
+            const dt = new DataTransfer()
+            validFiles.forEach(f => dt.items.add(f))
+            addFiles(dt.files, 'video')
+        }
     }
     target.value = ''
 }
