@@ -5,6 +5,9 @@ import "time"
 type RealEstate struct {
 	ID uint64 `gorm:"primaryKey"`
 
+	// User đăng tin (nullable cho tin từ crawler)
+	UserID *uint64 `gorm:"column:user_id;index"`
+
 	Title    string  `gorm:"column:title"`
 	PriceVND float64 `gorm:"column:price_vnd"`
 
@@ -15,10 +18,14 @@ type RealEstate struct {
 	Acreage    float64 `gorm:"column:acreage"`
 	PricePerM2 float64 `gorm:"column:price_per_m2"`
 
-	CategoryID *uint64   `gorm:"column:category_id"`
-	Category   *Category `gorm:"foreignKey:CategoryID"`
+	CategoryID *uint64 `gorm:"column:category_id"`
+	// Không khai báo relationship Category → GORM không tự tạo FK constraint.
+	// Tin từ crawler có thể lưu category_id không tồn tại, nên để cột tự do.
 
 	TypeOfRealEstate string `gorm:"column:type_of_real_estate"`
+	Description      string `gorm:"column:description;type:text"`
+	Bedrooms         *int   `gorm:"column:bedrooms"`
+	Bathrooms        *int   `gorm:"column:bathrooms"`
 
 	Source    string `gorm:"column:source;index"`
 	SourceURL string `gorm:"column:source_url;uniqueIndex"`

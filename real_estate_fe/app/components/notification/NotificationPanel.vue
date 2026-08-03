@@ -59,7 +59,6 @@ defineEmits<{ close: [] }>()
 
 const store = useNotificationStore()
 const authStore = useAuthStore()
-const { fromNow } = useRelativeTime()
 
 onMounted(() => {
   store.fetchList(authStore.user?.id ?? 1)

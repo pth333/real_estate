@@ -58,7 +58,9 @@ func InitializeRealEstateHandler() (*controller.RealEstateHandler, error) {
 	db := providerDB()
 	realEstateRepository := repo.NewRealEstateRepository(db)
 	iCategoryRepository := repo.NewCategoryRepository(db)
-	iRealEstateService := usecase.NewRealEstateService(realEstateRepository, iCategoryRepository)
+	imageRepository := repo.NewImageRepository(db)
+	iUserRepository := repo.NewUserRepository(db)
+	iRealEstateService := usecase.NewRealEstateService(realEstateRepository, iCategoryRepository, imageRepository, iUserRepository)
 	realEstateHandler := controller.NewRealEstateHandler(iRealEstateService)
 	return realEstateHandler, nil
 }

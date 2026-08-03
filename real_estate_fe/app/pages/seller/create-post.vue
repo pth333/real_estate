@@ -29,7 +29,7 @@
             <!-- Section: Nhu cầu -->
             <!-- Bước 1. Thông tin BĐS -->
             <!-- Section: Địa chỉ -->
-            <div class="flex flex-col gap-4" v-show="postStore.tab === 'information'">
+            <div class="flex flex-col gap-4" v-show="postStore.form.tab === 'information'">
                 <DemandSection />
 
                 <AddressSection />
@@ -43,7 +43,7 @@
                 <DescriptionSection />
             </div>
             <!-- Bước 2. Upload ảnh, video -->
-            <div v-show="postStore.tab === 'upload'">
+            <div v-show="postStore.form.tab === 'upload'">
                 <UploadImageVideo ref="uploadComponent" />
             </div>
         </div>
@@ -53,10 +53,10 @@
             <n-button size="large" @click="prevPage">
                 Quay lại
             </n-button>
-            <n-button size="large" type="error" @click="nextPage">
+            <n-button  size="large" type="error" @click="nextPage">
                 Tiếp tục
             </n-button>
-            <n-button v-show="postStore.tab === 'review'" size="large" type="error" @click="submitCreatePost">
+            <n-button v-if="postStore.form.isTabUpload()" size="large" type="error" @click="submitCreatePost">
                 Đăng tin
             </n-button>
         </div>
@@ -74,31 +74,53 @@ const { phoneVerified } = usePhoneVerification()
 const postStore = useCreatePost()
 const showOTPModal = ref(false)
 const uploadComponent = ref()
-
+const lastTab = ref(false)
 const nextPage = () => {
 
-    if (postStore.tab === 'information') {
+    if (postStore.form.isTabInformation()) {
         if (!postStore.validateInformation()) {
             window.message?.warning('Vui lòng nhập đầy đủ thông tin')
             return
         }
-        postStore.tab = 'upload'
-    } else if (postStore.tab === 'upload') {
+        postStore.form.tab = 'upload'
+    } else if (postStore.form.isTabUpload()) {
         if (!uploadComponent.value.validateImageCount()) return
-        postStore.tab = 'review'
-    } else if (postStore.tab === 'review') {
+        postStore.form.tab = 'review'
     }
+    // } else if (postStore.form.isTabReview()) {
+    // }
 }
 
 const prevPage = () => {
-    if (postStore.tab === 'upload') {
-        postStore.tab = 'information'
-    } else if (postStore.tab === 'review') {
-        postStore.tab = 'upload'
+    if (postStore.form.isTabUpload()) {
+        postStore.form.tab = 'information'
+    } else if (postStore.form.isTabReview()) {
+        postStore.form.tab = 'upload'
     }
 }
 
-const submitCreatePost = () => {
+const { $api } = useNuxtApp()
+const isSubmitting = ref(false)
+
+const submitCreatePost = async () => {
+    isSubmitting.value = true
+    try {
+        const res = await $api.post<{ success: boolean; message?: string; data?: { id: number } }>(
+            '/real-estate/create',
+            postStore.payload,
+        )
+        if (res.success) {
+            window.message?.success('Đăng tin thành công')
+            navigateTo('/')
+        } else {
+            window.message?.error(res.message || 'Đăng tin thất bại')
+        }
+    } catch (err: unknown) {
+        const msg = (err as { data?: { message?: string } })?.data?.message
+        window.message?.error(msg || 'Đăng tin thất bại, vui lòng thử lại')
+    } finally {
+        isSubmitting.value = false
+    }
 };
 
 onMounted(() => {

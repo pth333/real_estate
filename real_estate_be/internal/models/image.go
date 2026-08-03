@@ -11,6 +11,9 @@ type Image struct {
 	URL          string `gorm:"column:url;size:500"`
 	ThumbnailURL string `gorm:"column:thumbnail_url;size:500"`
 
+	// Liên kết ảnh với tin đăng (nullable — chưa thuộc tin nào khi mới upload)
+	RealEstateID *uint64 `gorm:"column:real_estate_id;index"`
+
 	CreatedAt time.Time `gorm:"column:created_at"`
 	UpdatedAt time.Time `gorm:"column:updated_at"`
 }

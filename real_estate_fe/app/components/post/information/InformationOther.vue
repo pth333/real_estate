@@ -62,24 +62,18 @@
             <div class="flex gap-2 mb-4">
                 <div class="flex flex-col flex-1">
                     <label class="text-sm text-gray-700 mb-1.5">Mức giá điện</label>
-                    <n-input :value="electricity.displayed" placeholder="VD: 3.500" class="w-full"
-                        @update:value="electricity.onInput">
-                        <template #suffix>đ/kWh</template>
-                    </n-input>
+                    <NumberFormatInput v-model="postStore.form.price_electricity" placeholder="VD: 3.500"
+                        suffix="đ/kWh" />
                 </div>
                 <div class="flex flex-col flex-1">
                     <label class="text-sm text-gray-700 mb-1.5">Mức giá nước</label>
-                    <n-input :value="water.displayed" placeholder="VD: 25.000" class="w-full"
-                        @update:value="water.onInput">
-                        <template #suffix>đ/m³</template>
-                    </n-input>
+                    <NumberFormatInput v-model="postStore.form.price_water" placeholder="VD: 25.000"
+                        suffix="đ/m³" />
                 </div>
                 <div class="flex flex-col flex-1">
                     <label class="text-sm text-gray-700 mb-1.5">Mức giá internet</label>
-                    <n-input :value="internet.displayed" placeholder="VD: 200.000" class="w-full"
-                        @update:value="internet.onInput">
-                        <template #suffix>đ/tháng</template>
-                    </n-input>
+                    <NumberFormatInput v-model="postStore.form.price_internet" placeholder="VD: 200.000"
+                        suffix="đ/tháng" />
                 </div>
             </div>
 
@@ -101,15 +95,12 @@
 <script setup lang="ts">
 import type { SelectOption } from 'naive-ui'
 import { useCreatePost } from '~/stores/create-post'
-import { useNumberInput } from '~/composables/useNumberInput'
 
 const postStore = useCreatePost()
 const collapsed = ref(false)
 
-// Các ô nhập giá — tự format dấu chấm hàng nghìn, ghi số thực vào store
-const electricity = useNumberInput(toRef(postStore.form, 'price_electricity'))
-const water = useNumberInput(toRef(postStore.form, 'price_water'))
-const internet = useNumberInput(toRef(postStore.form, 'price_internet'))
+// Các ô nhập giá điện/nước/internet dùng NumberFormatInput (auto-import từ common/):
+// gõ là format dấu chấm ngay, emit số thực về store qua v-model.
 
 // Giấy tờ pháp lý
 const legalDocOptions = ref<SelectOption[]>([

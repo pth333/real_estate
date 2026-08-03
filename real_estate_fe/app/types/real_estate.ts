@@ -81,10 +81,6 @@ export interface NotificationSSEPayload {
   source_url: string;
 }
 
-/**
- * Class chứa dữ liệu tin đăng nhập vào theo từng section.
- * Dùng trong create-post store + các section component.
- */
 export class InformationRealestate {
   // Nhu cầu
   listingType: "sell" | "rent" = "sell";
@@ -113,6 +109,10 @@ export class InformationRealestate {
   price_internet: number | null = null;
   amenities: string[] = [];
 
+  // Ảnh / video đã upload — lưu id trả về từ /upload/confirm
+  // Dùng để liên kết ảnh với tin đăng khi tạo real_estate
+  image_ids: number[] = [];
+
   // Thông tin liên hệ
   contact_name: string = "";
   contact_email: string = "";
@@ -121,6 +121,18 @@ export class InformationRealestate {
   // Tiêu đề & mô tả
   title: string = "";
   description: string = "";
+
+  tab: "information" | "upload" | "review" = "information";
+
+  isTabInformation() {
+    return this.tab === "information";
+  }
+  isTabUpload() {
+    return this.tab === "upload";
+  }
+  isTabReview() {
+    return this.tab === "review";
+  }
 }
 
 export interface CityOption {

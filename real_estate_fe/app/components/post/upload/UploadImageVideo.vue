@@ -167,8 +167,11 @@
 <script setup lang="ts">
 import type { FileItem } from '~/types/uploadmedia'
 import { uploadFile } from '~/composables/upload'
+import { useCreatePost } from '~/stores/create-post'
 
 const { validateImage, validateVideo } = useValidate()
+
+const postStore = useCreatePost()
 
 const imageInputRef = ref<HTMLInputElement | null>(null)
 const videoInputRef = ref<HTMLInputElement | null>(null)
@@ -222,8 +225,17 @@ function addFiles(fileList: FileList, type: 'image' | 'video') {
 
     files.value.push(...newItems)
     newItems.forEach(({ id }) => {
-        uploadFile(files.value.find(f => f.id === id)!)
+        uploadFile(files.value.find(f => f.id === id)!).then(() => {
+            syncImageIdsToStore()
+        })
     })
+}
+
+// Đồng bộ id các ảnh/video đã upload thành công lên store để gửi khi Đăng tin
+function syncImageIdsToStore() {
+    postStore.form.image_ids = files.value
+        .filter((f) => f.status === 'done' && f.imageId)
+        .map((f) => f.imageId!)
 }
 
 function onDrop(e: DragEvent) {
@@ -288,6 +300,7 @@ function removeFile(id: string) {
     const item = files.value.find(f => f.id === id)
     if (item) URL.revokeObjectURL(item.previewUrl)
     files.value = files.value.filter(f => f.id !== id)
+    syncImageIdsToStore()
 }
 
 function validateImageCount(): boolean {

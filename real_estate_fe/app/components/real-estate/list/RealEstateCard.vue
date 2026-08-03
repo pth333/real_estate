@@ -83,8 +83,6 @@
 
 <script setup lang="ts">
 import type { RealEstateResponse } from '~/types/real_estate'
-import { usePriceFormatter } from '~/composables/usePriceFormatter'
-import { useRelativeTime } from '~/composables/useRelativeTime'
 import { useImageGrid } from '~/composables/useImageGrid'
 
 interface Props {
@@ -98,8 +96,6 @@ const emit = defineEmits<{
   toggleFavorite: [id: number]
 }>()
 
-const { formatPrice, formatPricePerM2 } = usePriceFormatter()
-const { fromNow } = useRelativeTime()
 const { mainImage, thumbnails, remainingImagesCount, handleImageError } = useImageGrid(computed(() => props.estate.images))
 
 const isFavorite = ref(props.estate.is_favorite || false)

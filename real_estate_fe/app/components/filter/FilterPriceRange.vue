@@ -77,8 +77,6 @@ const presets: PricePreset[] = [
   { label: 'Trên 10 tỷ', range: { min_price: 10_000_000_000 } },
 ];
 
-const { formatPrice } = usePriceFormatter();
-
 const buttonLabel = computed(() => {
   const range = filterStore.filterPriceRange;
   if (range.min_price != null && range.max_price != null) {

@@ -133,3 +133,32 @@ func (h *RealEstateHandler) ListRealEstateTypes(c *fiber.Ctx) error {
 
 	return response.OK(c, options)
 }
+
+// CreateRealEstate — tạo tin đăng từ payload FE (đã qua AuthMiddleware → lấy email)
+func (h *RealEstateHandler) Create(c *fiber.Ctx) error {
+	var req dto.CreateRealEstateRequest
+	if err := c.BodyParser(&req); err != nil {
+		return response.BadRequest(c, "Invalid request body", err.Error())
+	}
+
+	// Lấy email từ token đã lưu trong AuthMiddleware
+	email, ok := c.Locals("email").(string)
+	if !ok || email == "" {
+		return response.Unauthorized(c, "Unauthorized", nil)
+	}
+
+	// Tìm user theo email để lấy user_id
+	user, err := h.service.GetUserByEmail(email)
+	if err != nil {
+		return response.Unauthorized(c, "User not found", err.Error())
+	}
+
+	id, err := h.service.CreateRealEstate(req, user.ID)
+	if err != nil {
+		return response.InternalServerError(c, "Create real estate failed", err.Error())
+	}
+
+	return response.Created(c, "Tạo tin đăng thành công", fiber.Map{
+		"id": id,
+	})
+}

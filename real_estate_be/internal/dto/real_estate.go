@@ -39,3 +39,33 @@ type ProvinceResponse struct {
 	Name string `json:"name"`
 	Code string `json:"code"`
 }
+
+// CreateRealEstateRequest — payload tạo tin đăng từ FE
+type CreateRealEstateRequest struct {
+	ListingType      string   `json:"listing_type"`
+	Province         string   `json:"province"`
+	Ward             string   `json:"ward"`
+	DetailAddress    string   `json:"detail_address"`
+	RealEstateType   string   `json:"real_estate_type"`
+	Area             float64  `json:"area"`
+	Price            float64  `json:"price"`
+	Unit             string   `json:"unit"`
+	LegalDocs        string   `json:"legal_docs"`
+	Interior         string   `json:"interior"`
+	BathroomCount    *int     `json:"bathroom_count"`
+	BedroomCount     *int     `json:"bedroom_count"`
+	HouseDirection   string   `json:"house_direction"`
+	BalconyDirection string   `json:"balcony_direction"`
+	MoveInTime       string   `json:"move_in_time"`
+	PriceElectricity *float64 `json:"price_electricity"`
+	PriceWater       *float64 `json:"price_water"`
+	PriceInternet    *float64 `json:"price_internet"`
+	Amenities        []string `json:"amenities"`
+	ContactName      string   `json:"contact_name"`
+	ContactEmail     string   `json:"contact_email"`
+	ContactPhone     string   `json:"contact_phone"`
+	Title            string   `json:"title"`
+	Description      string   `json:"description"`
+	// Id ảnh/video đã upload (từ /upload/confirm), để liên kết với tin đăng
+	ImageIDs []uint64 `json:"image_ids"`
+}

@@ -9,6 +9,8 @@ import (
 type ImageRepository interface {
 	Create(image *model.Image) error
 	FindByKey(key string) (*model.Image, error)
+	// LinkToRealEstate gán real_estate_id cho danh sách ảnh đã upload
+	LinkToRealEstate(imageIDs []uint64, realEstateID uint64) error
 }
 
 type imageRepository struct {
@@ -21,6 +23,16 @@ func NewImageRepository(db *gorm.DB) ImageRepository {
 
 func (r *imageRepository) Create(image *model.Image) error {
 	return r.db.Create(image).Error
+}
+
+func (r *imageRepository) LinkToRealEstate(imageIDs []uint64, realEstateID uint64) error {
+	if len(imageIDs) == 0 {
+		return nil
+	}
+	return r.db.Model(&model.Image{}).
+		Where("id IN ?", imageIDs).
+		Update("real_estate_id", realEstateID).
+		Error
 }
 
 func (r *imageRepository) FindByKey(key string) (*model.Image, error) {

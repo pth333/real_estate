@@ -38,9 +38,9 @@
                     <label class="text-sm text-gray-700 mb-1.5">
                         Mức giá <span class="text-red-500">*</span>
                     </label>
-                    <n-input :value="price.displayed" placeholder="Nhập mức giá" class="w-full"
+                    <NumberFormatInput v-model="postStore.form.price" placeholder="Nhập mức giá"
                         :status="postStore.errorsMainInfo.price ? 'error' : 'default'"
-                        @update:value="(v: any) => { price.onInput(v); clearError('price') }" />
+                        @update:modelValue="clearError('price')" />
                     <span v-if="postStore.errorsMainInfo.price" class="text-xs text-red-500 mt-1 block">{{
                         postStore.errorsMainInfo.price
                     }}</span>
@@ -70,15 +70,14 @@
 import type { SelectOption } from 'naive-ui'
 import { useCreatePost } from '~/stores/create-post'
 import type { OptionTypeRealestate } from '~/types/real_estate'
-import { useNumberInput } from '~/composables/useNumberInput'
 
 const postStore = useCreatePost()
 const { $api } = useNuxtApp()
 const collapsed = ref(false)
 const realEstateTypes = ref<SelectOption[]>([])
 
-// Ô nhập giá — tự format dấu chấm hàng nghìn, ghi số thực vào store
-const price = useNumberInput(toRef(postStore.form, 'price'))
+// Ô nhập giá dùng NumberFormatInput (auto-import từ common/):
+// gõ là format dấu chấm ngay, emit số thực về store qua v-model.
 
 const unitOptions = ref<SelectOption[]>([
     { label: 'VNĐ', value: 'vnd' },
@@ -86,23 +85,10 @@ const unitOptions = ref<SelectOption[]>([
     { label: 'EUR', value: 'eur' },
 ])
 
-// Định dạng số tiền theo đơn vị (triệu VNĐ, tỷ VNĐ, USD, EUR...)
-const formatCurrency = (value: number, unit: string) => {
-    const currencyMap: Record<string, string> = {
-        vnd: 'VND',
-        usd: 'USD',
-        eur: 'EUR',
-    }
-    const currency = currencyMap[unit] ?? 'VND'
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency, maximumFractionDigits: 2 }).format(value)
-}
-
 // Hiển thị tổng giá trị và giá trên m² theo format:
 // Tổng trị giá <x> (~<số tiền>/m²)
 // price: giá thuần 1 đơn vị (VNĐ hoặc USD/EUR)
 const formatTotalValue = (price: number, area: number, unit: string | null | undefined) => {
-    const { formatPrice, formatPricePerM2 } = usePriceFormatter()
-
     if (unit === 'vnd') {
         const total = price * area
         return `Tổng trị giá ${formatPrice(total)} (~${formatPricePerM2(price)})`

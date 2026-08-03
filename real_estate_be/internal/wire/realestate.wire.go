@@ -16,6 +16,8 @@ func InitializeRealEstateHandler() (*controller.RealEstateHandler, error) {
 		providerDB,
 		repo.NewRealEstateRepository,
 		repo.NewCategoryRepository,
+		repo.NewImageRepository,
+		repo.NewUserRepository,
 		usecase.NewRealEstateService,
 		controller.NewRealEstateHandler,
 	)

@@ -1,8 +1,6 @@
 import { InformationRealestate } from "~/types/real_estate";
 
 export const useCreatePost = defineStore("create-post", () => {
-  type Tab = "information" | "upload" | "review";
-
   // Dữ liệu tin đăng tổ chức trong class InformationRealestate
   const form = ref(new InformationRealestate());
 
@@ -33,34 +31,37 @@ export const useCreatePost = defineStore("create-post", () => {
     description: "",
   });
 
-  const tab = ref<Tab>("information");
-  const next = ref(false);
-
+  // Tách id + tên từ chuỗi "12-CanHo" (value của n-select). KHÔNG mutate form
+  // để payload gửi đi tách lấy id riêng, còn form giữ chuỗi gốc cho hiển thị select.
   const customValueRealEstateType = computed(() => {
     if (!form.value.real_estate_type) return null;
     const [id, name] = form.value.real_estate_type.split("-");
-    if (id) {
-      form.value.real_estate_type = id; // Cập nhật lại tên loại bất động sản trong form
-    } // Cập nhật lại tên loại bất động sản trong form
     return { id: Number(id), name };
   });
-  // ── Payload: chính là class InformationRealestate ──
-  const payload = computed(() => form.value);
+  // ── Payload: copy form, tách real_estate_type ra chỉ còn id để gửi backend ──
+  const payload = computed(() => {
+    const { real_estate_type, ...rest } = form.value;
+    const [id] = (real_estate_type ?? "").split("-");
+    return {
+      ...rest,
+      real_estate_type: id || null,
+    };
+  });
 
-  const stepLabels: Record<Tab, string> = {
+  const stepLabels: Record<string, string> = {
     information: "Bước 1. Thông tin BĐS",
     upload: "Bước 2. Hình ảnh & video",
     review: "Bước 3. Kiểm tra & đăng tin",
   };
 
-  const stepProgress: Record<Tab, number> = {
+  const stepProgress: Record<string, number> = {
     information: 33,
     upload: 66,
     review: 100,
   };
 
-  const currentStepLabel = computed(() => stepLabels[tab.value]);
-  const currentStepProgress = computed(() => stepProgress[tab.value]);
+  const currentStepLabel = computed(() => stepLabels[form.value.tab]);
+  const currentStepProgress = computed(() => stepProgress[form.value.tab]);
 
   // ── Validate chung (dùng cho cả nút Tiếp tục và nút Tạo với AI) ──
   const validateMainInfo = (): boolean => {
@@ -146,8 +147,6 @@ export const useCreatePost = defineStore("create-post", () => {
     errorsAddress,
     errorsContact,
     errorsDescription,
-    tab,
-    next,
     currentStepLabel,
     currentStepProgress,
     customValueRealEstateType,
