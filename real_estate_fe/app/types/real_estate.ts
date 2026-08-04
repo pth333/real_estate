@@ -8,7 +8,6 @@ export interface RealEstateResponse {
   city: string;
   acreage: number;
   price_per_m2: number;
-  type_of_real_estate: string;
   created_at: string;
 
   // Optional fields
@@ -33,7 +32,6 @@ export interface DashboardSummary {
 
 export interface Filter {
   acreage?: number;
-  type_of_real_estate?: string;
   location?: FilterLocation;
   price_range?: FilterPriceRange;
 }
@@ -109,9 +107,8 @@ export class InformationRealestate {
   price_internet: number | null = null;
   amenities: string[] = [];
 
-  // Ảnh / video đã upload — lưu id trả về từ /upload/confirm
-  // Dùng để liên kết ảnh với tin đăng khi tạo real_estate
-  image_ids: number[] = [];
+  // Ảnh/video đã upload (id + url + thumbnail) — dùng để khôi phục preview
+  images: UploadedMediaItem[] = [];
 
   // Thông tin liên hệ
   contact_name: string = "";
@@ -153,4 +150,17 @@ export interface WardOption {
 export interface OptionTypeRealestate {
   id: number;
   name: string;
+}
+
+// Ảnh/video đã upload thành công — id + url S3 (public_url/thumbnail)
+// Dùng để khôi phục preview khi quay lại bản nháp.
+// name + type (MIME thật) lưu kèm để hiển thị alt text và giữ đúng định dạng
+// file khi khôi phục (không hardcode image/jpeg hay video/mp4).
+export interface UploadedMediaItem {
+  imageId: number;
+  publicUrl: string;
+  thumbnailUrl?: string;
+  fileType: "image" | "video";
+  name: string;
+  type: string;
 }

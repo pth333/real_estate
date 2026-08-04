@@ -12,6 +12,16 @@ import (
 	"real_estate_be/internal/usecase"
 )
 
+// Injectors from tracking.wire.go:
+
+func InitializeTrackingHandler() (*controller.TrackingHandler, error) {
+	db := providerDB()
+	searchHistoryRepository := repo.NewSearchHistoryRepository(db)
+	trackingService := usecase.NewTrackingService(searchHistoryRepository)
+	trackingHandler := controller.NewTrackingHandler(trackingService)
+	return trackingHandler, nil
+}
+
 // Injectors from ai.wire.go:
 
 func InitializeAIHandler() (*controller.AIHandler, error) {

@@ -79,7 +79,6 @@ func MapBatDongSan(raw crawler.BatDongSanRaw) model.RealEstate {
 		City:             city,
 		Acreage:          area,
 		PricePerM2:       pricePerM2,
-		TypeOfRealEstate: "",
 		Source:           "batdongsan.com.vn",
 		SourceURL:        raw.SourceURL,
 		// PublishedAt:      parsePostedDate(raw.PostedDate),

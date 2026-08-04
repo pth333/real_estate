@@ -74,17 +74,16 @@ func (e *EnrichConsumer) handle(ctx context.Context, msg kafkago.Message) error 
 
 	// Lưu DB với enriched data
 	enriched := &model.RealEstate{
-		Title:            event.Title,
-		PriceVND:         event.PriceVND,
-		Address:          event.Address,
-		District:         event.District,
-		City:             event.City,
-		Acreage:          event.Acreage,
-		PricePerM2:       event.PricePerM2,
-		TypeOfRealEstate: typeStr,
-		Source:           event.Source,
-		SourceURL:        event.SourceURL,
-		CrawledAt:        event.CrawledAt,
+		Title:      event.Title,
+		PriceVND:   event.PriceVND,
+		Address:    event.Address,
+		District:   event.District,
+		City:       event.City,
+		Acreage:    event.Acreage,
+		PricePerM2: event.PricePerM2,
+		Source:     event.Source,
+		SourceURL:  event.SourceURL,
+		CrawledAt:  event.CrawledAt,
 	}
 	if err := e.repo.Create(enriched); err != nil {
 		log.Printf("⚠️ [EnrichConsumer] DB error: %v", err)

@@ -183,7 +183,6 @@ func mapBatDongSan(raw BatDongSanRaw) model.RealEstate {
 		City:             city,
 		Acreage:          area,
 		PricePerM2:       pricePerM2,
-		TypeOfRealEstate: "",
 		Source:           "batdongsan.com.vn",
 		SourceURL:        raw.SourceURL,
 		CrawledAt:        time.Now(),

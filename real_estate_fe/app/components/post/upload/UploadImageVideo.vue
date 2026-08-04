@@ -80,6 +80,9 @@
                 <!-- Preview -->
                 <img v-if="item.fileType === 'image'" :src="item.previewUrl" :alt="item.file.name"
                     class="w-full h-full object-cover" />
+                <!-- Video: dùng public_url (S3) để xem lại được; fallback thumbnail nếu chưa có url -->
+                <video v-else-if="item.publicUrl" :src="item.publicUrl" controls playsinline
+                    class="w-full h-full object-cover" />
                 <img v-else-if="item.thumbnailUrl" :src="item.thumbnailUrl" alt="Video thumbnail"
                     class="w-full h-full object-cover" />
                 <div v-else class="w-full h-full flex items-center justify-center bg-gray-100">
@@ -231,12 +234,43 @@ function addFiles(fileList: FileList, type: 'image' | 'video') {
     })
 }
 
-// Đồng bộ id các ảnh/video đã upload thành công lên store để gửi khi Đăng tin
+// Đồng bộ các ảnh/video đã upload thành công lên store.
+
 function syncImageIdsToStore() {
-    postStore.form.image_ids = files.value
-        .filter((f) => f.status === 'done' && f.imageId)
-        .map((f) => f.imageId!)
+    const doneFiles = files.value.filter((f) => f.status === 'done' && f.imageId)
+    // postStore.form.image_ids = doneFiles.map((f) => f.imageId!)?
+    postStore.form.images = doneFiles.map((f) => ({
+        imageId: f.imageId!,
+        publicUrl: f.publicUrl ?? '',
+        thumbnailUrl: f.thumbnailUrl,
+        fileType: f.fileType,
+        name: f.file.name,
+        type: f.file.type,
+    }))
 }
+
+// Khôi phục preview ảnh/video từ bản nháp: images đã được nạp vào form
+// khi người dùng chọn "Tiếp tục bản nháp". Chỉ chạy khi chưa có file nào.
+watch(
+    () => postStore.form.images,
+    (items) => {
+        if (!items || !items.length || files.value.length) return
+        const restored: FileItem[] = items.map((m) => ({
+            id: `draft_${m.imageId}`,
+            // name + type (MIME thật) lưu trong draft để khôi phục đúng định dạng
+            file: new File([], m.name, { type: m.type }),
+            fileType: m.fileType,
+            previewUrl: m.publicUrl,
+            thumbnailUrl: m.thumbnailUrl,
+            status: 'done' as const,
+            progress: 100,
+            imageId: m.imageId,
+            publicUrl: m.publicUrl,
+        }))
+        files.value.push(...restored)
+    },
+    { immediate: true },
+)
 
 function onDrop(e: DragEvent) {
     isDragging.value = false

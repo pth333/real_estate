@@ -135,7 +135,7 @@ func (h *RealEstateHandler) ListRealEstateTypes(c *fiber.Ctx) error {
 }
 
 // CreateRealEstate — tạo tin đăng từ payload FE (đã qua AuthMiddleware → lấy email)
-func (h *RealEstateHandler) Create(c *fiber.Ctx) error {
+func (h *RealEstateHandler) CreatePost(c *fiber.Ctx) error {
 	var req dto.CreateRealEstateRequest
 	if err := c.BodyParser(&req); err != nil {
 		return response.BadRequest(c, "Invalid request body", err.Error())

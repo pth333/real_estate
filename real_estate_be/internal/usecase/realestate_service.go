@@ -1,6 +1,8 @@
 package usecase
 
 import (
+	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -41,15 +43,14 @@ func mapSliceToResponse(data []model.RealEstate) []dto.RealEstateResponse {
 	result := make([]dto.RealEstateResponse, len(data))
 	for i, m := range data {
 		result[i] = dto.RealEstateResponse{
-			ID:               m.ID,
-			Title:            m.Title,
-			PriceVND:         m.PriceVND,
-			Address:          m.Address,
-			District:         m.District,
-			City:             m.City,
-			Acreage:          m.Acreage,
-			PricePerM2:       m.PricePerM2,
-			TypeOfRealEstate: m.TypeOfRealEstate,
+			ID:         m.ID,
+			Title:      m.Title,
+			PriceVND:   m.PriceVND,
+			Address:    m.Address,
+			District:   m.District,
+			City:       m.City,
+			Acreage:    m.Acreage,
+			PricePerM2: m.PricePerM2,
 		}
 	}
 	return result
@@ -107,39 +108,50 @@ func (s *RealEstateService) CreateRealEstate(req dto.CreateRealEstateRequest, us
 		}
 	}
 
-	// Tính giá theo đơn vị
-	var priceVND float64
+	pricePerM2 := req.Price
 	switch req.Unit {
 	case "usd":
-		priceVND = req.Price * USDToVND
+		pricePerM2 = req.Price * USDToVND
 	case "eur":
-		priceVND = req.Price * EURToVND
-	default: // vnd
-		priceVND = req.Price
+		pricePerM2 = req.Price * EURToVND
+	}
+	priceVND := pricePerM2 * req.Area
+
+	cityName, cityErr := s.repo.GetProvinceNameByCode(req.Province)
+	wardName, wardErr := s.repo.GetWardNameByCode(req.Ward)
+
+	if cityErr != nil {
+		return 0, fmt.Errorf("không tìm thấy tỉnh/thành: %s", req.Province)
+	}
+	if wardErr != nil {
+		return 0, fmt.Errorf("không tìm thấy phường/xã: %s", req.Ward)
 	}
 
-	// Địa chỉ ghép từ province + ward + detail
+	// Tiện ích (mảng) → JSON string để lưu vào cột amenities (MySQL không có kiểu array)
+	amenitiesJSON, err := json.Marshal(req.Amenities)
+	if err != nil {
+		return 0, fmt.Errorf("lỗi mã hoá tiện ích: %w", err)
+	}
+
+	// Địa chỉ ghép từ detail + tên phường/xã + tên tỉnh/thành
 	address := strings.TrimSpace(strings.Join([]string{
-		req.DetailAddress, req.Ward, req.Province,
+		req.DetailAddress, wardName, cityName,
 	}, " "))
 
-	var pricePerM2 float64
-	if req.Area > 0 {
-		pricePerM2 = priceVND / req.Area
-	}
-
 	estate := &model.RealEstate{
-		UserID:           &userID,
-		Title:            req.Title,
-		PriceVND:         priceVND,
-		Address:          address,
-		District:         req.Ward,
-		City:             req.Province,
-		Acreage:          req.Area,
-		PricePerM2:       pricePerM2,
-		CategoryID:       categoryID,
-		TypeOfRealEstate: req.RealEstateType,
-		Description:      req.Description,
+		UserID:      &userID,
+		Title:       req.Title,
+		PriceVND:    priceVND,
+		Address:     address,
+		District:    wardName,
+		City:        cityName,
+		Acreage:     req.Area,
+		PricePerM2:  pricePerM2,
+		CategoryID:  categoryID,
+		Description: req.Description,
+		Bedrooms:    req.BedroomCount,
+		Bathrooms:   req.BathroomCount,
+		Amenities:   string(amenitiesJSON),
 	}
 
 	if err := s.repo.Create(estate); err != nil {

@@ -20,6 +20,10 @@ type RealEstateRepository interface {
 	GetListCity() ([]model.Province, error)
 	GetListWard(provinceCode string) ([]model.Ward, error)
 	GetListRealEstateTypes() ([]model.Category, error)
+	// Lấy tên tỉnh/thành từ code (VD "79" → "Hồ Chí Minh")
+	GetProvinceNameByCode(code string) (string, error)
+	// Lấy tên phường/xã từ code (VD "76049" → "Phường 12")
+	GetWardNameByCode(code string) (string, error)
 }
 
 func NewRealEstateRepository(db *gorm.DB) RealEstateRepository {
@@ -40,7 +44,6 @@ func (r *realEstateRepo) Create(item *model.RealEstate) error {
 				"address",
 				"district",
 				"city",
-				"type_of_real_estate",
 				"crawled_at",
 				"updated_at",
 			}),
@@ -63,7 +66,6 @@ func (r *realEstateRepo) CreateBatch(items []*model.RealEstate) error {
 				"address",
 				"district",
 				"city",
-				"type_of_real_estate",
 				"crawled_at",
 				"updated_at",
 			}),
@@ -171,4 +173,20 @@ func (r *realEstateRepo) GetListRealEstateTypes() ([]model.Category, error) {
 		return nil, result.Error
 	}
 	return types, nil
+}
+
+func (r *realEstateRepo) GetProvinceNameByCode(code string) (string, error) {
+	var name string
+	if err := r.db.Model(&model.Province{}).Select("name").Where("code = ?", code).First(&name).Error; err != nil {
+		return "", err
+	}
+	return name, nil
+}
+
+func (r *realEstateRepo) GetWardNameByCode(code string) (string, error) {
+	var name string
+	if err := r.db.Model(&model.Ward{}).Select("name").Where("code = ?", code).First(&name).Error; err != nil {
+		return "", err
+	}
+	return name, nil
 }

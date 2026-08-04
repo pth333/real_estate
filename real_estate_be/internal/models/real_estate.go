@@ -22,10 +22,11 @@ type RealEstate struct {
 	// Không khai báo relationship Category → GORM không tự tạo FK constraint.
 	// Tin từ crawler có thể lưu category_id không tồn tại, nên để cột tự do.
 
-	TypeOfRealEstate string `gorm:"column:type_of_real_estate"`
-	Description      string `gorm:"column:description;type:text"`
-	Bedrooms         *int   `gorm:"column:bedrooms"`
-	Bathrooms        *int   `gorm:"column:bathrooms"`
+	Description string `gorm:"column:description;type:text"`
+	Bedrooms    *int   `gorm:"column:bedrooms"`
+	Bathrooms   *int   `gorm:"column:bathrooms"`
+	// Tiện ích lưu dạng JSON string: `["camera","bao_ve","pccc"]`
+	Amenities string `gorm:"column:amenities;type:text"`
 
 	Source    string `gorm:"column:source;index"`
 	SourceURL string `gorm:"column:source_url;uniqueIndex"`

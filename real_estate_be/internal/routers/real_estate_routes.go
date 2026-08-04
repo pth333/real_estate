@@ -20,7 +20,7 @@ func InitRealEstateRoutes(Router fiber.Router) {
 		{
 			authGroup.Post("/list", realEstateHandler.List)
 			authGroup.Post("/:slug/:page", realEstateHandler.ListRealEsateByCategory)
-			authGroup.Post("/create", realEstateHandler.Create)
+			authGroup.Post("/create-post", realEstateHandler.CreatePost)
 		}
 
 		// Route khong can auth

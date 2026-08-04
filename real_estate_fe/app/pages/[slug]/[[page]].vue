@@ -1,7 +1,7 @@
 <template>
   <div class="mx-auto max-w-[1200px] px-6 py-6">
     <div class="mb-4 flex flex-col gap-3">
-      <SearchBar @search="fetchDataRealEstate" />
+      <SearchBar @search="handleSearch" />
       <FilterManager />
     </div>
 
@@ -116,6 +116,25 @@ function handleToggleFavorite(id: number) {
   if (estate) {
     estate.is_favorite = !estate.is_favorite;
   }
+}
+
+const trackSearch = async (filters: Record<string, any>) => {
+  try {
+    const userId = localStorage.getItem("user_id") || '';
+    await $api.post('/tracking/search', {
+      filters,
+      user_id: userId,
+    });
+  } catch (err) {
+    console.error('Tracking search error:', err);
+  }
+}
+
+const handleSearch = async () => {
+  Promise.allSettled([
+    fetchDataRealEstate(),
+    trackSearch(filterStore.filters),
+  ]);
 }
 
 </script>

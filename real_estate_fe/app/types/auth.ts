@@ -14,6 +14,7 @@ export interface AuthResponse {
   message?: string
   data?: {
     token?: string
+    user?: UserInfo
   }
   error?: string
 }

@@ -13,7 +13,7 @@
                     </template>
                     Xem trước
                 </n-button>
-                <n-button>Thoát</n-button>
+                <n-button @click="handleExit">Thoát</n-button>
             </div>
         </div>
 
@@ -53,7 +53,7 @@
             <n-button size="large" @click="prevPage">
                 Quay lại
             </n-button>
-            <n-button  size="large" type="error" @click="nextPage">
+            <n-button v-if="!postStore.form.isTabUpload()" size="large" type="error" @click="nextPage">
                 Tiếp tục
             </n-button>
             <n-button v-if="postStore.form.isTabUpload()" size="large" type="error" @click="submitCreatePost">
@@ -63,6 +63,25 @@
 
         <ModalOTPAuthentication v-model:show="showOTPModal" />
 
+        <!-- Modal hỏi tiếp tục bản nháp cũ -->
+        <n-modal v-model:show="showDraftModal" preset="dialog" type="warning" title="Phát hiện bản nháp"
+            :mask-closable="false" @click="onDraftModalClose">
+            <template #default>
+                <p>
+                    Bạn có bản nháp tin đăng chưa hoàn thành. Bạn có muốn tiếp tục
+                    sử dụng bản nháp trước đó không?
+                </p>
+            </template>
+            <template #action>
+                <n-button size="large" @click="discardDraft">
+                    Không, tạo tin mới
+                </n-button>
+                <n-button size="large" type="error" @click="continueDraft">
+                    Tiếp tục bản nháp
+                </n-button>
+            </template>
+        </n-modal>
+
     </div>
 </template>
 <script setup lang="ts">
@@ -71,17 +90,45 @@ definePageMeta({
     alias: "/nguoi-ban/dang-tin",
 })
 const { phoneVerified } = usePhoneVerification()
+const { $api } = useNuxtApp()
+
 const postStore = useCreatePost()
 const showOTPModal = ref(false)
 const uploadComponent = ref()
-const lastTab = ref(false)
+
+// ── Bản nháp: lưu khi Thoát, hỏi khi vào lại trang ──
+const showDraftModal = ref(false)
+
+// Nút Thoát: lưu dữ liệu đang nhập vào localStorage rồi rời trang
+const handleExit = () => {
+    postStore.saveCurrentDraft()
+    navigateTo('/')
+}
+
+// Chọn "Tiếp tục bản nháp": hydrate dữ liệu đã lưu vào form
+const continueDraft = () => {
+    postStore.applyDraft()
+    console.log(postStore.form)
+    showDraftModal.value = false
+}
+
+// Chọn "Không, tạo tin mới": xoá bản nháp và bắt đầu form rỗng
+const discardDraft = () => {
+    postStore.clearCurrentDraft()
+    postStore.resetForm()
+    showDraftModal.value = false
+}
+
+const onDraftModalClose = () => {
+    showDraftModal.value = false
+}
 const nextPage = () => {
 
     if (postStore.form.isTabInformation()) {
-        if (!postStore.validateInformation()) {
-            window.message?.warning('Vui lòng nhập đầy đủ thông tin')
-            return
-        }
+        // if (!postStore.validateInformation()) {
+        //     window.message?.warning('Vui lòng nhập đầy đủ thông tin')
+        //     return
+        // }
         postStore.form.tab = 'upload'
     } else if (postStore.form.isTabUpload()) {
         if (!uploadComponent.value.validateImageCount()) return
@@ -99,18 +146,19 @@ const prevPage = () => {
     }
 }
 
-const { $api } = useNuxtApp()
 const isSubmitting = ref(false)
 
 const submitCreatePost = async () => {
     isSubmitting.value = true
     try {
         const res = await $api.post<{ success: boolean; message?: string; data?: { id: number } }>(
-            '/real-estate/create',
+            '/real-estate/create-post',
             postStore.payload,
         )
         if (res.success) {
             window.message?.success('Đăng tin thành công')
+            postStore.clearCurrentDraft()
+            postStore.resetForm()
             navigateTo('/')
         } else {
             window.message?.error(res.message || 'Đăng tin thất bại')
@@ -126,6 +174,11 @@ const submitCreatePost = async () => {
 onMounted(() => {
     if (!phoneVerified.value) {
         showOTPModal.value = true
+        return
+    }
+    // Có bản nháp cũ → hỏi người dùng có tiếp tục không
+    if (postStore.loadCurrentDraft()) {
+        showDraftModal.value = true
     }
 })
 

@@ -17,7 +17,7 @@ export const useAuthStore = defineStore("auth", () => {
 
   const isAuthenticated = computed(() => !!token.value);
 
-  function setSession(tok: string, userEmail?: string, userName?: string) {
+  function setSession(tok: string) {
     token.value = tok;
   }
 
@@ -33,6 +33,12 @@ export const useAuthStore = defineStore("auth", () => {
     }
 
     setSession(res.data.token);
+
+    // Lưu user_id vào localStorage
+    if (res.data?.user?.id) {
+      localStorage.setItem("user_id", String(res.data.user.id));
+    }
+
     return res;
   }
 
@@ -41,6 +47,11 @@ export const useAuthStore = defineStore("auth", () => {
 
     if (!res.success) {
       throw new Error(res.message || "Đăng ký thất bại");
+    }
+
+    // Lưu user_id vào localStorage
+    if (res.data?.user?.id) {
+      localStorage.setItem("user_id", String(res.data.user.id));
     }
 
     return res;

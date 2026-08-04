@@ -1,4 +1,5 @@
 import { InformationRealestate } from "~/types/real_estate";
+import { saveDraft, loadDraft, clearDraft } from "~/utils/create-post-draft";
 
 export const useCreatePost = defineStore("create-post", () => {
   // Dữ liệu tin đăng tổ chức trong class InformationRealestate
@@ -140,6 +141,36 @@ export const useCreatePost = defineStore("create-post", () => {
     return validations.every(Boolean);
   };
 
+  // Reset toàn bộ form về mặc định + xoá lỗi, dùng sau khi đăng tin thành công
+  const resetForm = () => {
+    form.value = new InformationRealestate();
+    errorsMainInfo.value = { real_estate_type: "", area: "", price: "", unit: "" };
+    errorsAddress.value = { province: "", ward: "", detail_address: "" };
+    errorsContact.value = { contact_name: "", contact_email: "", contact_phone: "" };
+    errorsDescription.value = { title: "", description: "" };
+  };
+
+  const saveCurrentDraft = () => {
+    saveDraft(form.value);
+  };
+
+  const loadCurrentDraft = (): InformationRealestate | null => {
+    return loadDraft();
+  };
+
+  // Áp bản nháp vào form. Quan trọng: draft từ JSON.parse là object thường,
+  // KHÔNG có các method của class (isTabUpload, isTabInformation...). Phải
+  // hydrate lại thành instance InformationRealestate để template gọi được.
+  const applyDraft = () => {
+    const draft = loadDraft();
+    if (!draft) return;
+    form.value = Object.assign(new InformationRealestate(), draft);
+  };
+
+  const clearCurrentDraft = () => {
+    clearDraft();
+  };
+
   return {
     form,
     payload,
@@ -156,5 +187,10 @@ export const useCreatePost = defineStore("create-post", () => {
     validateDescription,
     validateInformation,
     validateForAI,
+    resetForm,
+    saveCurrentDraft,
+    loadCurrentDraft,
+    applyDraft,
+    clearCurrentDraft,
   };
 });

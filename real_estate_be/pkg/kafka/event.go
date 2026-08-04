@@ -108,9 +108,8 @@ type RealEstateEnrichedEvent struct {
 	PublishedAt *time.Time `json:"published_at,omitempty"`
 
 	// Enriched fields
-	TypeOfRealEstate string   `json:"type_of_real_estate"`
-	Latitude         *float64 `json:"latitude,omitempty"`
-	Longitude        *float64 `json:"longitude,omitempty"`
+	Latitude  *float64 `json:"latitude,omitempty"`
+	Longitude *float64 `json:"longitude,omitempty"`
 }
 
 func (e RealEstateEnrichedEvent) GetKey() string { return e.SourceURL }
@@ -133,8 +132,6 @@ func NewRealEstateEnrichedEvent(crawled RealEstateCrawledEvent, typeStr string) 
 		PricePerM2:  crawled.PricePerM2,
 		CrawledAt:   crawled.CrawledAt,
 		PublishedAt: crawled.PublishedAt,
-
-		TypeOfRealEstate: typeStr,
 	}
 }
 
