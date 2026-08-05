@@ -62,7 +62,7 @@ func (h *AuthService) Login(req dto.LoginRequest) (string, string, error) {
 		return "", "", err
 	}
 
-	accessToken, err := jwt.GenerateAccessToken(user.Email)
+	accessToken, err := jwt.GenerateAccessToken(user.Email, user.ID)
 	if err != nil {
 		return "", "", err
 	}
@@ -81,7 +81,13 @@ func (h *AuthService) RefreshToken(refreshToken string) (string, string, error) 
 		return "", "", errors.New("invalid or expired refresh token")
 	}
 
-	newAccess, err := jwt.GenerateAccessToken(claims.Email)
+	// Tìm user theo email để lấy user_id cho access token mới
+	user, findErr := h.repo.FindByEmail(claims.Email)
+	if findErr != nil {
+		return "", "", errors.New("user not found")
+	}
+
+	newAccess, err := jwt.GenerateAccessToken(claims.Email, user.ID)
 	if err != nil {
 		return "", "", err
 	}

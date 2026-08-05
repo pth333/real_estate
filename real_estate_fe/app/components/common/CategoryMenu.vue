@@ -2,7 +2,7 @@
   <nav class="flex flex-1">
     <ul class="flex items-center gap-1">
       <li
-        v-for="cat in menuStore.categories"
+        v-for="cat in menuStore.menu"
         :key="cat.ID"
         class="relative group"
       >
@@ -43,8 +43,11 @@
 
 <script setup lang="ts">
 import { useMenuStore } from "~/stores/menu";
+import { Menu } from "~/types/window";
 
 const menuStore = useMenuStore();
+window.menu = new Menu(menuStore.user_id);
+
 onMounted(() => {
   menuStore.fetchMenuItems();
 });

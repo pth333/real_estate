@@ -39,7 +39,6 @@ const fetchListCity = async () => {
   try {
     loadingCity.value = true
     const res = await $api.get<{ data: CityOption[] }>("/real-estate/list/city")
-    console.log(res.data)
     filterStore.cityOptions = res.data.map((item: CityOption) => ({
       label: item.name,
       value: item.code

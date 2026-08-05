@@ -18,9 +18,7 @@ type RealEstate struct {
 	Acreage    float64 `gorm:"column:acreage"`
 	PricePerM2 float64 `gorm:"column:price_per_m2"`
 
-	CategoryID *uint64 `gorm:"column:category_id"`
-	// Không khai báo relationship Category → GORM không tự tạo FK constraint.
-	// Tin từ crawler có thể lưu category_id không tồn tại, nên để cột tự do.
+	CategoryID *int64 `gorm:"column:category_id"`
 
 	Description string `gorm:"column:description;type:text"`
 	Bedrooms    *int   `gorm:"column:bedrooms"`
@@ -28,13 +26,13 @@ type RealEstate struct {
 	// Tiện ích lưu dạng JSON string: `["camera","bao_ve","pccc"]`
 	Amenities string `gorm:"column:amenities;type:text"`
 
-	Source    string `gorm:"column:source;index"`
-	SourceURL string `gorm:"column:source_url;uniqueIndex"`
-
-	CrawledAt time.Time `gorm:"column:crawled_at;index"`
-
 	CreatedAt time.Time
 	UpdatedAt time.Time
+
+	// Relationship (không tạo FK constraint trong DB)
+	User     *User      `gorm:"foreignKey:UserID;references:ID"`
+	Category *Category  `gorm:"foreignKey:CategoryID;references:ID"`
+	Images   []Image    `gorm:"foreignKey:RealEstateID"`
 }
 
 type DashboardSummary struct {
@@ -50,13 +48,22 @@ type DistrictStat struct {
 	AvgPriceM2 float64 `json:"avg_price_m2"`
 }
 
+// CityStat — thống kê 1 thành phố có nhiều BĐS
+type CityStat struct {
+	City  string `json:"city" gorm:"column:city"`
+	Count int64  `json:"count" gorm:"column:total"`
+	// Ảnh đại diện thành phố lấy từ bảng provinces (theo name)
+	Image string `json:"image" gorm:"column:image"`
+}
+
 type Province struct {
-	Code string `gorm:"column:code" json:"code"`
-	Name string `gorm:"column:name" json:"name"`
+	Code  string `gorm:"column:code;size:20" json:"code"`
+	Name  string `gorm:"column:name;size:100" json:"name"`
+	Image string `gorm:"column:image;type:text" json:"image"`
 }
 
 type Ward struct {
-	Code         string `gorm:"column:code" json:"code"`
-	Name         string `gorm:"column:name" json:"name"`
-	ProvinceCode string `gorm:"column:province_code" json:"province_code"`
+	Code         string `gorm:"column:code;size:20" json:"code"`
+	Name         string `gorm:"column:name;size:100" json:"name"`
+	ProvinceCode string `gorm:"column:province_code;size:20" json:"province_code"`
 }

@@ -1,6 +1,7 @@
 export interface MenuResponse {
   success: boolean;
   data: Category[];
+  user_id?: number;
 }
 
 export interface Category {

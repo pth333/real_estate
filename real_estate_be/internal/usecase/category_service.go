@@ -23,21 +23,33 @@ func (s *CategoryService) GetAll() ([]model.Category, error) {
 }
 
 func (s *CategoryService) BuildCategoriesResponse(categories []model.Category) []model.Category {
-	// Build map ID → pointer (để sửa trực tiếp trên slice gốc)
-	mapCategories := make(map[int64]*model.Category, len(categories))
+	// Build map ID → con trỏ tới node riêng trên heap.
+	// Mỗi node copy ra từ categories[i] bằng biến mới (c) để con trỏ ổn định,
+	// tránh lỗi copy value làm mất children (fix: con bị append sau khi root đã copy vào roots).
+	nodes := make(map[int64]*model.Category, len(categories))
+	var roots []*model.Category
 	for i := range categories {
-		mapCategories[categories[i].ID] = &categories[i]
-	}
-
-	var roots []model.Category
-	for i := range categories {
-		if categories[i].ParentID == nil {
-			roots = append(roots, categories[i])
-		} else {
-			if parent, ok := mapCategories[*categories[i].ParentID]; ok {
-				parent.Children = append(parent.Children, &categories[i])
-			}
+		c := categories[i]
+		nodes[c.ID] = &c
+		if c.ParentID == nil {
+			roots = append(roots, &c)
 		}
 	}
-	return roots
+
+	// Gắn children vào parent qua nodes
+	for _, c := range categories {
+		if c.ParentID == nil {
+			continue
+		}
+		if parent, ok := nodes[*c.ParentID]; ok {
+			parent.Children = append(parent.Children, nodes[c.ID])
+		}
+	}
+
+	// Deref các root để trả về []model.Category
+	result := make([]model.Category, 0, len(roots))
+	for _, r := range roots {
+		result = append(result, *r)
+	}
+	return result
 }

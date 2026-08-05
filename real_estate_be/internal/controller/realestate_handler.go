@@ -66,6 +66,32 @@ func (h *RealEstateHandler) ListRealEsateByCategory(c *fiber.Ctx) error {
 	})
 }
 
+func (h *RealEstateHandler) ListTopCity(c *fiber.Ctx) error {
+	// Mặc định lấy 5 thành phố có nhiều BĐS nhất
+	limit := 5
+
+	data, err := h.service.GetTopCity(limit)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	result := make([]dto.TopCityResponse, 0, len(data))
+	for _, city := range data {
+		slug := h.service.ToSlug(city.City)
+
+		result = append(result, dto.TopCityResponse{
+			Name:  city.City,
+			Slug:  "nha-ban-dat-" + slug,
+			Count: city.Count,
+			Image: city.Image,
+		})
+	}
+
+	return response.OK(c, result)
+}
+
 func (h *RealEstateHandler) ListCity(c *fiber.Ctx) error {
 	provinces, err := h.service.GetListCity()
 	if err != nil {

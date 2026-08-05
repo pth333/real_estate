@@ -12,7 +12,8 @@ var (
 )
 
 type AccessClaims struct {
-	Email string `json:"email"`
+	Email  string `json:"email"`
+	UserID uint64 `json:"user_id"`
 	jwt.RegisteredClaims
 }
 
@@ -21,10 +22,11 @@ type RefreshClaims struct {
 	jwt.RegisteredClaims
 }
 
-// GenerateAccessToken — hết hạn sau 15 phút
-func GenerateAccessToken(email string) (string, error) {
+// GenerateAccessToken — hết hạn sau 15 phút, kèm user_id
+func GenerateAccessToken(email string, userID uint64) (string, error) {
 	claims := AccessClaims{
-		Email: email,
+		Email:  email,
+		UserID: userID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(15 * time.Minute)),
 		},

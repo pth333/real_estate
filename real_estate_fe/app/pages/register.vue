@@ -8,95 +8,38 @@
         </h1>
         <p class="mb-8 text-sm text-patina/80">Tạo tài khoản mới</p>
 
-        <form @submit.prevent="handleRegister">
-          <n-form :model="form" label-placement="top">
-            <n-form-item
-              label="Họ và tên"
-              :feedback="errors.name"
-              :validation-status="errors.name ? 'error' : undefined"
-            >
-              <n-input
-                v-model:value="form.name"
-                type="text"
-                placeholder="Nguyễn Văn A"
-                clearable
-              />
-            </n-form-item>
+        <n-form :model="form" label-placement="top">
+          <n-form-item label="Họ và tên" :feedback="errors.name" :validation-status="errors.name ? 'error' : undefined">
+            <n-input v-model:value="form.name" type="text" placeholder="Nguyễn Văn A" clearable />
+          </n-form-item>
 
-            <n-form-item
-              label="Email"
-              :feedback="errors.email"
-              :validation-status="errors.email ? 'error' : undefined"
-            >
-              <n-input
-                v-model:value="form.email"
-                type="text"
-                placeholder="your@email.com"
-                clearable
-              />
-            </n-form-item>
+          <n-form-item label="Email" :feedback="errors.email" :validation-status="errors.email ? 'error' : undefined">
+            <n-input v-model:value="form.email" type="text" placeholder="your@email.com" clearable />
+          </n-form-item>
 
-            <n-form-item
-              label="Mật khẩu"
-              :feedback="errors.password"
-              :validation-status="errors.password ? 'error' : undefined"
-            >
-              <n-input
-                v-model:value="form.password"
-                type="password"
-                placeholder="••••••••"
-                show-password-on="click"
-                clearable
-              />
-            </n-form-item>
+          <n-form-item label="Mật khẩu" :feedback="errors.password"
+            :validation-status="errors.password ? 'error' : undefined">
+            <n-input v-model:value="form.password" type="password" placeholder="••••••••" show-password-on="click"
+              clearable />
+          </n-form-item>
 
-            <n-form-item
-              label="Xác nhận mật khẩu"
-              :feedback="errors.confirmPassword"
-              :validation-status="errors.confirmPassword ? 'error' : undefined"
-            >
-              <n-input
-                v-model:value="form.confirmPassword"
-                type="password"
-                placeholder="••••••••"
-                show-password-on="click"
-                clearable
-              />
-            </n-form-item>
+          <n-form-item label="Xác nhận mật khẩu" :feedback="errors.confirmPassword"
+            :validation-status="errors.confirmPassword ? 'error' : undefined">
+            <n-input v-model:value="form.confirmPassword" type="password" placeholder="••••••••"
+              show-password-on="click" clearable />
+          </n-form-item>
 
-            <n-button
-              type="primary"
-              attr-type="submit"
-              :loading="loading"
-              :disabled="loading"
-              size="large"
-              block
-            >
-              Đăng ký
-            </n-button>
-          </n-form>
-        </form>
+          <n-button type="primary" @click="handleRegister" :loading="loading" :disabled="loading" size="large" block>
+            Đăng ký
+          </n-button>
+        </n-form>
 
-        <n-alert
-          v-if="apiError"
-          type="error"
-          :title="apiError"
-          class="mt-4"
-          closable
-        />
-        <n-alert
-          v-if="successMsg"
-          type="success"
-          :title="successMsg"
-          class="mt-4"
-          closable
-        />
+        <n-alert v-if="apiError" type="error" :title="apiError" class="mt-4" closable />
+        <n-alert v-if="successMsg" type="success" :title="successMsg" class="mt-4" closable />
 
         <p class="mt-8 text-sm text-limestone/60">
           Đã có tài khoản?
-          <NuxtLink to="/login" class="font-medium text-oak hover:underline"
-            >Đăng nhập</NuxtLink
-          >
+          <NuxtLink to="/login" class="font-medium text-oak hover:underline">Đăng nhập</NuxtLink>
         </p>
       </div>
     </div>
@@ -106,35 +49,11 @@
       <div class="relative h-full w-full">
         <svg class="h-full w-full" xmlns="http://www.w3.org/2000/svg">
           <defs>
-            <pattern
-              id="topo-register"
-              x="0"
-              y="0"
-              width="120"
-              height="120"
-              patternUnits="userSpaceOnUse"
-            >
-              <path
-                d="M20 60c15-8 35-8 50 0s35 8 50 0"
-                fill="none"
-                stroke="#2a3439"
-                stroke-width="0.5"
-                opacity="0.15"
-              />
-              <path
-                d="M20 80c15-8 35-8 50 0s35 8 50 0"
-                fill="none"
-                stroke="#2a3439"
-                stroke-width="0.5"
-                opacity="0.1"
-              />
-              <path
-                d="M20 40c15-8 35-8 50 0s35 8 50 0"
-                fill="none"
-                stroke="#2a3439"
-                stroke-width="0.5"
-                opacity="0.1"
-              />
+            <pattern id="topo-register" x="0" y="0" width="120" height="120" patternUnits="userSpaceOnUse">
+              <path d="M20 60c15-8 35-8 50 0s35 8 50 0" fill="none" stroke="#2a3439" stroke-width="0.5"
+                opacity="0.15" />
+              <path d="M20 80c15-8 35-8 50 0s35 8 50 0" fill="none" stroke="#2a3439" stroke-width="0.5" opacity="0.1" />
+              <path d="M20 40c15-8 35-8 50 0s35 8 50 0" fill="none" stroke="#2a3439" stroke-width="0.5" opacity="0.1" />
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="url(#topo-register)" />

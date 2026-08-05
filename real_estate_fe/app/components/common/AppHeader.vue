@@ -14,13 +14,15 @@
 
         </template>
         <template v-else>
-          <NuxtLink to="/login" class="text-sm text-gray-600 hover:text-blue-600 transition">
+          <n-button type="primary" tertiary size="small" class="text-sm text-gray-600 hover:text-blue-600 transition"
+            @click="$router.push('/login')">
             Đăng nhập
-          </NuxtLink>
-          <NuxtLink to="/register"
-            class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700">
+          </n-button>
+          <n-button type="primary" size="small"
+            class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+            @click="$router.push('/register')">
             Đăng ký
-          </NuxtLink>
+          </n-button>
         </template>
       </nav>
       <n-button type="primary" @click="handlePushlishPost">Đăng tin</n-button>

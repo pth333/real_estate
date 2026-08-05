@@ -72,16 +72,12 @@ func MapBatDongSan(raw crawler.BatDongSanRaw) model.RealEstate {
 	}
 
 	return model.RealEstate{
-		Title:            raw.Title,
-		PriceVND:         price,
-		Address:          raw.Address,
-		District:         district,
-		City:             city,
-		Acreage:          area,
-		PricePerM2:       pricePerM2,
-		Source:           "batdongsan.com.vn",
-		SourceURL:        raw.SourceURL,
-		// PublishedAt:      parsePostedDate(raw.PostedDate),
-		CrawledAt: time.Now(),
+		Title:      raw.Title,
+		PriceVND:   price,
+		Address:    raw.Address,
+		District:   district,
+		City:       city,
+		Acreage:    area,
+		PricePerM2: pricePerM2,
 	}
 }

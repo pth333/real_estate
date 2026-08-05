@@ -78,7 +78,6 @@ func NewRealEstateCrawledEvent(m model.RealEstate) RealEstateCrawledEvent {
 			Version:   VersionV1,
 			Timestamp: time.Now(),
 		},
-		SourceURL:   m.SourceURL,
 		Title:       m.Title,
 		Address:     m.Address,
 		District:    m.District,
@@ -86,7 +85,6 @@ func NewRealEstateCrawledEvent(m model.RealEstate) RealEstateCrawledEvent {
 		PriceVND:    m.PriceVND,
 		Acreage:     m.Acreage,
 		PricePerM2:  m.PricePerM2,
-		CrawledAt:   m.CrawledAt,
 		PublishedAt: nil,
 	}
 }

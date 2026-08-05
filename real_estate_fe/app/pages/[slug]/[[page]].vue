@@ -120,10 +120,9 @@ function handleToggleFavorite(id: number) {
 
 const trackSearch = async (filters: Record<string, any>) => {
   try {
-    const userId = localStorage.getItem("user_id") || '';
     await $api.post('/tracking/search', {
       filters,
-      user_id: userId,
+      user_id: window.menu?.user_id || '',
     });
   } catch (err) {
     console.error('Tracking search error:', err);

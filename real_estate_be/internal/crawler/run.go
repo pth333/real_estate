@@ -143,12 +143,12 @@ func processItems(ctx context.Context, items []model.RealEstate, re repo.RealEst
 		}
 
 		// Publish Kafka
-		if producer != nil {
-			event := kafkapkg.NewRealEstateCrawledEvent(items[i])
-			if err := producer.Publish(ctx, items[i].SourceURL, event); err != nil {
-				log.Printf("⚠️ Kafka publish error: %v", err)
-			}
-		}
+		// if producer != nil {
+		// 	event := kafkapkg.NewRealEstateCrawledEvent(items[i])
+		// 	if err := producer.Publish(ctx, event); err != nil {
+		// 		log.Printf("⚠️ Kafka publish error: %v", err)
+		// 	}
+		// }
 	}
 	return true
 }

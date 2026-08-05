@@ -19,6 +19,7 @@ import { useNotificationStore } from "~/stores/notification";
 
 const notifStore = useNotificationStore();
 
+
 onMounted(() => {
   // Notification sẽ kết nối SSE sau khi auth hoàn thiện
   // TODO: thêm kết nối SSE realtime

@@ -16,27 +16,35 @@ type Filter struct {
 }
 
 type RealEstateResponse struct {
-	ID          uint64   `json:"id"`
-	Title       string   `json:"title"`
-	PriceVND    float64  `json:"price_vnd"`
-	Address     string   `json:"address"`
-	District    string   `json:"district"`
-	City        string   `json:"city"`
-	Acreage     float64  `json:"acreage"`
-	PricePerM2  float64  `json:"price_per_m2"`
-	Images      []string `json:"images,omitempty"`
-	Bedrooms    *int     `json:"bedrooms,omitempty"`
-	Bathrooms   *int     `json:"bathrooms,omitempty"`
-	Description string   `json:"description,omitempty"`
-	AgentName   string   `json:"agent_name,omitempty"`
-	AgentPhone  string   `json:"agent_phone,omitempty"`
-	Badge       string   `json:"badge,omitempty"`
-	CreatedAt   string   `json:"created_at"`
+	ID          uint64   `json:"id" gorm:"column:id"`
+	Title       string   `json:"title" gorm:"column:title"`
+	PriceVND    float64  `json:"price_vnd" gorm:"column:price_vnd"`
+	Address     string   `json:"address" gorm:"column:address"`
+	District    string   `json:"district" gorm:"column:district"`
+	City        string   `json:"city" gorm:"column:city"`
+	Acreage     float64  `json:"acreage" gorm:"column:acreage"`
+	PricePerM2  float64  `json:"price_per_m2" gorm:"column:price_per_m2"`
+	Images      []string `json:"images,omitempty" gorm:"-"`
+	Bedrooms    *int     `json:"bedrooms,omitempty" gorm:"column:bedrooms"`
+	Bathrooms   *int     `json:"bathrooms,omitempty" gorm:"column:bathrooms"`
+	Description string   `json:"description,omitempty" gorm:"column:description"`
+	AgentName   string   `json:"agent_name,omitempty" gorm:"column:agent_name"`
+	AgentPhone  string   `json:"agent_phone,omitempty" gorm:"column:agent_phone"`
+	Badge       string   `json:"badge,omitempty" gorm:"-"`
+	CreatedAt   string   `json:"created_at" gorm:"column:created_at"`
 }
 
 type ProvinceResponse struct {
 	Name string `json:"name"`
 	Code string `json:"code"`
+}
+
+// TopCityResponse — 1 thành phố trong danh sách "Bất động sản theo khu vực"
+type TopCityResponse struct {
+	Name  string `json:"name"`
+	Slug  string `json:"slug"`
+	Count int64  `json:"count"`
+	Image string `json:"image"`
 }
 
 // CreateRealEstateRequest — payload tạo tin đăng từ FE

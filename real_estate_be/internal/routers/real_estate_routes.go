@@ -24,6 +24,7 @@ func InitRealEstateRoutes(Router fiber.Router) {
 		}
 
 		// Route khong can auth
+		realEstateRouter.Get("/list/top-city", realEstateHandler.ListTopCity)
 		realEstateRouter.Get("/list/city", realEstateHandler.ListCity)
 		realEstateRouter.Get("/list/ward", realEstateHandler.ListWard)
 		realEstateRouter.Get("/list/types", realEstateHandler.ListRealEstateTypes)

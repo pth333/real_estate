@@ -81,9 +81,6 @@ func (e *EnrichConsumer) handle(ctx context.Context, msg kafkago.Message) error 
 		City:       event.City,
 		Acreage:    event.Acreage,
 		PricePerM2: event.PricePerM2,
-		Source:     event.Source,
-		SourceURL:  event.SourceURL,
-		CrawledAt:  event.CrawledAt,
 	}
 	if err := e.repo.Create(enriched); err != nil {
 		log.Printf("⚠️ [EnrichConsumer] DB error: %v", err)

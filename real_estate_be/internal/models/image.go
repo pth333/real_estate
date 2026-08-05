@@ -14,6 +14,12 @@ type Image struct {
 	// Liên kết ảnh với tin đăng (nullable — chưa thuộc tin nào khi mới upload)
 	RealEstateID *uint64 `gorm:"column:real_estate_id;index"`
 
+	// Relationship (không tạo FK constraint trong DB)
+	RealEstate *RealEstate `gorm:"foreignKey:RealEstateID;references:ID"`
+
+	// Ảnh đại diện/xuất hiện cho tỉnh/thành (theo province.code)
+	ProvinceCode string `gorm:"column:province_code;size:20;index"`
+
 	CreatedAt time.Time `gorm:"column:created_at"`
 	UpdatedAt time.Time `gorm:"column:updated_at"`
 }
