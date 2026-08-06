@@ -1,6 +1,9 @@
 package repo
 
 import (
+	"fmt"
+	"strings"
+
 	"real_estate_be/internal/dto"
 	model "real_estate_be/internal/models"
 
@@ -11,35 +14,10 @@ type realEstateRepo struct {
 	db *gorm.DB
 }
 
-// toResponse chuyển model.RealEstate (đã Preload User + Images) → dto.RealEstateResponse
-func toResponse(m model.RealEstate) dto.RealEstateResponse {
-	images := make([]string, 0, len(m.Images))
-	for _, img := range m.Images {
-		images = append(images, img.URL)
-	}
-
-	agentName, agentPhone := "", ""
-	if m.User != nil {
-		agentName = m.User.Name
-		agentPhone = m.User.Phone
-	}
-
-	return dto.RealEstateResponse{
-		ID:          m.ID,
-		Title:       m.Title,
-		PriceVND:    m.PriceVND,
-		Address:     m.Address,
-		District:    m.District,
-		City:        m.City,
-		Acreage:     m.Acreage,
-		PricePerM2:  m.PricePerM2,
-		Images:      images,
-		Bedrooms:    m.Bedrooms,
-		Bathrooms:   m.Bathrooms,
-		Description: m.Description,
-		AgentName:   agentName,
-		AgentPhone:  agentPhone,
-		CreatedAt:   m.CreatedAt.Format("2006-01-02 15:04:05"),
+// toResponse chuyển dto.RealEstateResponse (scan từ deferred join, có ImageURLs) → Images slice
+func toResponse(m *dto.RealEstateResponse) {
+	if m.ImageURLs != "" {
+		m.Images = strings.Split(m.ImageURLs, "|")
 	}
 }
 
@@ -73,9 +51,11 @@ func (r *realEstateRepo) CreateBatch(items []*model.RealEstate) error {
 
 func (r *realEstateRepo) GetList(req dto.RealEstateSearchRequest, offset, limit int) ([]dto.RealEstateResponse, int64, error) {
 	var (
-		items []model.RealEstate
+		items []dto.RealEstateResponse
 		total int64
 	)
+
+	fmt.Printf("123")
 
 	// Điều kiện lọc chung (dùng cho COUNT và query)
 	where := "WHERE 1=1"
@@ -84,6 +64,10 @@ func (r *realEstateRepo) GetList(req dto.RealEstateSearchRequest, offset, limit 
 	if req.Filter.District != "" {
 		where += " AND re.district = ?"
 		args = append(args, req.Filter.District)
+	}
+	if req.Filter.City != "" {
+		where += " AND re.city = ?"
+		args = append(args, req.Filter.City)
 	}
 	if req.Filter.MinPrice != 0 {
 		where += " AND re.price_vnd >= ?"
@@ -102,38 +86,36 @@ func (r *realEstateRepo) GetList(req dto.RealEstateSearchRequest, offset, limit 
 		return nil, 0, err
 	}
 
-	// Lấy danh sách dùng GORM + Preload (User + Images)
-	db := r.db.Model(&model.RealEstate{}).
-		Preload("User").
-		Preload("Images", func(db *gorm.DB) *gorm.DB {
-			return db.Order("images.id ASC")
-		})
-
-	if req.Filter.District != "" {
-		db = db.Where("district = ?", req.Filter.District)
-	}
-	if req.Filter.MinPrice != 0 {
-		db = db.Where("price_vnd >= ?", req.Filter.MinPrice)
-	}
-	if req.Filter.MaxPrice != 0 {
-		db = db.Where("price_vnd <= ?", req.Filter.MaxPrice)
-	}
-
-	err := db.Order("created_at DESC").Offset(offset).Limit(limit).Find(&items).Error
+	// deferred join: subquery lấy id trang hiện tại, rồi LEFT JOIN users + gom ảnh
+	listArgs := append(append([]interface{}{}, args...), limit, offset)
+	err := r.db.Raw(
+		"SELECT re.id, re.title, re.price_vnd, re.address, re.district, re.city, "+
+			"re.acreage, re.price_per_m2, re.bedrooms, re.bathrooms, re.description, re.created_at, "+
+			"COALESCE(GROUP_CONCAT(DISTINCT img.url ORDER BY img.id SEPARATOR '|'), '') AS image_urls, "+
+			"COALESCE(u.name, '') AS agent_name, "+
+			"COALESCE(u.phone, '') AS agent_phone "+
+			"FROM real_estates re "+
+			"LEFT JOIN images img ON img.real_estate_id = re.id "+
+			"LEFT JOIN users u ON u.id = re.user_id "+
+			"JOIN (SELECT re.id FROM real_estates re "+where+
+			" ORDER BY re.created_at DESC, re.id DESC LIMIT ? OFFSET ?) tmp ON tmp.id = re.id "+
+			"GROUP BY re.id "+
+			"ORDER BY re.created_at DESC, re.id DESC",
+		listArgs...,
+	).Debug().Scan(&items).Error
 	if err != nil {
 		return nil, 0, err
 	}
 
-	result := make([]dto.RealEstateResponse, len(items))
-	for i, item := range items {
-		result[i] = toResponse(item)
+	for i := range items {
+		toResponse(&items[i])
 	}
-	return result, total, nil
+	return items, total, nil
 }
 
 func (r *realEstateRepo) GetListByCategory(offset int, req dto.RealEstateSearchRequest, limit int) ([]dto.RealEstateResponse, int64, error) {
 	var (
-		items []model.RealEstate
+		items []dto.RealEstateResponse
 		total int64
 	)
 
@@ -144,6 +126,10 @@ func (r *realEstateRepo) GetListByCategory(offset int, req dto.RealEstateSearchR
 	if req.Filter.District != "" {
 		where += " AND re.district = ?"
 		args = append(args, req.Filter.District)
+	}
+	if req.Filter.City != "" {
+		where += " AND re.city = ?"
+		args = append(args, req.Filter.City)
 	}
 	if req.Filter.MinPrice != 0 {
 		where += " AND re.price_vnd >= ?"
@@ -166,43 +152,31 @@ func (r *realEstateRepo) GetListByCategory(offset int, req dto.RealEstateSearchR
 		return nil, 0, err
 	}
 
-	// Lấy category id từ slug, sau đó GORM + Preload (User + Images)
-	var categoryID int64
-	if err := r.db.Model(&model.Category{}).Select("id").Where("slug = ?", req.Slug).First(&categoryID).Error; err != nil {
-		return nil, 0, err
-	}
-
-	db := r.db.Model(&model.RealEstate{}).
-		Preload("User").
-		Preload("Images", func(db *gorm.DB) *gorm.DB {
-			return db.Order("images.id ASC")
-		}).
-		Where("category_id = ?", categoryID)
-
-	if req.Filter.District != "" {
-		db = db.Where("district = ?", req.Filter.District)
-	}
-	if req.Filter.MinPrice != 0 {
-		db = db.Where("price_vnd >= ?", req.Filter.MinPrice)
-	}
-	if req.Filter.MaxPrice != 0 {
-		db = db.Where("price_vnd <= ?", req.Filter.MaxPrice)
-	}
-	if req.Search != "" {
-		// Full-text search — khớp với COUNT query ở trên
-		db = db.Where("MATCH(title, address) AGAINST(? IN BOOLEAN MODE)", req.Search)
-	}
-
-	err := db.Order("created_at DESC").Offset(offset).Limit(limit).Find(&items).Error
+	// deferred join: subquery lấy id trang hiện tại, rồi LEFT JOIN users + gom ảnh
+	listArgs := append(append([]interface{}{}, args...), limit, offset)
+	err := r.db.Raw(
+		"SELECT re.id, re.title, re.price_vnd, re.address, re.district, re.city, "+
+			"re.acreage, re.price_per_m2, re.bedrooms, re.bathrooms, re.description, re.created_at, "+
+			"COALESCE(GROUP_CONCAT(DISTINCT img.url ORDER BY img.id SEPARATOR '|'), '') AS image_urls, "+
+			"COALESCE(u.name, '') AS agent_name, "+
+			"COALESCE(u.phone, '') AS agent_phone "+
+			"FROM real_estates re "+
+			"LEFT JOIN images img ON img.real_estate_id = re.id "+
+			"LEFT JOIN users u ON u.id = re.user_id "+
+			"JOIN (SELECT re.id FROM real_estates re JOIN categories c ON c.id = re.category_id "+
+			where+" ORDER BY re.created_at DESC, re.id DESC LIMIT ? OFFSET ?) tmp ON tmp.id = re.id "+
+			"GROUP BY re.id "+
+			"ORDER BY re.created_at DESC, re.id DESC",
+		listArgs...,
+	).Scan(&items).Error
 	if err != nil {
 		return nil, 0, err
 	}
 
-	result := make([]dto.RealEstateResponse, len(items))
-	for i, item := range items {
-		result[i] = toResponse(item)
+	for i := range items {
+		toResponse(&items[i])
 	}
-	return result, total, nil
+	return items, total, nil
 }
 
 func (r *realEstateRepo) GetListCity() ([]model.Province, error) {

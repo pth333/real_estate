@@ -43,9 +43,11 @@
 
 <script setup lang="ts">
 import { useMenuStore } from "~/stores/menu";
+import { useRealEstateStore } from "~/stores/real_estate";
 import { Menu } from "~/types/window";
 
 const menuStore = useMenuStore();
+const realEstateStore = useRealEstateStore();
 window.menu = new Menu(menuStore.user_id);
 
 onMounted(() => {
@@ -53,6 +55,8 @@ onMounted(() => {
 });
 
 const handleClick = (slug: string) => {
+  // Lưu pure category slug để các filter build URL SEO đúng
+  realEstateStore.categorySlug = slug;
   navigateTo(`/${slug}`);
 };
 </script>

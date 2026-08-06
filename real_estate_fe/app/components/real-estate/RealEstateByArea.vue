@@ -1,9 +1,9 @@
 <template>
     <section class="py-8 px-4">
-        <h1 class="text-lg font-bold text-gray-600 mb-4">Bất động sản theo địa điểm</h1 >
+        <h1 class="text-lg font-bold text-gray-600 mb-4">Bất động sản theo địa điểm</h1>
 
         <div class="flex gap-3" style="height: 360px;">
-            <div class="relative rounded-xl overflow-hidden cursor-pointer group flex-shrink-0" style="flex: 0 0 45%;"
+            <div class="relative overflow-hidden cursor-pointer group flex-shrink-0" style="flex: 0 0 45%;"
                 @click="navigateTo(`/${featured?.slug}`)">
                 <img :src="featured?.image" :alt="featured?.name"
                     class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
@@ -16,13 +16,15 @@
 
             <div class="flex-1 grid grid-cols-2 grid-rows-2 gap-3">
                 <div v-for="location in restLocations" :key="location.id"
-                    class="relative rounded-xl overflow-hidden cursor-pointer group">
-                    <img :src="location.image" :alt="location.name"
-                        class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-                    <div class="absolute bottom-0 left-0 p-3 text-white">
-                        <p class="font-bold text-sm leading-tight"> {{ location.name }} </p>
-                        <p class="text-xs text-white/80 mt-0.5"> {{ location.count }} tin đăng </p>
+                    class="relative  overflow-hidden cursor-pointer group">
+                    <div @click="navigateTo(`/${location.slug}`)" class="w-full h-full">
+                        <img :src="location.image" :alt="location.name"
+                            class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+                        <div class="absolute bottom-0 left-0 p-3 text-white">
+                            <p class="font-bold text-sm leading-tight"> {{ location.name }} </p>
+                            <p class="text-xs text-white/80 mt-0.5"> {{ location.count }} tin đăng </p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -56,7 +58,6 @@ const fetchListTopCity = async () => {
     try {
         const result = await $api.get<{ data: ListTopCity[] }>('/real-estate/list/top-city')
         listTopCity.value = result.data
-        console.log(listTopCity.value)
     } catch (e) {
         console.log(e)
     }

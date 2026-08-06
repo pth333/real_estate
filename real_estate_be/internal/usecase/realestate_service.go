@@ -49,14 +49,25 @@ func (s *RealEstateService) ListRealEstate(req dto.RealEstateSearchRequest) ([]d
 	return s.repo.GetList(req, offset, limit)
 }
 
-// ListRealEstateByCategory lấy category từ slug, sau đó query BĐS theo category_id
+// ListRealEstateByCategory lấy category từ slug, nếu slug là category hợp lệ
+// thì query BĐS theo category. Nếu slug không khớp category nào (VD slug SEO mỹ
+// thuật) thì bỏ qua lọc category, fallback query theo payload filter.
 func (s *RealEstateService) ListRealEstateByCategory(req dto.RealEstateSearchRequest) ([]dto.RealEstateResponse, int64, error) {
 	limit := req.Size
 	if limit < 1 {
 		limit = 10
 	}
 	offset := (req.Page - 1) * limit
-	return s.repo.GetListByCategory(offset, req, limit)
+
+	// Nếu slug khớp category trong DB → giữ query theo category
+	if req.Slug != "" {
+		if id, err := s.categoryRepo.GetCategoryIdBySlug(req.Slug); err == nil && id > 0 {
+			return s.repo.GetListByCategory(offset, req, limit)
+		}
+	}
+
+	// Không khớp category → fallback: query theo payload filter (bỏ category)
+	return s.repo.GetList(req, offset, limit)
 }
 
 func (s *RealEstateService) GetListCity() ([]model.Province, error) {

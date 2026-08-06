@@ -19,7 +19,7 @@ func InitRealEstateRoutes(Router fiber.Router) {
 		authGroup := realEstateRouter.Group("/", middleware.AuthMiddleware)
 		{
 			authGroup.Post("/list", realEstateHandler.List)
-			authGroup.Post("/:slug/:page", realEstateHandler.ListRealEsateByCategory)
+			authGroup.Post("/:slug/:price?/:page?", realEstateHandler.ListRealEsateByCategory)
 			authGroup.Post("/create-post", realEstateHandler.CreatePost)
 		}
 

@@ -1,26 +1,36 @@
 <template>
-  <div
-    class="group relative overflow-hidden rounded-lg bg-white shadow-sm transition-shadow duration-300 hover:shadow-md">
+  <div class="group relative rounded-lg bg-white shadow-sm transition-shadow duration-300 hover:shadow-md">
     <!-- Badge VIP -->
     <div v-if="estate.badge"
       class="absolute left-3 top-3 z-10 rounded bg-red-600 px-3 py-1 text-xs font-bold uppercase text-white">
       {{ estate.badge }}
     </div>
 
-    <!-- Grid ảnh: 1 ảnh lớn + 3 ảnh nhỏ -->
-    <div class="grid h-60 grid-cols-[2fr_1fr] gap-0.5 bg-gray-100">
-      <div class="col-span-2 row-span-2">
+    <!-- Grid ảnh: cột trái ảnh chính lớn, cột phải grid 2x2 -->
+    <div class="grid h-80 grid-cols-[2fr_1fr] gap-0.5 bg-gray-100 overflow-hidden">
+      <div class="overflow-hidden">
         <img :src="mainImage" :alt="estate.title" class="h-full w-full object-cover" @error="handleImageError" />
       </div>
 
-      <div class="grid grid-rows-2 gap-0.5">
-        <div v-for="(img, idx) in thumbnails" :key="idx" class="overflow-hidden bg-gray-200">
-          <img :src="img" :alt="`${estate.title} ${idx + 2}`" class="h-full w-full object-cover"
+      <div class="flex h-full min-h-0 flex-col gap-0.5">
+        <!-- Ảnh 2: hàng trên (chiếm nửa chiều cao) -->
+        <div v-if="thumbnails[0]" class="relative min-h-0 flex-1 overflow-hidden bg-gray-200">
+          <img :src="thumbnails[0]" :alt="`${estate.title} 2`" class="absolute inset-0 h-full w-full object-cover"
             @error="handleImageError" />
         </div>
-        <div v-if="remainingImagesCount > 0"
-          class="flex items-center justify-center bg-black/60 text-2xl font-bold text-white">
-          <span>{{ remainingImagesCount }}</span>
+        <!-- Hàng dưới: ảnh 3 (trái) + +N (phải), chia đôi -->
+        <div v-if="thumbnails[1] || remainingImagesCount > 0" class="flex min-h-0 flex-1 gap-0.5">
+          <div v-if="thumbnails[1]" class="relative min-h-0 flex-1 overflow-hidden bg-gray-200">
+            <img :src="thumbnails[1]" :alt="`${estate.title} 3`" class="absolute inset-0 h-full w-full object-cover"
+              @error="handleImageError" />
+          </div>
+          <div v-if="remainingImagesCount > 0" class="relative min-h-0 flex-1 overflow-hidden bg-gray-200">
+            <img v-if="overlayImage" :src="overlayImage" :alt="`${estate.title} more`"
+              class="absolute inset-0 h-full w-full object-cover" @error="handleImageError" />
+            <div class="absolute inset-0 flex items-center justify-center bg-black/60 text-xl font-bold text-white">
+              +{{ remainingImagesCount }}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -85,18 +95,21 @@
 import type { RealEstateResponse } from '~/types/real_estate'
 import { useImageGrid } from '~/composables/useImageGrid'
 
-interface Props {
-  estate: RealEstateResponse
-}
 
-const props = defineProps<Props>()
+const props = defineProps({
+  estate: {
+    type: Object as PropType<RealEstateResponse>,
+    required: true,
+  }
+})
+
 
 const emit = defineEmits<{
   call: [phone: string]
   toggleFavorite: [id: number]
 }>()
 
-const { mainImage, thumbnails, remainingImagesCount, handleImageError } = useImageGrid(computed(() => props.estate.images))
+const { mainImage, thumbnails, overlayImage, remainingImagesCount, handleImageError } = useImageGrid(computed(() => props.estate.images))
 
 const isFavorite = ref(props.estate.is_favorite || false)
 

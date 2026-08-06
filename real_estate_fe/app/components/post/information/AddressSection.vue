@@ -103,8 +103,8 @@ const locationLabel = computed(() => {
 
 const fetchListProvice = async () => {
     try {
-        const res = await $api.get<CityOption[]>("/real-estate/list/city")
-        provinceOption.value = res.map((item: CityOption) => ({
+        const res = await $api.get("/real-estate/list/city") as { data: CityOption[] }
+        provinceOption.value = res.data.map((item: CityOption) => ({
             label: item.name,
             value: item.code
         }))

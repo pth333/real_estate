@@ -17,16 +17,21 @@ export const useFilterStore = defineStore("filter", () => {
   const filterPriceRange = ref<FilterPriceRange>({});
   const showLocationModal = ref(false);
 
-  // Mock cityOptions
   const cityOptions = ref<SelectOption[]>([]);
-
-  // Mock districtOptions
   const districtOptions = ref<SelectOption[]>([]);
 
-  // Mock wardOptions
   const wardOptions = ref<SelectOption[]>([]);
 
   const screen = ref<"main" | "location">("main");
+
+  // Lấy tên tỉnh/thành từ code (VD 79 → "Hà Nội") để ghép vào slug
+  // cityOptions là SelectOption[]: value = code, label = name
+  const slugCity = computed(() => {
+    const found = cityOptions.value.find(
+      (item) => item.value === filterLocation.value.city,
+    );
+    return found?.label ?? "";
+  });
 
   return {
     screen,
@@ -37,7 +42,7 @@ export const useFilterStore = defineStore("filter", () => {
     filterPriceRange,
     showLocationModal,
     filterLocation,
-
+    slugCity,
     cityOptions,
     districtOptions,
     wardOptions,

@@ -18,7 +18,10 @@ func InitMysql() {
 		m.Port,
 		m.DBName,
 	)
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	// DisableForeignKeyConstraintWhenMigrating: giữ relationship field để dùng Preload,
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
+		DisableForeignKeyConstraintWhenMigrating: true,
+	})
 
 	db.AutoMigrate(&model.User{})
 	db.AutoMigrate(&model.Category{})

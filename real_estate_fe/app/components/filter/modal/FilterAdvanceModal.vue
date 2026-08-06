@@ -95,9 +95,16 @@ const handleApply = () => {
 
   // Reset URL về trang 1 để trigger fetch lại — vì filters đã thay đổi
   realEstateStore.currentPage = 0;
-  const slug = route.params.slug;
-  const slugStr = slug ? (Array.isArray(slug) ? slug[0] : slug) : '';
-  navigateTo(`/${slugStr}`);
+  const catSlug: string = realEstateStore.categorySlug || "";
+  const s = route.params.slug;
+  const rawSlug: string = Array.isArray(s) ? s[0] ?? "" : s ?? "";
+  const slugStr = catSlug || rawSlug;
+  const url = buildSeoUrl(
+    buildLocationSegment(slugStr, filterStore.filterLocation, filterStore.cityOptions, filterStore.wardOptions),
+    buildPriceSegment(filterStore.filterPriceRange),
+    1,
+  );
+  navigateTo(url);
 };
 
 // Reset screen khi mở modal

@@ -1,5 +1,10 @@
 import { defineStore } from "pinia";
-import type { DashboardSummary, Filter, PaginatedResponse, RealEstateResponse } from "@/types/real_estate";
+import type {
+  DashboardSummary,
+  Filter,
+  PaginatedResponse,
+  RealEstateResponse,
+} from "@/types/real_estate";
 
 export const useRealEstateStore = defineStore("realEstate", () => {
   const items = ref<RealEstateResponse[]>([]);
@@ -10,7 +15,10 @@ export const useRealEstateStore = defineStore("realEstate", () => {
   const page = ref(1);
   const pageSize = ref(50);
   const filter = ref<Filter>({});
-const currentPage = ref(1)
+  const currentPage = ref(1);
+  // Slug category thuần (phần đầu của URL, không chứa city/ward) — dùng để
+  // build lại URL SEO khi thay đổi filter, tránh phải parse ngược từ URL.
+  const categorySlug = ref("");
   function formattedPrice(priceVND: number): string {
     return (priceVND / 1_000_000_000).toFixed(2) + " tỷ";
   }
@@ -72,7 +80,21 @@ const currentPage = ref(1)
   }
 
   return {
-    items, total, loading, summary, summaryLoading, page, pageSize, filter,currentPage,
-    formattedPrice, fetchList, fetchSummary, setFilter, setPage, setPageSize,
+    items,
+    total,
+    loading,
+    summary,
+    summaryLoading,
+    page,
+    pageSize,
+    filter,
+    currentPage,
+    categorySlug,
+    formattedPrice,
+    fetchList,
+    fetchSummary,
+    setFilter,
+    setPage,
+    setPageSize,
   };
 });

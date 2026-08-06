@@ -99,20 +99,16 @@ const uploadComponent = ref()
 // ── Bản nháp: lưu khi Thoát, hỏi khi vào lại trang ──
 const showDraftModal = ref(false)
 
-// Nút Thoát: lưu dữ liệu đang nhập vào localStorage rồi rời trang
 const handleExit = () => {
     postStore.saveCurrentDraft()
     navigateTo('/')
 }
 
-// Chọn "Tiếp tục bản nháp": hydrate dữ liệu đã lưu vào form
 const continueDraft = () => {
     postStore.applyDraft()
-    console.log(postStore.form)
     showDraftModal.value = false
 }
 
-// Chọn "Không, tạo tin mới": xoá bản nháp và bắt đầu form rỗng
 const discardDraft = () => {
     postStore.clearCurrentDraft()
     postStore.resetForm()

@@ -35,10 +35,14 @@
 
 <script setup lang="ts">
 import type { Category } from '~/types/menu';
+import { useRealEstateStore } from '~/stores/real_estate';
 
 defineProps<{ item: Category }>();
+const realEstateStore = useRealEstateStore();
 
 function handleClick(slug: string) {
+  // Lưu pure category slug để các filter build URL SEO đúng
+  realEstateStore.categorySlug = slug;
   navigateTo(`/${slug}`);
 }
 </script>

@@ -17,6 +17,7 @@
     <div v-else class="mb-8 flex flex-col gap-4">
       <RealEstateCard v-for="estate in realEstates" :key="estate.id" :estate="estate" @call="handleCall"
         @toggle-favorite="handleToggleFavorite" />
+
     </div>
 
     <!-- Pagination -->
@@ -35,20 +36,36 @@ const route = useRoute();
 const { $api } = useNuxtApp();
 const filterStore = useFilterStore();
 const realEstateStore = useRealEstateStore()
-
 const realEstates = ref<RealEstateResponse[]>([]);
 const loading = ref(false);
 const pageSize = ref(10);
 const totalRecords = ref(0);
 
-// Slug = segment đầu, page = segment thứ 2 (nếu có)
-const slugSegments = computed(() => {
+// Category slug thuần (không chứa city/ward), ưu tiên từ store (do menu đặt)
+const categorySlug = computed<string>(() => {
+  const stored = realEstateStore.categorySlug;
+  if (stored) return stored;
   const s = route.params.slug;
-  return Array.isArray(s) ? s : [s];
+  return Array.isArray(s) ? s[0] ?? "" : s ?? "";
 });
 
-const slug = computed(() => slugSegments.value[0] || "");
+// Slug đầy đủ build từ store filter (city/ward/price) để URL SEO đúng trạng thái
+const seoSlug = computed(() => {
+  const locationSeg = buildLocationSegment(
+    categorySlug.value,
+    filterStore.filterLocation,
+    filterStore.cityOptions,
+    filterStore.wardOptions,
+  );
+  console.log(locationSeg)
+  const priceSeg = buildPriceSegment(filterStore.filterPriceRange);
+  return buildSeoUrl(locationSeg, priceSeg, realEstateStore.currentPage);
+});
 
+// Segment danh mục gửi API: nếu URL đã là SEO thì backend fallback theo payload,
+// còn nếu chỉ có category thuần (menu) thì giữ nguyên để match category.
+const slug = computed<string>(() => categorySlug.value);
+console.log(slug.value)
 const totalPages = computed(() =>
   Math.ceil(totalRecords.value / pageSize.value),
 );
@@ -65,7 +82,7 @@ const fetchDataRealEstate = async () => {
 
   try {
     const res = await $api.post<PaginatedResponse<RealEstateResponse>>(
-      `/real-estate/${slug.value}/${realEstateStore.currentPage}`,
+      `/real-estate/${slug.value}`,
       payload.value,
     );
 
@@ -75,7 +92,6 @@ const fetchDataRealEstate = async () => {
     const msg =
       err instanceof Error ? err.message : "Có lỗi xảy ra khi tải dữ liệu";
     window.message?.error(msg);
-    console.error("Error fetching real estates:", err);
   } finally {
     loading.value = false;
   }
@@ -84,28 +100,43 @@ const fetchDataRealEstate = async () => {
 function goToPage(page: number) {
   realEstateStore.currentPage = page
   if (realEstateStore.currentPage < 1 || realEstateStore.currentPage > totalPages.value) return;
-  if (realEstateStore.currentPage === 1) {
-    navigateTo(`/${slug.value}`);
-  } else {
-    navigateTo(`/${slug.value}/${realEstateStore.currentPage}`);
-  }
+  navigateTo(seoSlug.value);
 }
 
 watch(
-  () => [route.params.slug, route.params.page],
-  async ([newSlug, newPage]) => {
+  () => [route.params.slug, route.params.price, route.params.page],
+  async ([_newSlug, _newPrice, newPage]) => {
     // Reset state
     realEstates.value = [];
     totalRecords.value = 0;
 
     // Đồng bộ page từ route
-    realEstateStore.currentPage = newPage ? Number(newPage) : 1;
+    const pageNumber = newPage ? Number(newPage) : 1;
+    realEstateStore.currentPage = Number.isNaN(pageNumber) ? 1 : pageNumber;
+
+    // Đồng bộ filter từ URL SEO khi thay đổi route
+    syncFromRoute();
 
     await fetchDataRealEstate();
   },
   { immediate: true },
 );
 
+function syncFromRoute() {
+  const slugSeg: string = Array.isArray(route.params.slug) ? route.params.slug[0] ?? "" : route.params.slug ?? "";
+  const priceSeg: string = Array.isArray(route.params.price) ? route.params.price[0] ?? "" : route.params.price ?? "";
+
+  // Location: chỉ parse nếu đã có options (đã fetch) để map code
+  if (filterStore.cityOptions.length > 0) {
+    const parsed = parseLocationFromSegment(slugSeg, filterStore.cityOptions, filterStore.wardOptions);
+    filterStore.filterLocation = { ...parsed };
+    filterStore.filters.location = { ...parsed };
+  }
+
+  const parsedPrice = parsePriceFromSegment(priceSeg);
+  filterStore.filterPriceRange = parsedPrice;
+  filterStore.filters.price_range = { ...parsedPrice };
+}
 
 function handleCall(phone: string) {
   window.open(`tel:${phone}`, "_self");
@@ -118,22 +149,21 @@ function handleToggleFavorite(id: number) {
   }
 }
 
-const trackSearch = async (filters: Record<string, any>) => {
-  try {
-    await $api.post('/tracking/search', {
-      filters,
-      user_id: window.menu?.user_id || '',
-    });
-  } catch (err) {
-    console.error('Tracking search error:', err);
-  }
-}
+// const trackSearch = async (filters: Record<string, any>) => {
+//   try {
+//     await $api.post('/tracking/search', {
+//       filters,
+//       user_id: window.menu?.user_id || '',
+//     });
+//   } catch (err) {
+//     console.error('Tracking search error:', err);
+//   }
+// }
 
 const handleSearch = async () => {
   Promise.allSettled([
     fetchDataRealEstate(),
-    trackSearch(filterStore.filters),
+    // trackSearch(filterStore.filters),
   ]);
 }
-
 </script>

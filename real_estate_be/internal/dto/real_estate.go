@@ -12,6 +12,8 @@ type Filter struct {
 	MinPrice float64 `json:"min_price,omitempty"`
 	MaxPrice float64 `json:"max_price,omitempty"`
 	District string  `json:"district,omitempty"`
+	City     string  `json:"city,omitempty"`
+	Ward     string  `json:"ward,omitempty"`
 	Slug     string  `json:"slug,omitempty"`
 }
 
@@ -32,6 +34,8 @@ type RealEstateResponse struct {
 	AgentPhone  string   `json:"agent_phone,omitempty" gorm:"column:agent_phone"`
 	Badge       string   `json:"badge,omitempty" gorm:"-"`
 	CreatedAt   string   `json:"created_at" gorm:"column:created_at"`
+	// Scan nội bộ — không export ra JSON, chứa URL ảnh pipe-separated từ GROUP_CONCAT
+	ImageURLs string `json:"-" gorm:"column:image_urls"`
 }
 
 type ProvinceResponse struct {

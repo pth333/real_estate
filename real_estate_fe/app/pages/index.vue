@@ -16,7 +16,7 @@
         <p class="text-sm text-primary/70 mb-6">Tìm kiếm Bất động sản theo nhu cầu của Quý khách</p>
 
         <!-- Search box -->
-        <div class="bg-white rounded-xl shadow-lg px-4 py-4 max-w-2xl mx-auto">
+        <div class="bg-white  shadow-lg px-4 py-4 max-w-2xl mx-auto">
           <n-input-group>
             <n-input v-model:value="searchQuery" placeholder="Tìm kiếm theo khu vực hoặc dự án" size="large"
               style="text-align: left;" />

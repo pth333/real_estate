@@ -47,8 +47,11 @@
 <script setup lang="ts">
 import type { FilterPriceRange } from '~/types/real_estate';
 import { useFilterStore } from '~/stores/filter';
+import { useRealEstateStore } from '~/stores/real_estate';
 
 const filterStore = useFilterStore();
+const realEstateStore = useRealEstateStore();
+const route = useRoute();
 
 const localMin = ref<number | null>(null);
 const localMax = ref<number | null>(null);
@@ -120,10 +123,16 @@ function handleApply() {
   filterStore.filters.price_range = { ...filterStore.filterPriceRange };
   filterStore.filters.location = { ...filterStore.filterLocation };
 
-  // Reset URL về trang 1 → trigger fetch
-  const route = useRoute();
-  const slug = route.params.slug;
-  const slugStr = slug ? (Array.isArray(slug) ? slug[0] : slug) : '';
-  navigateTo(`/${slugStr}`);
+  // Build URL SEO 3 segment về trang 1 → trigger fetch
+  const catSlug: string = realEstateStore.categorySlug || "";
+  const s = route.params.slug;
+  const rawSlug: string = Array.isArray(s) ? s[0] ?? "" : s ?? "";
+  const slugStr = catSlug || rawSlug;
+  const url = buildSeoUrl(
+    buildLocationSegment(slugStr, filterStore.filterLocation, filterStore.cityOptions, filterStore.wardOptions),
+    buildPriceSegment(filterStore.filterPriceRange),
+    1,
+  );
+  navigateTo(url);
 }
 </script>
