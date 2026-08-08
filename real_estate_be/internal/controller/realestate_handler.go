@@ -1,19 +1,33 @@
 package controller
 
 import (
+	"fmt"
+	"regexp"
+	"sort"
+	"strconv"
+	"strings"
+
 	"real_estate_be/internal/dto"
+	"real_estate_be/internal/repo"
 	"real_estate_be/internal/response"
 	"real_estate_be/internal/usecase"
 
 	"github.com/gofiber/fiber/v2"
 )
 
+// detailPattern nhận diện slug trang chi tiết: kết thúc "-rs{id}" (VD "nha-pho-...-rs123").
+var detailPattern = regexp.MustCompile(`-rs(\d+)$`)
+
 type RealEstateHandler struct {
 	service usecase.IRealEstateService
+	repo    repo.RealEstateRepository
 }
 
-func NewRealEstateHandler(service usecase.IRealEstateService) *RealEstateHandler {
-	return &RealEstateHandler{service: service}
+func NewRealEstateHandler(
+	service usecase.IRealEstateService,
+	repo repo.RealEstateRepository,
+) *RealEstateHandler {
+	return &RealEstateHandler{service: service, repo: repo}
 }
 
 func (h *RealEstateHandler) List(c *fiber.Ctx) error {
@@ -38,24 +52,100 @@ func (h *RealEstateHandler) List(c *fiber.Ctx) error {
 	})
 }
 
-func (h *RealEstateHandler) ListRealEsateByCategory(c *fiber.Ctx) error {
-	slug := c.Params("slug")
-	if slug == "" {
-		return c.Status(400).JSON(fiber.Map{
-			"message": "Invalid category slug",
+func (h *RealEstateHandler) ListBySEOURL(c *fiber.Ctx) error {
+	req := dto.RealEstateSearchRequest{}
+
+	catParam := c.Params("category") // "nha-dat-ban-ha-noi"
+
+	if catParam != "" {
+		// Lấy tất cả categories từ DB (nên cache)
+		categories, err := h.repo.GetCategory()
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"message": err.Error(),
+			})
+		}
+
+		// Sort giảm dần theo độ dài slug → tránh prefix conflict
+		sort.Slice(categories, func(i, j int) bool {
+			return len(categories[i].Slug) > len(categories[j].Slug)
 		})
+
+		for _, category := range categories {
+			if !strings.HasPrefix(catParam, category.Slug) {
+				continue
+			}
+
+			if catParam == category.Slug {
+				req.Slug = category.Slug
+				break
+			}
+
+			// Tách location slug (phần sau category.Slug + "-")
+			locationSlug := strings.TrimPrefix(catParam, category.Slug)
+			locationSlug = strings.TrimPrefix(locationSlug, "-")
+
+			if locationSlug != "" {
+
+				province, err := h.repo.GetProvinceBySlug(locationSlug)
+
+				if err != nil {
+					// Slug không phải city → bỏ qua, không báo lỗi
+					break
+				}
+				req.Filter.City = province
+				fmt.Println("city:", req.Filter.City)
+			}
+			break
+		}
 	}
 
-	var req dto.RealEstateSearchRequest
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{
-			"message": "Invalid request body",
-		})
+	segmentRaw := c.Params("*") // "gia-1-den-3-ty/dien-tich-50-100"
+	if segmentRaw != "" {
+		segments := strings.Split(segmentRaw, "/")
+		for _, seg := range segments {
+			filterRange, err := h.repo.GetFilterRangeBySlug(seg)
+			if err != nil {
+				continue // Segment không match → bỏ qua
+			}
+			switch filterRange.Type {
+			case "price":
+				if filterRange.MinVal != nil {
+					req.Filter.MinPrice = *filterRange.MinVal
+				}
+				if filterRange.MaxVal != nil {
+					req.Filter.MaxPrice = *filterRange.MaxVal
+				}
+			case "area":
+				if filterRange.MinVal != nil {
+					req.Filter.MinAcreage = *filterRange.MinVal
+				}
+				if filterRange.MaxVal != nil {
+					req.Filter.MaxAcreage = *filterRange.MaxVal
+				}
+			}
+
+			fmt.Printf("data: MinPrice=%.0f MaxPrice=%.0f MinAcreage=%.0f MaxAcreage=%.0f\n",
+				req.Filter.MinPrice, req.Filter.MaxPrice, req.Filter.MinAcreage, req.Filter.MaxAcreage)
+			// → data: MinPrice=3000000000 MaxPrice=5000000000 MinAcreage=0 MaxAcreage=0
+		}
 	}
-	req.Slug = slug
+
+	page, _ := strconv.Atoi(c.Query("page", "1"))
+	if page < 1 {
+		page = 1
+	}
+	size, _ := strconv.Atoi(c.Query("size", "12"))
+	if size < 1 {
+		size = 12
+	}
+	req.Page = page
+	req.Size = size
+	req.Search = c.Query("search", "")
+
 	data, total, err := h.service.ListRealEstateByCategory(req)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
 		})
 	}
@@ -63,6 +153,30 @@ func (h *RealEstateHandler) ListRealEsateByCategory(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"total": total,
 		"data":  data,
+	})
+}
+
+// getDetail trả về 1 tin đăng theo ID (trang chi tiết từ slug -rs{id}).
+func (h *RealEstateHandler) getDetail(c *fiber.Ctx, id uint64) error {
+	if id == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid listing id",
+		})
+	}
+	item, err := h.service.GetByID(id)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+	if item == nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"message": "Không tìm thấy tin đăng",
+		})
+	}
+	return c.JSON(fiber.Map{
+		"type": "detail",
+		"data": item,
 	})
 }
 
@@ -77,15 +191,22 @@ func (h *RealEstateHandler) ListTopCity(c *fiber.Ctx) error {
 		})
 	}
 
+	// Category segment chung cho toàn khối: category đầu tiên trong menu
+	categorySlug, err := h.service.GetFirstCategorySlug()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
 	result := make([]dto.TopCityResponse, 0, len(data))
 	for _, city := range data {
-		slug := h.service.ToSlug(city.City)
-
 		result = append(result, dto.TopCityResponse{
-			Name:  city.City,
-			Slug:  "nha-ban-dat-" + slug,
-			Count: city.Count,
-			Image: city.Image,
+			Name:         city.City,
+			CategorySlug: categorySlug,
+			CitySlug:     h.service.ToSlug(city.City),
+			Count:        city.Count,
+			Image:        city.Image,
 		})
 	}
 

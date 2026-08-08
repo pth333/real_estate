@@ -29,7 +29,7 @@ func InitRouter() *fiber.App {
 		// Real Estate
 		routers.InitRealEstateRoutes(MainGroup)
 		// Tracking
-		routers.InitTrackingRoutes(MainGroup)
+		// routers.InitTrackingRoutes(MainGroup)
 		// Notifications + SSE
 		routers.InitNotificationRoutes(MainGroup)
 		// Upload

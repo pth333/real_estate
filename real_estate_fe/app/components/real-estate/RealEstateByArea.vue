@@ -4,7 +4,7 @@
 
         <div class="flex gap-3" style="height: 360px;">
             <div class="relative overflow-hidden cursor-pointer group flex-shrink-0" style="flex: 0 0 45%;"
-                @click="navigateTo(`/${featured?.slug}`)">
+                @click="goToCity(featured)">
                 <img :src="featured?.image" :alt="featured?.name"
                     class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                 <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
@@ -17,7 +17,7 @@
             <div class="flex-1 grid grid-cols-2 grid-rows-2 gap-3">
                 <div v-for="location in restLocations" :key="location.id"
                     class="relative  overflow-hidden cursor-pointer group">
-                    <div @click="navigateTo(`/${location.slug}`)" class="w-full h-full">
+                    <div @click="goToCity(location)" class="w-full h-full">
                         <img :src="location.image" :alt="location.name"
                             class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                         <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
@@ -38,8 +38,16 @@ interface ListTopCity {
     name: string;
     count: number;
     image: string;
-    slug: string
+    category_slug: string;
+    city_slug: string;
 }
+
+// Điều hướng server-driven: /{category}/{city-slug}
+function goToCity(city?: ListTopCity | null) {
+    if (!city) return;
+    navigateTo(`/${city.category_slug}/${city.city_slug}`);
+}
+
 // Các địa điểm còn lại (lưới 2x2 bên phải)
 const restLocations = computed(() => {
     if (listTopCity.value) {

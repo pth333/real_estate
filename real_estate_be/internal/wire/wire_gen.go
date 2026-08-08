@@ -12,16 +12,6 @@ import (
 	"real_estate_be/internal/usecase"
 )
 
-// Injectors from tracking.wire.go:
-
-func InitializeTrackingHandler() (*controller.TrackingHandler, error) {
-	db := providerDB()
-	searchHistoryRepository := repo.NewSearchHistoryRepository(db)
-	trackingService := usecase.NewTrackingService(searchHistoryRepository)
-	trackingHandler := controller.NewTrackingHandler(trackingService)
-	return trackingHandler, nil
-}
-
 // Injectors from ai.wire.go:
 
 func InitializeAIHandler() (*controller.AIHandler, error) {
@@ -71,6 +61,6 @@ func InitializeRealEstateHandler() (*controller.RealEstateHandler, error) {
 	imageRepository := repo.NewImageRepository(db)
 	iUserRepository := repo.NewUserRepository(db)
 	iRealEstateService := usecase.NewRealEstateService(realEstateRepository, iCategoryRepository, imageRepository, iUserRepository)
-	realEstateHandler := controller.NewRealEstateHandler(iRealEstateService)
+	realEstateHandler := controller.NewRealEstateHandler(iRealEstateService, realEstateRepository)
 	return realEstateHandler, nil
 }

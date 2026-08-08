@@ -2,6 +2,7 @@
 export interface RealEstateResponse {
   id: number;
   title: string;
+  slug?: string;
   price_vnd: number;
   address: string;
   district: string;
@@ -34,6 +35,13 @@ export interface Filter {
   acreage?: number;
   location?: FilterLocation;
   price_range?: FilterPriceRange;
+  min_acreage?: number;
+  max_acreage?: number;
+}
+
+export interface FilterAreaRange {
+  min_acreage?: number;
+  max_acreage?: number;
 }
 
 export interface FilterPriceRange {

@@ -9,17 +9,20 @@ type RealEstateSearchRequest struct {
 }
 
 type Filter struct {
-	MinPrice float64 `json:"min_price,omitempty"`
-	MaxPrice float64 `json:"max_price,omitempty"`
-	District string  `json:"district,omitempty"`
-	City     string  `json:"city,omitempty"`
-	Ward     string  `json:"ward,omitempty"`
-	Slug     string  `json:"slug,omitempty"`
+	MinPrice   float64 `json:"min_price,omitempty"`
+	MaxPrice   float64 `json:"max_price,omitempty"`
+	MinAcreage float64 `json:"min_acreage,omitempty"`
+	MaxAcreage float64 `json:"max_acreage,omitempty"`
+	District   string  `json:"district,omitempty"`
+	City       string  `json:"city,omitempty"`
+	Ward       string  `json:"ward,omitempty"`
+	Slug       string  `json:"slug,omitempty"`
 }
 
 type RealEstateResponse struct {
 	ID          uint64   `json:"id" gorm:"column:id"`
 	Title       string   `json:"title" gorm:"column:title"`
+	Slug        string   `json:"slug,omitempty" gorm:"column:slug"`
 	PriceVND    float64  `json:"price_vnd" gorm:"column:price_vnd"`
 	Address     string   `json:"address" gorm:"column:address"`
 	District    string   `json:"district" gorm:"column:district"`
@@ -44,11 +47,14 @@ type ProvinceResponse struct {
 }
 
 // TopCityResponse — 1 thành phố trong danh sách "Bất động sản theo khu vực"
+// CategorySlug: category đầu tiên trong menu; CitySlug: tên thành phố đã slug hóa.
+// FE ghép → /{CategorySlug}/{CitySlug} để server-driven.
 type TopCityResponse struct {
-	Name  string `json:"name"`
-	Slug  string `json:"slug"`
-	Count int64  `json:"count"`
-	Image string `json:"image"`
+	Name         string `json:"name"`
+	CategorySlug string `json:"category_slug"`
+	CitySlug     string `json:"city_slug"`
+	Count        int64  `json:"count"`
+	Image        string `json:"image"`
 }
 
 // CreateRealEstateRequest — payload tạo tin đăng từ FE

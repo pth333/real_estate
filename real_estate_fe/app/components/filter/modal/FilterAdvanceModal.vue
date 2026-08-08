@@ -48,6 +48,7 @@
 <script setup lang="ts">
 import { useFilterStore } from '~/stores/filter';
 import { useRealEstateStore } from '~/stores/real_estate';
+import { buildCategoryPath } from '~/utils/slug';
 
 const props = defineProps<{
   showModalAll: boolean
@@ -86,6 +87,7 @@ function backToMain() {
 function handleReset() {
   // filterStore.filters.price_range = {};
   filterStore.filterLocation = {};
+  console.log(realEstateStore.categorySlug)
 }
 
 const handleApply = () => {
@@ -95,15 +97,16 @@ const handleApply = () => {
 
   // Reset URL về trang 1 để trigger fetch lại — vì filters đã thay đổi
   realEstateStore.currentPage = 0;
-  const catSlug: string = realEstateStore.categorySlug || "";
-  const s = route.params.slug;
-  const rawSlug: string = Array.isArray(s) ? s[0] ?? "" : s ?? "";
-  const slugStr = catSlug || rawSlug;
-  const url = buildSeoUrl(
-    buildLocationSegment(slugStr, filterStore.filterLocation, filterStore.cityOptions, filterStore.wardOptions),
-    buildPriceSegment(filterStore.filterPriceRange),
+  const catSlug: string = realEstateStore.categorySlug || (Array.isArray(route.params.category) ? route.params.category[0] ?? "" : route.params.category ?? "");
+  const url = buildCategoryPath(
+    catSlug,
+    filterStore.filterLocation,
+    filterStore.cityOptions,
+    filterStore.filterPriceRange,
+    filterStore.filterAreaRange,
     1,
   );
+  console.log(url)
   navigateTo(url);
 };
 

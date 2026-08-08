@@ -19,7 +19,6 @@ func InitRealEstateRoutes(Router fiber.Router) {
 		authGroup := realEstateRouter.Group("/", middleware.AuthMiddleware)
 		{
 			authGroup.Post("/list", realEstateHandler.List)
-			authGroup.Post("/:slug/:price?/:page?", realEstateHandler.ListRealEsateByCategory)
 			authGroup.Post("/create-post", realEstateHandler.CreatePost)
 		}
 
@@ -28,6 +27,12 @@ func InitRealEstateRoutes(Router fiber.Router) {
 		realEstateRouter.Get("/list/city", realEstateHandler.ListCity)
 		realEstateRouter.Get("/list/ward", realEstateHandler.ListWard)
 		realEstateRouter.Get("/list/types", realEstateHandler.ListRealEstateTypes)
+
+		// Server-driven SEO: URL là nguồn truth, backend tự parse
+		// /{category} | /{category}/{location} | /{category}/{location}/{filters}
+		// Đặt sau các route static /list/... để Fiber ưu tiên match static trước.
+		realEstateRouter.Get("/:category", realEstateHandler.ListBySEOURL)
+		realEstateRouter.Get("/:category/*", realEstateHandler.ListBySEOURL)
 
 	}
 }

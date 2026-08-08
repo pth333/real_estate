@@ -15,8 +15,9 @@
 
             <!-- Filter price range -->
             <FilterPriceRange />
-            <!-- <FilterTypwOfRealEstate />
-        <FilterAreaRange /> -->
+
+            <!-- Filter diện tích -->
+            <FilterAreaRange />
         </div>
         <!-- Badge filter đang active -->
         <!-- <div v-if="hasActiveFilters" class="mt-2 flex flex-wrap items-center gap-2">

@@ -37,7 +37,8 @@
 
     <!-- Thông tin chính -->
     <div class="space-y-3 p-4">
-      <h3 class="line-clamp-2 text-base font-semibold uppercase leading-tight text-gray-800">
+      <h3 class="line-clamp-2 text-base font-semibold uppercase leading-tight text-gray-800 cursor-pointer hover:text-blue-600"
+        @click="goToDetail">
         {{ estate.title }}
       </h3>
 
@@ -94,6 +95,7 @@
 <script setup lang="ts">
 import type { RealEstateResponse } from '~/types/real_estate'
 import { useImageGrid } from '~/composables/useImageGrid'
+import { buildDetailUrl } from '~/utils/slug'
 
 
 const props = defineProps({
@@ -155,5 +157,13 @@ const handleCall = () => {
 const handleToggleFavorite = () => {
   isFavorite.value = !isFavorite.value
   emit('toggleFavorite', props.estate.id)
+}
+
+// Điều hướng sang trang chi tiết bằng slug SEO "{title-slug}-rs{id}".
+// Nếu listing chưa có slug (dữ liệu cũ) → dựng dạng tối thiểu "-rs{id}" để
+// backend vẫn detect được theo regex -rs\d+$.
+const goToDetail = () => {
+  const slug = props.estate.slug || `-rs${props.estate.id}`
+  navigateTo(buildDetailUrl(slug))
 }
 </script>

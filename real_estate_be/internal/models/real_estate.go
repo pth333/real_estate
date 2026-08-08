@@ -8,7 +8,9 @@ type RealEstate struct {
 	// User đăng tin (nullable cho tin từ crawler)
 	UserID *uint64 `gorm:"column:user_id;index"`
 
-	Title    string  `gorm:"column:title"`
+	Title string `gorm:"column:title"`
+	// Slug riêng cho từng listing: "{title-slug}-rs{id}" (URL trang chi tiết SEO).
+	Slug     string  `gorm:"column:slug;uniqueIndex;size:255"`
 	PriceVND float64 `gorm:"column:price_vnd"`
 
 	Address  string `gorm:"column:address"`
@@ -30,9 +32,9 @@ type RealEstate struct {
 	UpdatedAt time.Time
 
 	// Relationship (không tạo FK constraint trong DB)
-	User     *User      `gorm:"foreignKey:UserID;references:ID"`
-	Category *Category  `gorm:"foreignKey:CategoryID;references:ID"`
-	Images   []Image    `gorm:"foreignKey:RealEstateID"`
+	User     *User     `gorm:"foreignKey:UserID;references:ID"`
+	Category *Category `gorm:"foreignKey:CategoryID;references:ID"`
+	Images   []Image   `gorm:"foreignKey:RealEstateID"`
 }
 
 type DashboardSummary struct {
@@ -60,6 +62,7 @@ type Province struct {
 	Code  string `gorm:"column:code;size:20" json:"code"`
 	Name  string `gorm:"column:name;size:100" json:"name"`
 	Image string `gorm:"column:image;type:text" json:"image"`
+	Slug  string `gorm:"column:slug" json:"slug"`
 }
 
 type Ward struct {

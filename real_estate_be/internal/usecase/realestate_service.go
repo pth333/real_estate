@@ -27,13 +27,22 @@ type RealEstateService struct {
 type IRealEstateService interface {
 	ListRealEstate(req dto.RealEstateSearchRequest) ([]dto.RealEstateResponse, int64, error)
 	ListRealEstateByCategory(req dto.RealEstateSearchRequest) ([]dto.RealEstateResponse, int64, error)
+	// GetByID lấy 1 tin đăng theo ID (trang chi tiết slug -rs{id}); trả nil nếu không tồn tại.
+	GetByID(id uint64) (*dto.RealEstateResponse, error)
 	GetListCity() ([]model.Province, error)
 	GetListWard(provinceCode string) ([]model.Ward, error)
 	GetListRealEstateTypes() ([]model.Category, error)
 	GetUserByEmail(email string) (*model.User, error)
 	CreateRealEstate(req dto.CreateRealEstateRequest, userID uint64) (uint64, error)
 	GetTopCity(limit int) ([]model.CityStat, error)
+	GetFirstCategorySlug() (string, error)
 	ToSlug(city string) string
+	// ResolveCityBySlug(slug string) (string, error)
+	// Đưa 1 segment filter (giá/diện tích) từ URL vào Filter: lookup theo slug
+	// trong bảng filter_ranges. Segment không khớp bất kỳ range nào → bỏ qua.
+	ApplyFilterSegment(seg string, filter *dto.Filter) error
+	// GenerateListingSlug tạo slug trang chi tiết "{title-slug}-rs{id}".
+	GenerateListingSlug(title string, id uint64) string
 }
 
 func NewRealEstateService(repo repo.RealEstateRepository, categoryRepo repo.ICategoryRepository, imageRepo repo.ImageRepository, userRepo repo.IUserRepository) IRealEstateService {
@@ -49,15 +58,18 @@ func (s *RealEstateService) ListRealEstate(req dto.RealEstateSearchRequest) ([]d
 	return s.repo.GetList(req, offset, limit)
 }
 
-// ListRealEstateByCategory lấy category từ slug, nếu slug là category hợp lệ
-// thì query BĐS theo category. Nếu slug không khớp category nào (VD slug SEO mỹ
-// thuật) thì bỏ qua lọc category, fallback query theo payload filter.
+func (s *RealEstateService) GetByID(id uint64) (*dto.RealEstateResponse, error) {
+	return s.repo.GetByID(id)
+}
+
 func (s *RealEstateService) ListRealEstateByCategory(req dto.RealEstateSearchRequest) ([]dto.RealEstateResponse, int64, error) {
 	limit := req.Size
 	if limit < 1 {
 		limit = 10
 	}
 	offset := (req.Page - 1) * limit
+	jsonData, _ := json.MarshalIndent(req, "", "  ")
+	fmt.Println("Data:", string(jsonData))
 
 	// Nếu slug khớp category trong DB → giữ query theo category
 	if req.Slug != "" {
@@ -89,6 +101,21 @@ func (s *RealEstateService) GetTopCity(limit int) ([]model.CityStat, error) {
 	}
 
 	return cities, nil
+}
+
+// GetFirstCategorySlug lấy slug của category đầu tiên trong menu (theo name ASC),
+// dùng làm segment `{category}` cho khối "Bất động sản theo địa điểm" trên trang chủ.
+func (s *RealEstateService) GetFirstCategorySlug() (string, error) {
+	categories, err := s.categoryRepo.GetAll()
+	if err != nil {
+		return "", err
+	}
+	for _, c := range categories {
+		if c.Slug != "" {
+			return c.Slug, nil
+		}
+	}
+	return "", nil
 }
 
 func (s *RealEstateService) GetUserByEmail(email string) (*model.User, error) {
@@ -155,6 +182,14 @@ func (s *RealEstateService) CreateRealEstate(req dto.CreateRealEstateRequest, us
 		return 0, err
 	}
 
+	// Generate slug trang chi tiết sau khi có ID: "{title-slug}-rs{id}".
+	if estate.Slug == "" {
+		estate.Slug = s.GenerateListingSlug(estate.Title, estate.ID)
+		if err := s.repo.Save(estate); err != nil {
+			return 0, err
+		}
+	}
+
 	// Gắn ảnh đã upload vào tin đăng
 	if err := s.imageRepo.LinkToRealEstate(req.ImageIDs, estate.ID); err != nil {
 		return 0, err
@@ -186,10 +221,82 @@ func (s *RealEstateService) ToSlug(input string) string {
 				b.WriteRune('-')
 			}
 		default:
-			if s, ok := accents[r]; ok {
-				b.WriteString(s)
+			if ch, ok := accents[r]; ok {
+				b.WriteString(ch)
 			}
 		}
 	}
 	return strings.Trim(b.String(), "-")
+}
+
+// ResolveCityBySlug tìm TÊN tỉnh/thành theo slug SEO. Vì real_estates.city lưu
+// TÊN có dấu (VD "Hồ Chí Minh") chứ không phải slug, ta scan in-memory toàn bộ
+// provinces (~63 row), so sánh ToSlug(name) == slug. Không thêm cột DB vì quá nhỏ.
+// func (s *RealEstateService) ResolveCityBySlug(slug string) (string, error) {
+// 	if slug == "" {
+// 		return "", nil
+// 	}
+// 	provinces, err := s.repo.GetLisCity()
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	for _, p := range provinces {
+// 		if s.ToSlug(p.Name) == slug {
+// 			return p.Name, nil
+// 		}
+// 	}
+// 	return "", nil
+// }
+
+// ApplyFilterSegment áp 1 segment filter (giá/diện tích) từ URL vào Filter.
+//
+// Cơ chế server-driven: lookup đúng slug trong bảng filter_ranges (không parse
+// chuỗi thủ công):
+//
+//	"gia-1-den-3-ty"    → type=price, MinVal=1e9, MaxVal=3e9
+//	"dien-tich-50-100"  → type=area,  MinVal=50,  MaxVal=100
+//
+// Slug không khớp bất kỳ range nào → bỏ qua (không lỗi), để URL thừa
+// 1 đoạn không làm hỏng trang.
+func (s *RealEstateService) ApplyFilterSegment(seg string, filter *dto.Filter) error {
+	if seg == "" || filter == nil {
+		return nil
+	}
+	f, err := s.repo.GetFilterRangeBySlug(seg)
+	if err != nil {
+		// Lỗi DB thực → báo lỗi; không tìm thấy → trả nil, nil.
+		return err
+	}
+	if f == nil {
+		// Slug không nằm trong filter_ranges → URL thừa → bỏ qua.
+		return nil
+	}
+	switch f.Type {
+	case "price":
+		if f.MinVal != nil {
+			filter.MinPrice = *f.MinVal
+		}
+		if f.MaxVal != nil {
+			filter.MaxPrice = *f.MaxVal
+		}
+	case "area":
+		if f.MinVal != nil {
+			filter.MinAcreage = *f.MinVal
+		}
+		if f.MaxVal != nil {
+			filter.MaxAcreage = *f.MaxVal
+		}
+	}
+	return nil
+}
+
+// GenerateListingSlug tạo slug trang chi tiết cho 1 tin đăng: "{title-slug}-rs{id}".
+// VD title "Nhà phố 2 tầng Cầu Giấy" id 123 → "nha-pho-2-tang-cau-giay-rs123".
+// Phần "-rs{id}" giúp backend detect (regex -rs\d+$) và đảm bảo unique theo id.
+func (s *RealEstateService) GenerateListingSlug(title string, id uint64) string {
+	return fmt.Sprintf("%s-rs%d", s.ToSlug(title), id)
+}
+
+func (s *RealEstateService) GetCategory() ([]model.Category, error) {
+	return s.repo.GetCategory()
 }

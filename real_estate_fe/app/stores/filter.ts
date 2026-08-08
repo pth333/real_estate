@@ -2,12 +2,14 @@ import type { SelectOption } from "naive-ui";
 import { defineStore } from "pinia";
 import type {
   Filter,
+  FilterAreaRange,
   FilterLocation,
   FilterPriceRange,
 } from "~/types/real_estate";
 export const useFilterStore = defineStore("filter", () => {
   const showModalAll = ref(false);
   const showPopover = ref(false);
+  const showAreaPopover = ref(false);
 
   const filterLocation = ref<FilterLocation>({});
 
@@ -15,6 +17,7 @@ export const useFilterStore = defineStore("filter", () => {
 
   const filters = ref<Filter>({});
   const filterPriceRange = ref<FilterPriceRange>({});
+  const filterAreaRange = ref<FilterAreaRange>({});
   const showLocationModal = ref(false);
 
   const cityOptions = ref<SelectOption[]>([]);
@@ -39,7 +42,9 @@ export const useFilterStore = defineStore("filter", () => {
     searchKeyword,
     showModalAll,
     showPopover,
+    showAreaPopover,
     filterPriceRange,
+    filterAreaRange,
     showLocationModal,
     filterLocation,
     slugCity,

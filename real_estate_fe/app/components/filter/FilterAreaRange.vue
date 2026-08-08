@@ -1,7 +1,7 @@
 <template>
   <!-- Trigger button + popover -->
-  <n-popover placement="bottom-start" trigger="click" :show="filterStore.showPopover"
-    @update:show="filterStore.showPopover = $event" :style="{ padding: 0 }">
+  <n-popover placement="bottom-start" trigger="click" :show="filterStore.showAreaPopover"
+    @update:show="filterStore.showAreaPopover = $event" :style="{ padding: 0 }">
     <template #trigger>
       <n-button ghost size="small">
         <template #icon>
@@ -12,14 +12,14 @@
     </template>
 
     <div class="w-80 p-4">
-      <h3 class="mb-3 text-sm font-semibold text-gray-700">Khoảng giá</h3>
+      <h3 class="mb-3 text-sm font-semibold text-gray-700">Diện tích</h3>
 
       <!-- Inputs -->
       <div class="mb-3 flex items-center gap-2">
-        <n-input-number v-model:value="localMin" placeholder="Từ (VNĐ)" :min="0" clearable class="flex-1"
+        <n-input-number v-model:value="localMin" placeholder="Từ (m²)" :min="0" clearable class="flex-1"
           size="small" />
         <span class="text-gray-400">—</span>
-        <n-input-number v-model:value="localMax" placeholder="Đến (VNĐ)" :min="0" clearable class="flex-1"
+        <n-input-number v-model:value="localMax" placeholder="Đến (m²)" :min="0" clearable class="flex-1"
           size="small" />
       </div>
 
@@ -45,7 +45,7 @@
 </template>
 
 <script setup lang="ts">
-import type { FilterPriceRange } from '~/types/real_estate';
+import type { FilterAreaRange } from '~/types/real_estate';
 import { useFilterStore } from '~/stores/filter';
 import { useRealEstateStore } from '~/stores/real_estate';
 import { buildCategoryPath } from '~/utils/slug';
@@ -59,74 +59,73 @@ const localMax = ref<number | null>(null);
 
 // Mở popover → đồng bộ local state từ store
 function syncLocalFromStore() {
-  localMin.value = filterStore.filterPriceRange?.min_price ?? null;
-  localMax.value = filterStore.filterPriceRange?.max_price ?? null;
+  localMin.value = filterStore.filterAreaRange?.min_acreage ?? null;
+  localMax.value = filterStore.filterAreaRange?.max_acreage ?? null;
 }
 
-watch(() => filterStore.showPopover, (val) => {
+watch(() => filterStore.showAreaPopover, (val) => {
   if (val) syncLocalFromStore();
 });
 
-interface PricePreset {
+interface AreaPreset {
   label: string
-  range: FilterPriceRange
+  range: FilterAreaRange
 }
 
-const presets: PricePreset[] = [
-  { label: 'Dưới 500 triệu', range: { max_price: 500_000_000 } },
-  { label: '500 tr - 1 tỷ', range: { min_price: 500_000_000, max_price: 1_000_000_000 } },
-  { label: '1 tỷ - 3 tỷ', range: { min_price: 1_000_000_000, max_price: 3_000_000_000 } },
-  { label: '3 tỷ - 5 tỷ', range: { min_price: 3_000_000_000, max_price: 5_000_000_000 } },
-  { label: '5 tỷ - 10 tỷ', range: { min_price: 5_000_000_000, max_price: 10_000_000_000 } },
-  { label: 'Trên 10 tỷ', range: { min_price: 10_000_000_000 } },
+const presets: AreaPreset[] = [
+  { label: 'Dưới 30 m²', range: { max_acreage: 30 } },
+  { label: '30 - 50 m²', range: { min_acreage: 30, max_acreage: 50 } },
+  { label: '50 - 100 m²', range: { min_acreage: 50, max_acreage: 100 } },
+  { label: '100 - 200 m²', range: { min_acreage: 100, max_acreage: 200 } },
+  { label: 'Trên 200 m²', range: { min_acreage: 200 } },
 ];
 
 const buttonLabel = computed(() => {
-  const range = filterStore.filterPriceRange;
-  if (range.min_price != null && range.max_price != null) {
-    return `${formatPrice(range.min_price)} - ${formatPrice(range.max_price)}`;
+  const range = filterStore.filterAreaRange;
+  if (range.min_acreage != null && range.max_acreage != null) {
+    return `${range.min_acreage} - ${range.max_acreage} m²`;
   }
-  if (range.min_price != null) {
-    return `Từ ${formatPrice(range.min_price)}`;
+  if (range.min_acreage != null) {
+    return `Từ ${range.min_acreage} m²`;
   }
-  if (range.max_price != null) {
-    return `Đến ${formatPrice(range.max_price)}`;
+  if (range.max_acreage != null) {
+    return `Đến ${range.max_acreage} m²`;
   }
-  return 'Khoảng giá';
+  return 'Diện tích';
 });
 
-function isPresetActive(preset: PricePreset): boolean {
+function isPresetActive(preset: AreaPreset): boolean {
   return (
-    localMin.value === (preset.range.min_price ?? null) &&
-    localMax.value === (preset.range.max_price ?? null)
+    localMin.value === (preset.range.min_acreage ?? null) &&
+    localMax.value === (preset.range.max_acreage ?? null)
   );
 }
 
-function selectPreset(preset: PricePreset) {
-  localMin.value = preset.range.min_price ?? null;
-  localMax.value = preset.range.max_price ?? null;
+function selectPreset(preset: AreaPreset) {
+  localMin.value = preset.range.min_acreage ?? null;
+  localMax.value = preset.range.max_acreage ?? null;
 }
 
 function handleReset() {
   localMin.value = null;
   localMax.value = null;
-  filterStore.filterPriceRange = {};
+  filterStore.filterAreaRange = {};
 }
 
 function handleApply() {
-  filterStore.filterPriceRange = {
-    min_price: localMin.value ?? undefined,
-    max_price: localMax.value ?? undefined,
+  filterStore.filterAreaRange = {
+    min_acreage: localMin.value ?? undefined,
+    max_acreage: localMax.value ?? undefined,
   };
-  filterStore.showPopover = false;
+  filterStore.showAreaPopover = false;
 
-  // Commit lên filters.price_range để đồng nhất
-  filterStore.filters.price_range = { ...filterStore.filterPriceRange };
+  // Commit lên filters để đồng nhất
+  filterStore.filters.min_acreage = filterStore.filterAreaRange.min_acreage;
+  filterStore.filters.max_acreage = filterStore.filterAreaRange.max_acreage;
   filterStore.filters.location = { ...filterStore.filterLocation };
 
   // Build URL SEO server-driven → trigger fetch. Location = tên city (segment [location]).
   const catSlug: string = realEstateStore.categorySlug || (Array.isArray(route.params.category) ? route.params.category[0] ?? "" : route.params.category ?? "");
-  console.log(catSlug)
   const url = buildCategoryPath(
     catSlug,
     filterStore.filterLocation,

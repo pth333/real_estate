@@ -38,54 +38,44 @@ const filterStore = useFilterStore();
 const realEstateStore = useRealEstateStore()
 const realEstates = ref<RealEstateResponse[]>([]);
 const loading = ref(false);
-const pageSize = ref(10);
+const pageSize = ref(12);
 const totalRecords = ref(0);
 
-// Category slug thuần (không chứa city/ward), ưu tiên từ store (do menu đặt)
+
 const categorySlug = computed<string>(() => {
-  const stored = realEstateStore.categorySlug;
-  if (stored) return stored;
-  const s = route.params.slug;
-  return Array.isArray(s) ? s[0] ?? "" : s ?? "";
+  const v = route.params.category;
+  return Array.isArray(v) ? v[0] ?? "" : v ?? "";
 });
 
-// Slug đầy đủ build từ store filter (city/ward/price) để URL SEO đúng trạng thái
-const seoSlug = computed(() => {
-  const locationSeg = buildLocationSegment(
-    categorySlug.value,
-    filterStore.filterLocation,
-    filterStore.cityOptions,
-    filterStore.wardOptions,
-  );
-  console.log(locationSeg)
-  const priceSeg = buildPriceSegment(filterStore.filterPriceRange);
-  return buildSeoUrl(locationSeg, priceSeg, realEstateStore.currentPage);
+const filterSegments = computed<string[]>(() => {
+  const v = route.params.filters;
+  if (Array.isArray(v)) return v;
+  return v ? [v] : [];
 });
 
-// Segment danh mục gửi API: nếu URL đã là SEO thì backend fallback theo payload,
-// còn nếu chỉ có category thuần (menu) thì giữ nguyên để match category.
-const slug = computed<string>(() => categorySlug.value);
-console.log(slug.value)
+const apiPath = computed<string>(() => {
+  const parts: string[] = [categorySlug.value];
+  if (filterSegments.value.length > 0) parts.push(filterSegments.value.join("/"));
+  return parts.join("/");
+});
+
+
 const totalPages = computed(() =>
   Math.ceil(totalRecords.value / pageSize.value),
 );
 
-const payload = computed(() => ({
-  page: realEstateStore.currentPage,
-  size: pageSize.value,
-  filter: filterStore.filters,
-  search: filterStore.searchKeyword,
-}))
-
 const fetchDataRealEstate = async () => {
   loading.value = true;
-
   try {
-    const res = await $api.post<PaginatedResponse<RealEstateResponse>>(
-      `/real-estate/${slug.value}`,
-      payload.value,
+    const res = await $api.get<PaginatedResponse<RealEstateResponse>>(
+      `/real-estate/${apiPath.value}`,
+      {
+        params: {
+          page: realEstateStore.currentPage,
+          size: pageSize.value,
+        },
+      },
     );
-
     realEstates.value = res.data || [];
     totalRecords.value = res.total || 0;
   } catch (err) {
@@ -98,45 +88,33 @@ const fetchDataRealEstate = async () => {
 }
 
 function goToPage(page: number) {
-  realEstateStore.currentPage = page
-  if (realEstateStore.currentPage < 1 || realEstateStore.currentPage > totalPages.value) return;
-  navigateTo(seoSlug.value);
+  if (page < 1 || page > totalPages.value) return;
+  realEstateStore.currentPage = page;
+  const parts: string[] = [categorySlug.value];
+  if (filterSegments.value.length > 0) parts.push(filterSegments.value.join("/"));
+  // page > 1 → query string (cấu trúc [...filters] không có segment page)
+  let url = `/${parts.join("/")}`;
+  if (page > 1) url += `?page=${page}`;
+  navigateTo(url);
 }
 
+
 watch(
-  () => [route.params.slug, route.params.price, route.params.page],
-  async ([_newSlug, _newPrice, newPage]) => {
-    // Reset state
+  () => [route.params.category, route.params.filters, route.query.page],
+  ([_cat, _filt, newPage]) => {
     realEstates.value = [];
     totalRecords.value = 0;
 
-    // Đồng bộ page từ route
     const pageNumber = newPage ? Number(newPage) : 1;
     realEstateStore.currentPage = Number.isNaN(pageNumber) ? 1 : pageNumber;
+    console.log(realEstateStore.currentPage)
 
-    // Đồng bộ filter từ URL SEO khi thay đổi route
-    syncFromRoute();
+    fetchDataRealEstate();
+    console.log(realEstateStore.currentPage)
 
-    await fetchDataRealEstate();
   },
   { immediate: true },
 );
-
-function syncFromRoute() {
-  const slugSeg: string = Array.isArray(route.params.slug) ? route.params.slug[0] ?? "" : route.params.slug ?? "";
-  const priceSeg: string = Array.isArray(route.params.price) ? route.params.price[0] ?? "" : route.params.price ?? "";
-
-  // Location: chỉ parse nếu đã có options (đã fetch) để map code
-  if (filterStore.cityOptions.length > 0) {
-    const parsed = parseLocationFromSegment(slugSeg, filterStore.cityOptions, filterStore.wardOptions);
-    filterStore.filterLocation = { ...parsed };
-    filterStore.filters.location = { ...parsed };
-  }
-
-  const parsedPrice = parsePriceFromSegment(priceSeg);
-  filterStore.filterPriceRange = parsedPrice;
-  filterStore.filters.price_range = { ...parsedPrice };
-}
 
 function handleCall(phone: string) {
   window.open(`tel:${phone}`, "_self");
@@ -149,21 +127,16 @@ function handleToggleFavorite(id: number) {
   }
 }
 
-// const trackSearch = async (filters: Record<string, any>) => {
-//   try {
-//     await $api.post('/tracking/search', {
-//       filters,
-//       user_id: window.menu?.user_id || '',
-//     });
-//   } catch (err) {
-//     console.error('Tracking search error:', err);
-//   }
-// }
-
 const handleSearch = async () => {
-  Promise.allSettled([
-    fetchDataRealEstate(),
-    // trackSearch(filterStore.filters),
-  ]);
+  // Server-driven: đưa keyword vào query để server chạy FULLTEXT
+  const q = filterStore.searchKeyword || "";
+  const parts: string[] = [categorySlug.value];
+  if (filterSegments.value.length > 0) parts.push(filterSegments.value.join("/"));
+  let url = `/${parts.join("/")}`;
+  const params: string[] = [];
+  if (realEstateStore.currentPage > 1) params.push(`page=${realEstateStore.currentPage}`);
+  if (q) params.push(`search=${encodeURIComponent(q)}`);
+  if (params.length) url += `?${params.join("&")}`;
+  navigateTo(url);
 }
 </script>
