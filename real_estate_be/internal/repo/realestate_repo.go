@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"encoding/json"
 	"errors"
 	"strings"
 
@@ -14,10 +15,17 @@ type realEstateRepo struct {
 	db *gorm.DB
 }
 
-// toResponse chuyển dto.RealEstateResponse (scan từ deferred join, có ImageURLs) → Images slice
+// toResponse chuyển dto.RealEstateResponse (scan từ deferred join) → Images slice + parse amenities JSON
 func toResponse(m *dto.RealEstateResponse) {
 	if m.ImageURLs != "" {
 		m.Images = strings.Split(m.ImageURLs, "|")
+	}
+	// AmenitiesRaw: JSON string lưu trong DB (`["camera","bao_ve"]`) → mảng string
+	if m.AmenitiesRaw != "" {
+		var amenities []string
+		if err := json.Unmarshal([]byte(m.AmenitiesRaw), &amenities); err == nil {
+			m.Amenities = amenities
+		}
 	}
 }
 
@@ -69,7 +77,7 @@ func (r *realEstateRepo) GetList(req dto.RealEstateSearchRequest, offset, limit 
 		total int64
 	)
 
-	// Điều kiện lọc chung (dùng cho COUNT và query)
+	// Điều kiện lọc chung (used cho COUNT và query)
 	where := "WHERE 1=1"
 	args := []interface{}{}
 
@@ -98,6 +106,33 @@ func (r *realEstateRepo) GetList(req dto.RealEstateSearchRequest, offset, limit 
 		args = append(args, req.Filter.MaxAcreage)
 	}
 
+	// ── Bộ lọc nâng cao ──
+
+	if req.Filter.Bedrooms != nil && *req.Filter.Bedrooms > 0 {
+		where += " AND re.bedrooms = ?"
+		args = append(args, *req.Filter.Bedrooms)
+	}
+	if req.Filter.Bathrooms != nil && *req.Filter.Bathrooms > 0 {
+		where += " AND re.bathrooms = ?"
+		args = append(args, *req.Filter.Bathrooms)
+	}
+	if req.Filter.HouseDirection != "" {
+		where += " AND re.house_direction = ?"
+		args = append(args, req.Filter.HouseDirection)
+	}
+	if req.Filter.BalconyDirection != "" {
+		where += " AND re.balcony_direction = ?"
+		args = append(args, req.Filter.BalconyDirection)
+	}
+	if req.Filter.LegalDocs != "" {
+		where += " AND re.legal_docs = ?"
+		args = append(args, req.Filter.LegalDocs)
+	}
+	if req.Filter.Interior != "" {
+		where += " AND re.interior = ?"
+		args = append(args, req.Filter.Interior)
+	}
+
 	// Đếm tổng số bản ghi (không cần join)
 	if err := r.db.Raw(
 		"SELECT COUNT(*) FROM real_estates re "+where,
@@ -106,11 +141,13 @@ func (r *realEstateRepo) GetList(req dto.RealEstateSearchRequest, offset, limit 
 		return nil, 0, err
 	}
 
-	// deferred join: subquery lấy id trang hiện tại, rồi LEFT JOIN users + gom ảnh
+	// deferred join: subquery lấy id trang hiện tại, rồi LEFT JOIN + gom ảnh
 	listArgs := append(append([]interface{}{}, args...), limit, offset)
 	err := r.db.Raw(
 		"SELECT re.id, re.title, re.slug, re.price_vnd, re.address, re.district, re.city, "+
 			"re.acreage, re.price_per_m2, re.bedrooms, re.bathrooms, re.description, re.created_at, "+
+			"re.house_direction, re.balcony_direction, re.floors, re.legal_docs, re.interior, "+
+			"re.price_electricity, re.price_water, re.price_internet, re.amenities, "+
 			"COALESCE(GROUP_CONCAT(DISTINCT img.url ORDER BY img.id SEPARATOR '|'), '') AS image_urls, "+
 			"COALESCE(u.name, '') AS agent_name, "+
 			"COALESCE(u.phone, '') AS agent_phone "+
@@ -122,7 +159,7 @@ func (r *realEstateRepo) GetList(req dto.RealEstateSearchRequest, offset, limit 
 			"GROUP BY re.id "+
 			"ORDER BY re.created_at DESC, re.id DESC",
 		listArgs...,
-	).Debug().Scan(&items).Error
+	).Scan(&items).Error
 	if err != nil {
 		return nil, 0, err
 	}
@@ -164,6 +201,33 @@ func (r *realEstateRepo) GetListByCategory(offset int, req dto.RealEstateSearchR
 		args = append(args, req.Search)
 	}
 
+	// ── Bộ lọc nâng cao ──
+
+	if req.Filter.Bedrooms != nil && *req.Filter.Bedrooms > 0 {
+		where += " AND re.bedrooms = ?"
+		args = append(args, *req.Filter.Bedrooms)
+	}
+	if req.Filter.Bathrooms != nil && *req.Filter.Bathrooms > 0 {
+		where += " AND re.bathrooms = ?"
+		args = append(args, *req.Filter.Bathrooms)
+	}
+	if req.Filter.HouseDirection != "" {
+		where += " AND re.house_direction = ?"
+		args = append(args, req.Filter.HouseDirection)
+	}
+	if req.Filter.BalconyDirection != "" {
+		where += " AND re.balcony_direction = ?"
+		args = append(args, req.Filter.BalconyDirection)
+	}
+	if req.Filter.LegalDocs != "" {
+		where += " AND re.legal_docs = ?"
+		args = append(args, req.Filter.LegalDocs)
+	}
+	if req.Filter.Interior != "" {
+		where += " AND re.interior = ?"
+		args = append(args, req.Filter.Interior)
+	}
+
 	// đếm tổng số bản ghi (không cần join ảnh/user)
 	if err := r.db.Raw(
 		"SELECT COUNT(*) FROM real_estates re JOIN categories c ON c.id = re.category_id "+where,
@@ -177,6 +241,8 @@ func (r *realEstateRepo) GetListByCategory(offset int, req dto.RealEstateSearchR
 	err := r.db.Raw(
 		"SELECT re.id, re.title, re.slug, re.price_vnd, re.address, re.district, re.city, "+
 			"re.acreage, re.price_per_m2, re.bedrooms, re.bathrooms, re.description, re.created_at, "+
+			"re.house_direction, re.balcony_direction, re.floors, re.legal_docs, re.interior, "+
+			"re.price_electricity, re.price_water, re.price_internet, re.amenities, "+
 			"COALESCE(GROUP_CONCAT(DISTINCT img.url ORDER BY img.id SEPARATOR '|'), '') AS image_urls, "+
 			"COALESCE(u.name, '') AS agent_name, "+
 			"COALESCE(u.phone, '') AS agent_phone "+
@@ -261,6 +327,8 @@ func (r *realEstateRepo) GetByID(id uint64) (*dto.RealEstateResponse, error) {
 	err := r.db.Raw(
 		"SELECT re.id, re.title, re.slug, re.price_vnd, re.address, re.district, re.city, "+
 			"re.acreage, re.price_per_m2, re.bedrooms, re.bathrooms, re.description, re.created_at, "+
+			"re.house_direction, re.balcony_direction, re.floors, re.legal_docs, re.interior, "+
+			"re.price_electricity, re.price_water, re.price_internet, re.amenities, "+
 			"COALESCE(GROUP_CONCAT(DISTINCT img.url ORDER BY img.id SEPARATOR '|'), '') AS image_urls, "+
 			"COALESCE(u.name, '') AS agent_name, "+
 			"COALESCE(u.phone, '') AS agent_phone "+

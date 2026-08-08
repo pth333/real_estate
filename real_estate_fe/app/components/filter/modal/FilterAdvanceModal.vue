@@ -48,7 +48,6 @@
 <script setup lang="ts">
 import { useFilterStore } from '~/stores/filter';
 import { useRealEstateStore } from '~/stores/real_estate';
-import { buildCategoryPath } from '~/utils/slug';
 
 const props = defineProps<{
   showModalAll: boolean
@@ -61,7 +60,7 @@ const realEstateStore = useRealEstateStore()
 const route = useRoute();
 
 const locationLabel = computed(() => {
-  const loc = filterStore.filterLocation
+  const loc = filterStore.filters
   const city = filterStore.cityOptions.find(item => item.value === loc.city)
   const district = filterStore.districtOptions.find(item => item.value === loc.district)
   const ward = filterStore.wardOptions.find(item => item.value === loc.ward)
@@ -83,30 +82,25 @@ function backToMain() {
   filterStore.screen = 'main';
 }
 
-
 function handleReset() {
-  // filterStore.filters.price_range = {};
-  filterStore.filterLocation = {};
-  console.log(realEstateStore.categorySlug)
+  filterStore.filters = {};
 }
 
+
+
 const handleApply = () => {
-  // Commit draft location vào filters actual
-  filterStore.filters.location = { ...filterStore.filterLocation };
   emit('update:showModalAll', false);
 
   // Reset URL về trang 1 để trigger fetch lại — vì filters đã thay đổi
   realEstateStore.currentPage = 0;
   const catSlug: string = realEstateStore.categorySlug || (Array.isArray(route.params.category) ? route.params.category[0] ?? "" : route.params.category ?? "");
-  const url = buildCategoryPath(
+
+  const url = buildListUrl(
     catSlug,
-    filterStore.filterLocation,
+    filterStore.filters,
     filterStore.cityOptions,
-    filterStore.filterPriceRange,
-    filterStore.filterAreaRange,
-    1,
   );
-  console.log(url)
+
   navigateTo(url);
 };
 

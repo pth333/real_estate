@@ -16,11 +16,11 @@
 
       <!-- Inputs -->
       <div class="mb-3 flex items-center gap-2">
-        <n-input-number v-model:value="localMin" placeholder="Từ (m²)" :min="0" clearable class="flex-1"
-          size="small" />
+        <n-input-number v-model:value="filterStore.filters.min_acreage" placeholder="Từ (m²)" :min="0" clearable
+          class="flex-1" size="small" />
         <span class="text-gray-400">—</span>
-        <n-input-number v-model:value="localMax" placeholder="Đến (m²)" :min="0" clearable class="flex-1"
-          size="small" />
+        <n-input-number v-model:value="filterStore.filters.max_acreage" placeholder="Đến (m²)" :min="0" clearable
+          class="flex-1" size="small" />
       </div>
 
       <!-- Preset ratios -->
@@ -45,31 +45,30 @@
 </template>
 
 <script setup lang="ts">
-import type { FilterAreaRange } from '~/types/real_estate';
 import { useFilterStore } from '~/stores/filter';
 import { useRealEstateStore } from '~/stores/real_estate';
-import { buildCategoryPath } from '~/utils/slug';
+import type { Filter } from "~/types/real_estate";
 
 const filterStore = useFilterStore();
 const realEstateStore = useRealEstateStore();
 const route = useRoute();
 
-const localMin = ref<number | null>(null);
-const localMax = ref<number | null>(null);
+// const localMin = ref<number | null>(null);
+// const localMax = ref<number | null>(null);
 
 // Mở popover → đồng bộ local state từ store
-function syncLocalFromStore() {
-  localMin.value = filterStore.filterAreaRange?.min_acreage ?? null;
-  localMax.value = filterStore.filterAreaRange?.max_acreage ?? null;
-}
+// function syncLocalFromStore() {
+//   localMin.value = filterStore.filters?.min_acreage ?? null;
+//   localMax.value = filterStore.filters?.max_acreage ?? null;
+// }
 
-watch(() => filterStore.showAreaPopover, (val) => {
-  if (val) syncLocalFromStore();
-});
+// watch(() => filterStore.showAreaPopover, (val) => {
+//   if (val) syncLocalFromStore();
+// });
 
 interface AreaPreset {
   label: string
-  range: FilterAreaRange
+  range: Filter
 }
 
 const presets: AreaPreset[] = [
@@ -81,7 +80,7 @@ const presets: AreaPreset[] = [
 ];
 
 const buttonLabel = computed(() => {
-  const range = filterStore.filterAreaRange;
+  const range = filterStore.filters;
   if (range.min_acreage != null && range.max_acreage != null) {
     return `${range.min_acreage} - ${range.max_acreage} m²`;
   }
@@ -96,43 +95,30 @@ const buttonLabel = computed(() => {
 
 function isPresetActive(preset: AreaPreset): boolean {
   return (
-    localMin.value === (preset.range.min_acreage ?? null) &&
-    localMax.value === (preset.range.max_acreage ?? null)
+    filterStore.filters.min_acreage === (preset.range.min_acreage ?? null) &&
+    filterStore.filters.max_acreage === (preset.range.max_acreage ?? null)
   );
 }
 
 function selectPreset(preset: AreaPreset) {
-  localMin.value = preset.range.min_acreage ?? null;
-  localMax.value = preset.range.max_acreage ?? null;
+  filterStore.filters.min_acreage = preset.range.min_acreage ?? undefined;
+  filterStore.filters.max_acreage = preset.range.max_acreage ?? undefined;
 }
 
 function handleReset() {
-  localMin.value = null;
-  localMax.value = null;
-  filterStore.filterAreaRange = {};
+  filterStore.filters.min_acreage = undefined
+  filterStore.filters.max_acreage = undefined
 }
 
 function handleApply() {
-  filterStore.filterAreaRange = {
-    min_acreage: localMin.value ?? undefined,
-    max_acreage: localMax.value ?? undefined,
-  };
   filterStore.showAreaPopover = false;
-
-  // Commit lên filters để đồng nhất
-  filterStore.filters.min_acreage = filterStore.filterAreaRange.min_acreage;
-  filterStore.filters.max_acreage = filterStore.filterAreaRange.max_acreage;
-  filterStore.filters.location = { ...filterStore.filterLocation };
 
   // Build URL SEO server-driven → trigger fetch. Location = tên city (segment [location]).
   const catSlug: string = realEstateStore.categorySlug || (Array.isArray(route.params.category) ? route.params.category[0] ?? "" : route.params.category ?? "");
-  const url = buildCategoryPath(
+  const url = buildListUrl(
     catSlug,
-    filterStore.filterLocation,
+    filterStore.filters,
     filterStore.cityOptions,
-    filterStore.filterPriceRange,
-    filterStore.filterAreaRange,
-    1,
   );
   navigateTo(url);
 }

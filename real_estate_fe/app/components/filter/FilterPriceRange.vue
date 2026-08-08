@@ -16,11 +16,11 @@
 
       <!-- Inputs -->
       <div class="mb-3 flex items-center gap-2">
-        <n-input-number v-model:value="localMin" placeholder="Từ (VNĐ)" :min="0" clearable class="flex-1"
-          size="small" />
+        <n-input-number v-model:value="filterStore.filters.min_price" placeholder="Từ (VNĐ)" :min="0" clearable
+          class="flex-1" size="small" />
         <span class="text-gray-400">—</span>
-        <n-input-number v-model:value="localMax" placeholder="Đến (VNĐ)" :min="0" clearable class="flex-1"
-          size="small" />
+        <n-input-number v-model:value="filterStore.filters.max_price" placeholder="Đến (VNĐ)" :min="0" clearable
+          class="flex-1" size="small" />
       </div>
 
       <!-- Preset ratios -->
@@ -45,31 +45,30 @@
 </template>
 
 <script setup lang="ts">
-import type { FilterPriceRange } from '~/types/real_estate';
 import { useFilterStore } from '~/stores/filter';
 import { useRealEstateStore } from '~/stores/real_estate';
-import { buildCategoryPath } from '~/utils/slug';
+import type { Filter } from "~/types/real_estate";
 
 const filterStore = useFilterStore();
 const realEstateStore = useRealEstateStore();
 const route = useRoute();
 
-const localMin = ref<number | null>(null);
-const localMax = ref<number | null>(null);
+// const localMin = ref<number | null>(null);
+// const localMax = ref<number | null>(null);
 
 // Mở popover → đồng bộ local state từ store
-function syncLocalFromStore() {
-  localMin.value = filterStore.filterPriceRange?.min_price ?? null;
-  localMax.value = filterStore.filterPriceRange?.max_price ?? null;
-}
+// function syncLocalFromStore() {
+//   localMin.value = filterStore.filters?.min_price ?? null;
+//   localMax.value = filterStore.filters?.max_price ?? null;
+// }
 
-watch(() => filterStore.showPopover, (val) => {
-  if (val) syncLocalFromStore();
-});
+// watch(() => filterStore.showPopover, (val) => {
+//   if (val) syncLocalFromStore();
+// });
 
 interface PricePreset {
   label: string
-  range: FilterPriceRange
+  range: Filter
 }
 
 const presets: PricePreset[] = [
@@ -82,7 +81,7 @@ const presets: PricePreset[] = [
 ];
 
 const buttonLabel = computed(() => {
-  const range = filterStore.filterPriceRange;
+  const range = filterStore.filters;
   if (range.min_price != null && range.max_price != null) {
     return `${formatPrice(range.min_price)} - ${formatPrice(range.max_price)}`;
   }
@@ -97,43 +96,30 @@ const buttonLabel = computed(() => {
 
 function isPresetActive(preset: PricePreset): boolean {
   return (
-    localMin.value === (preset.range.min_price ?? null) &&
-    localMax.value === (preset.range.max_price ?? null)
+    filterStore.filters.min_price  === (preset.range.min_price ?? null) &&
+    filterStore.filters.max_price === (preset.range.max_price ?? null)
   );
 }
 
 function selectPreset(preset: PricePreset) {
-  localMin.value = preset.range.min_price ?? null;
-  localMax.value = preset.range.max_price ?? null;
+  filterStore.filters.min_price = preset.range.min_price ?? undefined;
+  filterStore.filters.max_price = preset.range.max_price ?? undefined;
 }
 
 function handleReset() {
-  localMin.value = null;
-  localMax.value = null;
-  filterStore.filterPriceRange = {};
+  filterStore.filters.min_price = undefined
+  filterStore.filters.max_price = undefined
 }
 
 function handleApply() {
-  filterStore.filterPriceRange = {
-    min_price: localMin.value ?? undefined,
-    max_price: localMax.value ?? undefined,
-  };
   filterStore.showPopover = false;
-
-  // Commit lên filters.price_range để đồng nhất
-  filterStore.filters.price_range = { ...filterStore.filterPriceRange };
-  filterStore.filters.location = { ...filterStore.filterLocation };
 
   // Build URL SEO server-driven → trigger fetch. Location = tên city (segment [location]).
   const catSlug: string = realEstateStore.categorySlug || (Array.isArray(route.params.category) ? route.params.category[0] ?? "" : route.params.category ?? "");
-  console.log(catSlug)
-  const url = buildCategoryPath(
+  const url = buildListUrl(
     catSlug,
-    filterStore.filterLocation,
+    filterStore.filters,
     filterStore.cityOptions,
-    filterStore.filterPriceRange,
-    filterStore.filterAreaRange,
-    1,
   );
   navigateTo(url);
 }

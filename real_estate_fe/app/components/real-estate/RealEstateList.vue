@@ -41,7 +41,6 @@ const loading = ref(false);
 const pageSize = ref(12);
 const totalRecords = ref(0);
 
-
 const categorySlug = computed<string>(() => {
   const v = route.params.category;
   return Array.isArray(v) ? v[0] ?? "" : v ?? "";
@@ -98,20 +97,16 @@ function goToPage(page: number) {
   navigateTo(url);
 }
 
-
 watch(
-  () => [route.params.category, route.params.filters, route.query.page],
+  () => [route.params.category, route.params.filters, route.query],
   ([_cat, _filt, newPage]) => {
     realEstates.value = [];
     totalRecords.value = 0;
 
     const pageNumber = newPage ? Number(newPage) : 1;
     realEstateStore.currentPage = Number.isNaN(pageNumber) ? 1 : pageNumber;
-    console.log(realEstateStore.currentPage)
 
     fetchDataRealEstate();
-    console.log(realEstateStore.currentPage)
-
   },
   { immediate: true },
 );

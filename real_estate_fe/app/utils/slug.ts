@@ -1,80 +1,15 @@
 import type { SelectOption } from "naive-ui";
-import type {
-  FilterAreaRange,
-  FilterLocation,
-  FilterPriceRange,
-} from "~/types/real_estate";
+import type { Filter } from "~/types/real_estate";
 
 // Nhóm dấu tiếng Việt → ký tự gốc để build slug không dấu
 const VIETNAMESE_MAP: Record<string, string> = {
-  á: "a",
-  à: "a",
-  ả: "a",
-  ã: "a",
-  ạ: "a",
-  ă: "a",
-  ắ: "a",
-  ằ: "a",
-  ẳ: "a",
-  ẵ: "a",
-  ặ: "a",
-  â: "a",
-  ấ: "a",
-  ầ: "a",
-  ẩ: "a",
-  ẫ: "a",
-  ậ: "a",
-  é: "e",
-  è: "e",
-  ẻ: "e",
-  ẽ: "e",
-  ẹ: "e",
-  ê: "e",
-  ế: "e",
-  ề: "e",
-  ể: "e",
-  ễ: "e",
-  ệ: "e",
-  í: "i",
-  ì: "i",
-  ỉ: "i",
-  ĩ: "i",
-  ị: "i",
-  ó: "o",
-  ò: "o",
-  ỏ: "o",
-  õ: "o",
-  ọ: "o",
-  ô: "o",
-  ố: "o",
-  ồ: "o",
-  ổ: "o",
-  ỗ: "o",
-  ộ: "o",
-  ơ: "o",
-  ớ: "o",
-  ờ: "o",
-  ở: "o",
-  ỡ: "o",
-  ợ: "o",
-  ú: "u",
-  ù: "u",
-  ủ: "u",
-  ũ: "u",
-  ụ: "u",
-  ư: "u",
-  ứ: "u",
-  ừ: "u",
-  ử: "u",
-  ữ: "u",
-  ự: "u",
-  ý: "y",
-  ỳ: "y",
-  ỷ: "y",
-  ỹ: "y",
-  ỵ: "y",
-  đ: "d",
-  Đ: "d",
+  á: "a", à: "a", ả: "a", ã: "a", ạ: "a", ă: "a", ắ: "a", ằ: "a", ẳ: "a", ẵ: "a", ặ: "a", â: "a", ấ: "a", ầ: "a", ẩ: "a", ẫ: "a", ậ: "a",
+  é: "e", è: "e", ẻ: "e", ẽ: "e", ẹ: "e", ê: "e", ế: "e", ề: "e", ể: "e", ễ: "e", ệ: "e",
+  í: "i", ì: "i", ỉ: "i", ĩ: "i", ị: "i",
+  ó: "o", ò: "o", ỏ: "o", õ: "o", ọ: "o", ô: "o", ố: "o", ồ: "o", ổ: "o", ỗ: "o", ộ: "o", ơ: "o", ớ: "o", ờ: "o", ở: "o", ỡ: "o", ợ: "o",
+  ú: "u", ù: "u", ủ: "u", ũ: "u", ụ: "u", ư: "u", ứ: "u", ừ: "u", ử: "u", ữ: "u", ự: "u",
+  ý: "y", ỳ: "y", ỷ: "y", ỹ: "y", ỵ: "y",
+  đ: "d", Đ: "d",
 };
 
 /**
@@ -100,7 +35,6 @@ export function nameFromCode(options: SelectOption[], code?: string): string {
 
 // Đơn vị quy đổi (khớp seed backend filter_ranges)
 const TY = 1_000_000_000;
-const TRIEU = 1_000_000;
 
 /**
  * Menu khoảng giá SEO — slug phải khớp CHÍNH XÁC với seed bảng `filter_ranges`
@@ -128,97 +62,114 @@ const AREA_RANGES: Array<{ slug: string; min?: number; max?: number }> = [
 ];
 
 /**
- * Tìm slug chuẩn cho 1 khoảng (min/max). Trả "" nếu không khớp menu nào.
- * Khớp chính xác cả 2 đầu (min/max), min/max không khai báo = không giới hạn.
+ * Tìm slug chuẩn cho khoảng đã chọn (server-driven — slug khớp bảng filter_ranges).
+ * Khớp chính xác cả 2 đầu (min/max); không khai báo 1 đầu = không giới hạn phía đó.
+ * Trả "" khi không có khoảng nào khớp (để FE fallback sang query string).
  */
-function matchRangeSlug(
+function findRangeSlug(
   ranges: Array<{ slug: string; min?: number; max?: number }>,
-  hasMin: boolean,
-  hasMax: boolean,
-  min?: number,
-  max?: number,
+  range: { min?: number; max?: number },
 ): string {
   const hit = ranges.find((r) => {
-    const sameMin = hasMin ? r.min === min : r.min === undefined;
-    const sameMax = hasMax ? r.max === max : r.max === undefined;
-    return sameMin && sameMax;
+    const minOk = range.min !== undefined ? r.min === range.min : r.min === undefined;
+    const maxOk = range.max !== undefined ? r.max === range.max : r.max === undefined;
+    return minOk && maxOk;
   });
   return hit?.slug ?? "";
 }
 
-/**
- * Build segment giá SEO từ khoảng đã chọn (server-driven — slug khớp bảng
- * filter_ranges backend, backend quy đổi ngược về VND). Trả về "" khi không lọc giá.
- *   min=1e9 max=3e9   → "gia-1-den-3-ty"
- *   chỉ max=1e9        → "gia-duoi-1-ty"
- *   chỉ min=10e9       → "gia-tren-10-ty"
- */
-export function buildPriceSegment(range: FilterPriceRange | undefined): string {
-  if (!range) return "";
-  const hasMin = range.min_price != null && range.min_price > 0;
-  const hasMax = range.max_price != null && range.max_price > 0;
+/** Segment giá cho URL list. Trả "" khi không lọc giá (hoặc khoảng không khớp menu). */
+export function buildPriceSegment(min?: number, max?: number): string {
+  const hasMin = min != null && min > 0;
+  const hasMax = max != null && max > 0;
   if (!hasMin && !hasMax) return "";
+  return findRangeSlug(PRICE_RANGES, {
+    min: hasMin ? min : undefined,
+    max: hasMax ? max : undefined,
+  });
+}
 
-  return matchRangeSlug(
-    PRICE_RANGES,
-    hasMin,
-    hasMax,
-    range.min_price,
-    range.max_price,
-  );
+/** Segment diện tích cho URL list. Trả "" khi không lọc (hoặc không khớp menu). */
+export function buildAreaSegment(min?: number, max?: number): string {
+  const hasMin = min != null && min > 0;
+  const hasMax = max != null && max > 0;
+  if (!hasMin && !hasMax) return "";
+  return findRangeSlug(AREA_RANGES, {
+    min: hasMin ? min : undefined,
+    max: hasMax ? max : undefined,
+  });
 }
 
 /**
- * Build segment diện tích SEO tương tự buildPriceSegment. Trả "" khi không lọc.
- *   min=50 max=100 → "dien-tich-50-100"
- *   chỉ max=30      → "dien-tich-duoi-30"
- */
-export function buildAreaSegment(range: FilterAreaRange | undefined): string {
-  if (!range) return "";
-  const hasMin = range.min_acreage != null && range.min_acreage > 0;
-  const hasMax = range.max_acreage != null && range.max_acreage > 0;
-  if (!hasMin && !hasMax) return "";
 
-  return matchRangeSlug(
-    AREA_RANGES,
-    hasMin,
-    hasMax,
-    range.min_acreage,
-    range.max_acreage,
-  );
-}
-
-/**
- * Build đường dẫn SEO server-driven: `/{category}/{location?}/{price?}/{area?}`.
- * location chỉ có 1 segment (TÊN thành phố đã slug hóa). page > 1 → thêm query `?page=N`.
+ *
+ * VD: buildListUrl('nha-dat-ban', { city:'79', min_price:1e9, max_price:3e9, bedrooms:2 }, cityOptions)
+ *   → "/nha-dat-ban-ha-noi/gia-1-den-3-ty?bedrooms=2"
  */
-export function buildCategoryPath(
+export function buildListUrl(
   category: string,
-  location: FilterLocation,
-  cityOptions: SelectOption[],
-  price: FilterPriceRange | undefined,
-  area?: FilterAreaRange | undefined,
-  page = 1,
+  f: Filter | undefined,
+  cityOptions: SelectOption[] = [],
 ): string {
-  // Segment 1: category[-city]
-  const cityName = nameFromCode(cityOptions, location.city);
-  const seg1 = cityName
-    ? `${category}-${toSlugPart(cityName)}` // 'nha-dat-ban-ha-noi'
-    : category;
+  if (!f) return `/${category}`;
 
+  // Segment 1: category[-city] (city = tên, slug hóa)
+  const cityName = nameFromCode(cityOptions, f.city);
+  const seg1 = cityName ? `${category}-${toSlugPart(cityName)}` : category;
   const parts: string[] = [seg1];
 
-  // Segment 2+: filters
-  const priceSeg = buildPriceSegment(price);
+  // Segment 2+: giá, diện tích (nếu khớp menu chuẩn → append vào path)
+  const priceSeg = buildPriceSegment(f.min_price, f.max_price);
+  const hasPriceSeg = priceSeg !== "";
   if (priceSeg) parts.push(priceSeg);
 
-  const areaSeg = buildAreaSegment(area);
+  const areaSeg = buildAreaSegment(f.min_acreage, f.max_acreage);
+  const hasAreaSeg = areaSeg !== "";
   if (areaSeg) parts.push(areaSeg);
 
-  let url = `/${parts.join("/")}`;
-  if (page > 1) url += `?page=${page}`;
-  return url;
+  // Query: advanced + fallback giá/diện tích (khoảng không khớp menu)
+  const params: Record<string, string> = {};
+  if (!hasPriceSeg) {
+    if (f.min_price != null) params.min_price = String(f.min_price);
+    if (f.max_price != null) params.max_price = String(f.max_price);
+  }
+  if (!hasAreaSeg) {
+    if (f.min_acreage != null) params.min_acreage = String(f.min_acreage);
+    if (f.max_acreage != null) params.max_acreage = String(f.max_acreage);
+  }
+  if (f.bedrooms != null) params.bedrooms = String(f.bedrooms);
+  if (f.bathrooms != null) params.bathrooms = String(f.bathrooms);
+  if (f.house_direction) params.house_direction = f.house_direction;
+  if (f.balcony_direction) params.balcony_direction = f.balcony_direction;
+  if (f.legal_docs) params.legal_docs = f.legal_docs;
+  if (f.interior) params.interior = f.interior;
+
+  const qs = objectToQueryString(params);
+  return `/${parts.join("/")}${qs}`;
 }
+
+/** Chuyển object → query string ("a=b&c=d"), trả "" nếu rỗng. */
+export function objectToQueryString(params: Record<string, string>): string {
+  const pairs = Object.entries(params)
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+    .join("&");
+  return pairs ? `?${pairs}` : "";
+}
+
+/**
+ * Build object params từ toàn bộ Filter phẳng — dùng cho axios (query).
+ * (FE giữ nguyên, backend đọc query string riêng; không cần thiết trong API.)
+ */
+// export function buildListParams(f: Filter | undefined): Record<string, string> {
+//   const params: Record<string, string> = {};
+//   if (!f) return params;
+//   for (const [key, value] of Object.entries(f)) {
+//     if (value !== undefined && value !== null && value !== "") {
+//       params[key] = String(value);
+//     }
+//   }
+//   return params;
+// }
 
 /**
  * Build URL trang chi tiết từ slug listing (đã chứa "-rs{id}").

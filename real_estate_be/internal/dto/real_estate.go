@@ -17,6 +17,15 @@ type Filter struct {
 	City       string  `json:"city,omitempty"`
 	Ward       string  `json:"ward,omitempty"`
 	Slug       string  `json:"slug,omitempty"`
+
+	// ── Bộ lọc nâng cao (query string) ──
+	// CategoryID: loại bất động sản (lấy id từ bảng categories)
+	Bedrooms         *int   `json:"bedrooms,omitempty"`
+	Bathrooms        *int   `json:"bathrooms,omitempty"`
+	HouseDirection   string `json:"house_direction,omitempty"`
+	BalconyDirection string `json:"balcony_direction,omitempty"`
+	LegalDocs        string `json:"legal_docs,omitempty"`
+	Interior         string `json:"interior,omitempty"`
 }
 
 type RealEstateResponse struct {
@@ -37,7 +46,22 @@ type RealEstateResponse struct {
 	AgentPhone  string   `json:"agent_phone,omitempty" gorm:"column:agent_phone"`
 	Badge       string   `json:"badge,omitempty" gorm:"-"`
 	CreatedAt   string   `json:"created_at" gorm:"column:created_at"`
-	// Scan nội bộ — không export ra JSON, chứa URL ảnh pipe-separated từ GROUP_CONCAT
+
+	// ── Thông tin bổ sung mục Đặc điểm BĐS ──
+	HouseDirection   string   `json:"house_direction,omitempty" gorm:"column:house_direction"`
+	BalconyDirection string   `json:"balcony_direction,omitempty" gorm:"column:balcony_direction"`
+	Floors           *int     `json:"floors,omitempty" gorm:"column:floors"`
+	LegalDocs        string   `json:"legal_docs,omitempty" gorm:"column:legal_docs"`
+	Interior         string   `json:"interior,omitempty" gorm:"column:interior"`
+	PriceElectricity *float64 `json:"price_electricity,omitempty" gorm:"column:price_electricity"`
+	PriceWater       *float64 `json:"price_water,omitempty" gorm:"column:price_water"`
+	PriceInternet    *float64 `json:"price_internet,omitempty" gorm:"column:price_internet"`
+	// Tiện ích lưu JSON string trong DB (`["camera"]`), DTO trả mảng string
+	Amenities []string `json:"amenities,omitempty" gorm:"-"`
+	// AmenitiesRaw nhận giá trị raw từ cột amenities (JSON string) khi scan
+	AmenitiesRaw string `json:"-" gorm:"column:amenities"`
+
+	// ImageURLs nội bộ — không export ra JSON, chứa URL ảnh pipe-separated từ GROUP_CONCAT
 	ImageURLs string `json:"-" gorm:"column:image_urls"`
 }
 
@@ -57,7 +81,7 @@ type TopCityResponse struct {
 	Image        string `json:"image"`
 }
 
-// CreateRealEstateRequest — payload tạo tin đăng từ FE
+// CreateRealEstateRequest — request tạo tin đăng từ FE
 type CreateRealEstateRequest struct {
 	ListingType      string   `json:"listing_type"`
 	Province         string   `json:"province"`
@@ -71,6 +95,7 @@ type CreateRealEstateRequest struct {
 	Interior         string   `json:"interior"`
 	BathroomCount    *int     `json:"bathroom_count"`
 	BedroomCount     *int     `json:"bedroom_count"`
+	FloorCount       *int     `json:"floor_count"`
 	HouseDirection   string   `json:"house_direction"`
 	BalconyDirection string   `json:"balcony_direction"`
 	MoveInTime       string   `json:"move_in_time"`
@@ -83,6 +108,6 @@ type CreateRealEstateRequest struct {
 	ContactPhone     string   `json:"contact_phone"`
 	Title            string   `json:"title"`
 	Description      string   `json:"description"`
-	// Id ảnh/video đã upload (từ /upload/confirm), để liên kết với tin đăng
+	// Id ảnh/video đã upload, để liên kết với tin đăng
 	ImageIDs []uint64 `json:"image_ids"`
 }

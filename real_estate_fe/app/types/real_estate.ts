@@ -22,6 +22,17 @@ export interface RealEstateResponse {
   is_favorite?: boolean;
   source?: string;
   source_url?: string;
+
+  // Thông tin bổ sung (mục Đặc điểm BĐS)
+  house_direction?: string;
+  balcony_direction?: string;
+  floors?: number;
+  legal_docs?: string;
+  interior?: string;
+  price_electricity?: number;
+  price_water?: number;
+  price_internet?: number;
+  amenities?: string[];
 }
 
 export interface DashboardSummary {
@@ -31,29 +42,26 @@ export interface DashboardSummary {
   min_price_m2: number;
 }
 
+// Filter phẳng — khớp 1-1 với dto.Filter backend. Mọi trường optional,
+// giá trị rỗng/undefined bị bỏ qua khi build URL (không ghi lên query).
 export interface Filter {
-  acreage?: number;
-  location?: FilterLocation;
-  price_range?: FilterPriceRange;
-  min_acreage?: number;
-  max_acreage?: number;
-}
-
-export interface FilterAreaRange {
-  min_acreage?: number;
-  max_acreage?: number;
-}
-
-export interface FilterPriceRange {
-  min_price?: number;
-  max_price?: number;
-}
-
-export interface FilterLocation {
-  district?: string;
+  // Vị trí (lưu tên/code trực tiếp, không lồng location)
   city?: string;
+  district?: string;
   ward?: string;
   street?: string;
+  // Giá & diện tích (VNĐ / m²)
+  min_price?: number;
+  max_price?: number;
+  min_acreage?: number;
+  max_acreage?: number;
+  // Bộ lọc nâng cao (query string)
+  bedrooms?: number;
+  bathrooms?: number;
+  house_direction?: string;
+  balcony_direction?: string;
+  legal_docs?: string;
+  interior?: string;
 }
 
 export interface RealEstateSearchRequest {

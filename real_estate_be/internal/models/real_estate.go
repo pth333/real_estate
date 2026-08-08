@@ -28,6 +28,22 @@ type RealEstate struct {
 	// Tiện ích lưu dạng JSON string: `["camera","bao_ve","pccc"]`
 	Amenities string `gorm:"column:amenities;type:text"`
 
+	// ── Thông tin bổ sung (hiển thị mục Đặc điểm BĐS) ──
+	// Hướng nhà: đong/tay/nam/bac/dong_bac... (giá trị từ form tạo tin)
+	HouseDirection string `gorm:"column:house_direction" json:"house_direction"`
+	// Hướng ban công (nhà đất/CC): cửa hàng văn hóa
+	BalconyDirection string `gorm:"column:balcony_direction" json:"balcony_direction"`
+	// Số tầng của nhà (int, 0 = không khai báo)
+	Floors *int `gorm:"column:floors" json:"floors"`
+	// Pháp lý: so_do / hop_dong_mua_ban / dang_cho_so
+	LegalDocs string `gorm:"column:legal_docs" json:"legal_docs"`
+	// Nội thất: day_du / co_ban / chua_co
+	Interior string `gorm:"column:interior" json:"interior"`
+	// Giá điện (đ/kWh), nước (đ/m³), internet (đ/tháng)
+	PriceElectricity *float64 `gorm:"column:price_electricity" json:"price_electricity"`
+	PriceWater       *float64 `gorm:"column:price_water" json:"price_water"`
+	PriceInternet    *float64 `gorm:"column:price_internet" json:"price_internet"`
+
 	CreatedAt time.Time
 	UpdatedAt time.Time
 

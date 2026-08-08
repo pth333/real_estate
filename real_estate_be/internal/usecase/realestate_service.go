@@ -37,10 +37,8 @@ type IRealEstateService interface {
 	GetTopCity(limit int) ([]model.CityStat, error)
 	GetFirstCategorySlug() (string, error)
 	ToSlug(city string) string
-	// ResolveCityBySlug(slug string) (string, error)
-	// Đưa 1 segment filter (giá/diện tích) từ URL vào Filter: lookup theo slug
-	// trong bảng filter_ranges. Segment không khớp bất kỳ range nào → bỏ qua.
-	ApplyFilterSegment(seg string, filter *dto.Filter) error
+
+	// ApplyFilterSegment(seg string, filter *dto.Filter) error
 	// GenerateListingSlug tạo slug trang chi tiết "{title-slug}-rs{id}".
 	GenerateListingSlug(title string, id uint64) string
 }
@@ -163,19 +161,27 @@ func (s *RealEstateService) CreateRealEstate(req dto.CreateRealEstateRequest, us
 	}, " "))
 
 	estate := &model.RealEstate{
-		UserID:      &userID,
-		Title:       req.Title,
-		PriceVND:    priceVND,
-		Address:     address,
-		District:    wardName,
-		City:        cityName,
-		Acreage:     req.Area,
-		PricePerM2:  pricePerM2,
-		CategoryID:  categoryID,
-		Description: req.Description,
-		Bedrooms:    req.BedroomCount,
-		Bathrooms:   req.BathroomCount,
-		Amenities:   string(amenitiesJSON),
+		UserID:           &userID,
+		Title:            req.Title,
+		PriceVND:         priceVND,
+		Address:          address,
+		District:         wardName,
+		City:             cityName,
+		Acreage:          req.Area,
+		PricePerM2:       pricePerM2,
+		CategoryID:       categoryID,
+		Description:      req.Description,
+		Bedrooms:         req.BedroomCount,
+		Bathrooms:        req.BathroomCount,
+		Amenities:        string(amenitiesJSON),
+		HouseDirection:   req.HouseDirection,
+		BalconyDirection: req.BalconyDirection,
+		Floors:           req.FloorCount,
+		LegalDocs:        req.LegalDocs,
+		Interior:         req.Interior,
+		PriceElectricity: req.PriceElectricity,
+		PriceWater:       req.PriceWater,
+		PriceInternet:    req.PriceInternet,
 	}
 
 	if err := s.repo.Create(estate); err != nil {
@@ -229,66 +235,39 @@ func (s *RealEstateService) ToSlug(input string) string {
 	return strings.Trim(b.String(), "-")
 }
 
-// ResolveCityBySlug tìm TÊN tỉnh/thành theo slug SEO. Vì real_estates.city lưu
-// TÊN có dấu (VD "Hồ Chí Minh") chứ không phải slug, ta scan in-memory toàn bộ
-// provinces (~63 row), so sánh ToSlug(name) == slug. Không thêm cột DB vì quá nhỏ.
-// func (s *RealEstateService) ResolveCityBySlug(slug string) (string, error) {
-// 	if slug == "" {
-// 		return "", nil
-// 	}
-// 	provinces, err := s.repo.GetLisCity()
-// 	if err != nil {
-// 		return "", err
-// 	}
-// 	for _, p := range provinces {
-// 		if s.ToSlug(p.Name) == slug {
-// 			return p.Name, nil
-// 		}
-// 	}
-// 	return "", nil
-// }
-
-// ApplyFilterSegment áp 1 segment filter (giá/diện tích) từ URL vào Filter.
-//
-// Cơ chế server-driven: lookup đúng slug trong bảng filter_ranges (không parse
-// chuỗi thủ công):
-//
-//	"gia-1-den-3-ty"    → type=price, MinVal=1e9, MaxVal=3e9
-//	"dien-tich-50-100"  → type=area,  MinVal=50,  MaxVal=100
-//
 // Slug không khớp bất kỳ range nào → bỏ qua (không lỗi), để URL thừa
 // 1 đoạn không làm hỏng trang.
-func (s *RealEstateService) ApplyFilterSegment(seg string, filter *dto.Filter) error {
-	if seg == "" || filter == nil {
-		return nil
-	}
-	f, err := s.repo.GetFilterRangeBySlug(seg)
-	if err != nil {
-		// Lỗi DB thực → báo lỗi; không tìm thấy → trả nil, nil.
-		return err
-	}
-	if f == nil {
-		// Slug không nằm trong filter_ranges → URL thừa → bỏ qua.
-		return nil
-	}
-	switch f.Type {
-	case "price":
-		if f.MinVal != nil {
-			filter.MinPrice = *f.MinVal
-		}
-		if f.MaxVal != nil {
-			filter.MaxPrice = *f.MaxVal
-		}
-	case "area":
-		if f.MinVal != nil {
-			filter.MinAcreage = *f.MinVal
-		}
-		if f.MaxVal != nil {
-			filter.MaxAcreage = *f.MaxVal
-		}
-	}
-	return nil
-}
+// func (s *RealEstateService) ApplyFilterSegment(seg string, filter *dto.Filter) error {
+// 	if seg == "" || filter == nil {
+// 		return nil
+// 	}
+// 	f, err := s.repo.GetFilterRangeBySlug(seg)
+// 	if err != nil {
+// 		// Lỗi DB thực → báo lỗi; không tìm thấy → trả nil, nil.
+// 		return err
+// 	}
+// 	if f == nil {
+// 		// Slug không nằm trong filter_ranges → URL thừa → bỏ qua.
+// 		return nil
+// 	}
+// 	switch f.Type {
+// 	case "price":
+// 		if f.MinVal != nil {
+// 			filter.MinPrice = *f.MinVal
+// 		}
+// 		if f.MaxVal != nil {
+// 			filter.MaxPrice = *f.MaxVal
+// 		}
+// 	case "area":
+// 		if f.MinVal != nil {
+// 			filter.MinAcreage = *f.MinVal
+// 		}
+// 		if f.MaxVal != nil {
+// 			filter.MaxAcreage = *f.MaxVal
+// 		}
+// 	}
+// 	return nil
+// }
 
 // GenerateListingSlug tạo slug trang chi tiết cho 1 tin đăng: "{title-slug}-rs{id}".
 // VD title "Nhà phố 2 tầng Cầu Giấy" id 123 → "nha-pho-2-tang-cau-giay-rs123".

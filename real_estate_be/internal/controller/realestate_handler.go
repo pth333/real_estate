@@ -2,7 +2,6 @@ package controller
 
 import (
 	"fmt"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -14,9 +13,6 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 )
-
-// detailPattern nhận diện slug trang chi tiết: kết thúc "-rs{id}" (VD "nha-pho-...-rs123").
-var detailPattern = regexp.MustCompile(`-rs(\d+)$`)
 
 type RealEstateHandler struct {
 	service usecase.IRealEstateService
@@ -131,6 +127,11 @@ func (h *RealEstateHandler) ListBySEOURL(c *fiber.Ctx) error {
 		}
 	}
 
+	// ── Bộ lọc nâng cao (query string) ──
+	applyAdvancedFilter(c, &req)
+
+	req.Search = c.Query("search", "")
+
 	page, _ := strconv.Atoi(c.Query("page", "1"))
 	if page < 1 {
 		page = 1
@@ -141,7 +142,6 @@ func (h *RealEstateHandler) ListBySEOURL(c *fiber.Ctx) error {
 	}
 	req.Page = page
 	req.Size = size
-	req.Search = c.Query("search", "")
 
 	data, total, err := h.service.ListRealEstateByCategory(req)
 	if err != nil {
@@ -156,13 +156,68 @@ func (h *RealEstateHandler) ListBySEOURL(c *fiber.Ctx) error {
 	})
 }
 
-// getDetail trả về 1 tin đăng theo ID (trang chi tiết từ slug -rs{id}).
-func (h *RealEstateHandler) getDetail(c *fiber.Ctx, id uint64) error {
-	if id == 0 {
+// applyAdvancedFilter đọc các query string của toàn bộ filter (phẳng):
+func applyAdvancedFilter(c *fiber.Ctx, req *dto.RealEstateSearchRequest) {
+	q := c.Request().URI().QueryArgs()
+
+	parsePositiveInt := func(name string) *int {
+		v := q.Peek(name)
+		if len(v) == 0 {
+			return nil
+		}
+		n, err := strconv.Atoi(string(v))
+		if err != nil || n < 1 {
+			return nil
+		}
+		return &n
+	}
+	req.Filter.Bedrooms = parsePositiveInt("bedrooms")
+	req.Filter.Bathrooms = parsePositiveInt("bathrooms")
+
+	req.Filter.HouseDirection = c.Query("house_direction")
+	req.Filter.BalconyDirection = c.Query("balcony_direction")
+	req.Filter.LegalDocs = c.Query("legal_docs")
+	req.Filter.Interior = c.Query("interior")
+
+	// Khoảng giá / diện tích (từ popover hoặc modal nâng cao)
+	req.Filter.MinPrice = parseFloatQuery(c, "min_price")
+	req.Filter.MaxPrice = parseFloatQuery(c, "max_price")
+	req.Filter.MinAcreage = parseFloatQuery(c, "min_acreage")
+	req.Filter.MaxAcreage = parseFloatQuery(c, "max_acreage")
+
+	// Vị trí (city/district/ward lưu thẳng tên/code, không cần slug hoá)
+	req.Filter.City = c.Query("city")
+	req.Filter.District = c.Query("district")
+	req.Filter.Ward = c.Query("ward")
+}
+
+// parseFloatQuery đọc 1 query string → float64 (0/NaN/thiếu → 0 để bỏ qua điều kiện)
+func parseFloatQuery(c *fiber.Ctx, name string) float64 {
+	v := c.Query(name)
+	if v == "" {
+		return 0
+	}
+	f, err := strconv.ParseFloat(v, 64)
+	if err != nil || f < 0 {
+		return 0
+	}
+	return f
+}
+
+// Detail trả về 1 API: GET /real-estate/detail/:id — query theo id cua real estate.
+func (h *RealEstateHandler) Detail(c *fiber.Ctx) error {
+	raw := c.Params("id")
+	id, err := strconv.ParseUint(raw, 10, 64)
+	if err != nil || id == 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "Invalid listing id",
 		})
 	}
+	return h.getDetail(c, id)
+}
+
+// getDetail trả về 1 tin đăng theo ID.
+func (h *RealEstateHandler) getDetail(c *fiber.Ctx, id uint64) error {
 	item, err := h.service.GetByID(id)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -175,7 +230,6 @@ func (h *RealEstateHandler) getDetail(c *fiber.Ctx, id uint64) error {
 		})
 	}
 	return c.JSON(fiber.Map{
-		"type": "detail",
 		"data": item,
 	})
 }

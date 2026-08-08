@@ -13,6 +13,9 @@
             </span> -->
             </n-button>
 
+            <!-- Filter loại BĐS (BĐS basic — dùng chung mọi trang) -->
+            <FilterCategory />
+
             <!-- Filter price range -->
             <FilterPriceRange />
 

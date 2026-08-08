@@ -3,7 +3,7 @@
     <!-- Tỉnh/TP -->
     <div>
       <label class="mb-1 block text-xs font-medium text-gray-500">Tỉnh / Thành phố</label>
-      <n-select v-model:value="filterStore.filterLocation.city" :options="filterStore.cityOptions"
+      <n-select v-model:value="filterStore.filters.city" :options="filterStore.cityOptions"
         :loading="loadingCity" placeholder="Chọn tỉnh/thành phố" clearable filterable
         @update:value="onDistrictChange" />
     </div>
@@ -11,9 +11,9 @@
     <!-- Quận/Huyện -->
     <div>
       <label class="mb-1 block text-xs font-medium text-gray-500">Phường / Xã</label>
-      <n-select v-model:value="filterStore.filterLocation.ward" :options="filterStore.wardOptions"
+      <n-select v-model:value="filterStore.filters.ward" :options="filterStore.wardOptions"
         :loading="loadingWard" placeholder="Chọn phường/xã" clearable filterable
-        :disabled="!filterStore.filterLocation.city" />
+        :disabled="!filterStore.filters.city" />
     </div>
 
     <!-- Nút Áp dụng -->
@@ -51,7 +51,7 @@ const fetchListCity = async () => {
 
 const onDistrictChange = async (districtCode: string | null) => {
   // Reset ward
-  filterStore.filterLocation.ward = undefined
+  filterStore.filters.ward = undefined
   filterStore.wardOptions = []
 
   if (!districtCode) return
@@ -71,7 +71,6 @@ const onDistrictChange = async (districtCode: string | null) => {
 }
 
 const onApply = () => {
-  filterStore.filters.location = { ...filterStore.filterLocation };
   filterStore.screen = 'main'
 }
 

@@ -28,9 +28,10 @@ func InitRealEstateRoutes(Router fiber.Router) {
 		realEstateRouter.Get("/list/ward", realEstateHandler.ListWard)
 		realEstateRouter.Get("/list/types", realEstateHandler.ListRealEstateTypes)
 
-		// Server-driven SEO: URL là nguồn truth, backend tự parse
-		// /{category} | /{category}/{location} | /{category}/{location}/{filters}
-		// Đặt sau các route static /list/... để Fiber ưu tiên match static trước.
+		// Trang chi tiết: GET /real-estate/detail/:id — query theo id của real estate.
+		// Đặt TRƯỚC wildcard /:category để Fiber match static trước.
+		realEstateRouter.Get("/detail/:id", realEstateHandler.Detail)
+
 		realEstateRouter.Get("/:category", realEstateHandler.ListBySEOURL)
 		realEstateRouter.Get("/:category/*", realEstateHandler.ListBySEOURL)
 

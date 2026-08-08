@@ -37,7 +37,8 @@
 
     <!-- Thông tin chính -->
     <div class="space-y-3 p-4">
-      <h3 class="line-clamp-2 text-base font-semibold uppercase leading-tight text-gray-800 cursor-pointer hover:text-blue-600"
+      <h3
+        class="line-clamp-2 text-base font-semibold uppercase leading-tight text-gray-800 cursor-pointer hover:text-blue-600"
         @click="goToDetail">
         {{ estate.title }}
       </h3>
@@ -94,8 +95,6 @@
 
 <script setup lang="ts">
 import type { RealEstateResponse } from '~/types/real_estate'
-import { useImageGrid } from '~/composables/useImageGrid'
-import { buildDetailUrl } from '~/utils/slug'
 
 
 const props = defineProps({
@@ -105,15 +104,38 @@ const props = defineProps({
   }
 })
 
-
+console.log(props.estate.slug)
 const emit = defineEmits<{
   call: [phone: string]
   toggleFavorite: [id: number]
 }>()
 
-const { mainImage, thumbnails, overlayImage, remainingImagesCount, handleImageError } = useImageGrid(computed(() => props.estate.images))
-
 const isFavorite = ref(props.estate.is_favorite || false)
+
+// Grid ảnh: ảnh chính + 2 ảnh phụ thumbnail + ô +N (nhúng trực tiếp, không dùng composable)
+const DEFAULT_IMAGE = ''
+
+const images = computed(() => props.estate.images)
+
+const mainImage = computed(() => images.value?.[0] || DEFAULT_IMAGE)
+
+// Cột phải hiện 2 ảnh phụ: ảnh 2 (hàng trên), ảnh 3 (hàng dưới trái); +N ở hàng dưới phải
+const thumbnails = computed(() => {
+  return images.value?.slice(1, 3) || []
+})
+
+// Ảnh nền cho ô +N (ảnh tiếp theo sau ảnh 3)
+const overlayImage = computed(() => images.value?.[3] || DEFAULT_IMAGE)
+
+const remainingImagesCount = computed(() => {
+  const total = images.value?.length || 0
+  return Math.max(0, total - 3)
+})
+
+const handleImageError = (event: Event) => {
+  const img = event.target as HTMLImageElement
+  img.src = DEFAULT_IMAGE
+}
 
 const formattedPrice = computed(() => formatPrice(props.estate.price_vnd))
 
@@ -159,11 +181,10 @@ const handleToggleFavorite = () => {
   emit('toggleFavorite', props.estate.id)
 }
 
-// Điều hướng sang trang chi tiết bằng slug SEO "{title-slug}-rs{id}".
-// Nếu listing chưa có slug (dữ liệu cũ) → dựng dạng tối thiểu "-rs{id}" để
-// backend vẫn detect được theo regex -rs\d+$.
+// Điều hướng sang trang chi tiết bằng SLUG của real estate (đi qua
+// route /[category], trang sẽ tự phân biệt detail/list bằng đuôi -rs{id}).
 const goToDetail = () => {
   const slug = props.estate.slug || `-rs${props.estate.id}`
-  navigateTo(buildDetailUrl(slug))
+  navigateTo(`/${slug}`)
 }
 </script>

@@ -1,22 +1,17 @@
 /**
- * Các hàm format tiền tệ và thời gian dùng chung trong app.
- * Đặt trong utils/ để Nuxt auto-import, dùng được ở mọi nơi mà không cần khai báo.
- */
-
-// ── Format tiền tệ ────────────────────────────────────────
-
-/**
  * Format giá BĐS VND: tỷ → triệu → đ
  * VD: 2.500.000.000 → "2.5 tỷ", 800.000 → "800.000 đ"
  */
 export function formatPrice(priceVND: number): string {
+  if (!priceVND) return "Thỏa thuận";
+
   if (priceVND >= 1_000_000_000) {
-    return `${(priceVND / 1_000_000_000).toLocaleString('vi-VN', { maximumFractionDigits: 2 })} tỷ`
+    return `${(priceVND / 1_000_000_000).toLocaleString("vi-VN", { maximumFractionDigits: 2 })} tỷ`;
   }
   if (priceVND >= 1_000_000) {
-    return `${(priceVND / 1_000_000).toLocaleString('vi-VN', { maximumFractionDigits: 2 })} triệu`
+    return `${(priceVND / 1_000_000).toLocaleString("vi-VN", { maximumFractionDigits: 2 })} triệu`;
   }
-  return `${priceVND.toLocaleString('vi-VN')} đ`
+  return `${priceVND.toLocaleString("vi-VN")} đ`;
 }
 
 /**
@@ -25,9 +20,9 @@ export function formatPrice(priceVND: number): string {
  */
 export function formatPricePerM2(pricePerM2: number): string {
   if (pricePerM2 >= 1_000_000) {
-    return `${(pricePerM2 / 1_000_000).toLocaleString('vi-VN', { maximumFractionDigits: 2 })} tr/m²`
+    return `${(pricePerM2 / 1_000_000).toLocaleString("vi-VN", { maximumFractionDigits: 2 })} tr/m²`;
   }
-  return `${pricePerM2.toLocaleString('vi-VN')} đ/m²`
+  return `${pricePerM2.toLocaleString("vi-VN")} đ/m²`;
 }
 
 /**
@@ -35,12 +30,12 @@ export function formatPricePerM2(pricePerM2: number): string {
  */
 export function formatPriceCompact(priceVND: number): string {
   if (priceVND >= 1_000_000_000) {
-    return `${(priceVND / 1_000_000_000).toFixed(1)}B`
+    return `${(priceVND / 1_000_000_000).toFixed(1)}B`;
   }
   if (priceVND >= 1_000_000) {
-    return `${(priceVND / 1_000_000).toFixed(0)}M`
+    return `${(priceVND / 1_000_000).toFixed(0)}M`;
   }
-  return `${(priceVND / 1000).toFixed(0)}K`
+  return `${(priceVND / 1000).toFixed(0)}K`;
 }
 
 /**
@@ -48,12 +43,16 @@ export function formatPriceCompact(priceVND: number): string {
  */
 export function formatCurrency(value: number, unit: string): string {
   const currencyMap: Record<string, string> = {
-    vnd: 'VND',
-    usd: 'USD',
-    eur: 'EUR',
-  }
-  const currency = currencyMap[unit] ?? 'VND'
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency, maximumFractionDigits: 2 }).format(value)
+    vnd: "VND",
+    usd: "USD",
+    eur: "EUR",
+  };
+  const currency = currencyMap[unit] ?? "VND";
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 2,
+  }).format(value);
 }
 
 // ── Format số (dùng cho ô nhập giá / n-input-number) ──────
@@ -63,8 +62,8 @@ export function formatCurrency(value: number, unit: string): string {
  * Dùng cho prop `format` của n-input-number.
  */
 export function formatPriceNumber(value: number | null): string {
-  if (value === null) return ''
-  return value.toLocaleString('vi-VN')
+  if (value === null) return "";
+  return value.toLocaleString("vi-VN");
 }
 
 /**
@@ -72,33 +71,46 @@ export function formatPriceNumber(value: number | null): string {
  * Dùng cho prop `parse` của n-input-number.
  */
 export function parsePriceNumber(input: string): number | null {
-  const digits = input.replace(/\D/g, '')
-  return digits ? Number(digits) : null
+  const digits = input.replace(/\D/g, "");
+  return digits ? Number(digits) : null;
 }
 
 // ── Format thời gian ──────────────────────────────────────
 
 /**
- * Tính "cách đây bao lâu" từ date string
+ * Format ngày theo vi-VN: "12/02/2026"
+ * VD: "2026-08-08T10:00:00Z" → "08/08/2026"
+ */
+export function formatDate(dateStr: string): string {
+  if (!dateStr) return "—";
+  return new Date(dateStr).toLocaleDateString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
+/**
+ * Tính "cách đây bao nhiêu" từ date string
  * VD: "Vừa xong", "5 phút trước", "Đăng hôm qua"
  */
 export function fromNow(dateStr: string): string {
-  if (!dateStr) return ''
-  const d = new Date(dateStr)
-  const now = new Date()
-  const diffMs = now.getTime() - d.getTime()
-  const diffMin = Math.floor(diffMs / 60000)
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
 
-  if (diffMin < 1) return 'Vừa xong'
-  if (diffMin < 60) return `${diffMin} phút trước`
+  if (diffMin < 1) return "Vừa xong";
+  if (diffMin < 60) return `${diffMin} phút trước`;
 
-  const diffHour = Math.floor(diffMin / 60)
-  if (diffHour < 24) return `${diffHour} giờ trước`
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour} giờ trước`;
 
-  const diffDays = Math.floor(diffHour / 24)
-  if (diffDays === 0) return 'Đăng hôm nay'
-  if (diffDays === 1) return 'Đăng hôm qua'
-  if (diffDays < 7) return `Đăng ${diffDays} ngày trước`
+  const diffDays = Math.floor(diffHour / 24);
+  if (diffDays === 0) return "Đăng hôm nay";
+  if (diffDays === 1) return "Đăng hôm qua";
+  if (diffDays < 7) return `Đăng ${diffDays} ngày trước`;
 
-  return d.toLocaleDateString('vi-VN')
+  return d.toLocaleDateString("vi-VN");
 }
