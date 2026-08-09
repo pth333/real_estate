@@ -69,7 +69,6 @@ func (s *RealEstateService) ListRealEstateByCategory(req dto.RealEstateSearchReq
 	jsonData, _ := json.MarshalIndent(req, "", "  ")
 	fmt.Println("Data:", string(jsonData))
 
-	// Nếu slug khớp category trong DB → giữ query theo category
 	if req.Slug != "" {
 		if id, err := s.categoryRepo.GetCategoryIdBySlug(req.Slug); err == nil && id > 0 {
 			return s.repo.GetListByCategory(offset, req, limit)

@@ -16,10 +16,10 @@
 
       <!-- Inputs -->
       <div class="mb-3 flex items-center gap-2">
-        <n-input-number v-model:value="filterStore.filters.min_acreage" placeholder="Từ (m²)" :min="0" clearable
+        <n-input-number v-model:value="filterStore.filters.min_area" placeholder="Từ (m²)" :min="0" clearable
           class="flex-1" size="small" />
         <span class="text-gray-400">—</span>
-        <n-input-number v-model:value="filterStore.filters.max_acreage" placeholder="Đến (m²)" :min="0" clearable
+        <n-input-number v-model:value="filterStore.filters.max_area" placeholder="Đến (m²)" :min="0" clearable
           class="flex-1" size="small" />
       </div>
 
@@ -72,42 +72,42 @@ interface AreaPreset {
 }
 
 const presets: AreaPreset[] = [
-  { label: 'Dưới 30 m²', range: { max_acreage: 30 } },
-  { label: '30 - 50 m²', range: { min_acreage: 30, max_acreage: 50 } },
-  { label: '50 - 100 m²', range: { min_acreage: 50, max_acreage: 100 } },
-  { label: '100 - 200 m²', range: { min_acreage: 100, max_acreage: 200 } },
-  { label: 'Trên 200 m²', range: { min_acreage: 200 } },
+  { label: 'Dưới 30 m²', range: { max_area: 30 } },
+  { label: '30 - 50 m²', range: { min_area: 30, max_area: 50 } },
+  { label: '50 - 100 m²', range: { min_area: 50, max_area: 100 } },
+  { label: '100 - 200 m²', range: { min_area: 100, max_area: 200 } },
+  { label: 'Trên 200 m²', range: { min_area: 200 } },
 ];
 
 const buttonLabel = computed(() => {
   const range = filterStore.filters;
-  if (range.min_acreage != null && range.max_acreage != null) {
-    return `${range.min_acreage} - ${range.max_acreage} m²`;
+  if (range.min_area != null && range.max_area != null) {
+    return `${range.min_area} - ${range.max_area} m²`;
   }
-  if (range.min_acreage != null) {
-    return `Từ ${range.min_acreage} m²`;
+  if (range.min_area != null) {
+    return `Từ ${range.min_area} m²`;
   }
-  if (range.max_acreage != null) {
-    return `Đến ${range.max_acreage} m²`;
+  if (range.max_area != null) {
+    return `Đến ${range.max_area} m²`;
   }
   return 'Diện tích';
 });
 
 function isPresetActive(preset: AreaPreset): boolean {
   return (
-    filterStore.filters.min_acreage === (preset.range.min_acreage ?? null) &&
-    filterStore.filters.max_acreage === (preset.range.max_acreage ?? null)
+    filterStore.filters.min_area === (preset.range.min_area ?? null) &&
+    filterStore.filters.max_area === (preset.range.max_area ?? null)
   );
 }
 
 function selectPreset(preset: AreaPreset) {
-  filterStore.filters.min_acreage = preset.range.min_acreage ?? undefined;
-  filterStore.filters.max_acreage = preset.range.max_acreage ?? undefined;
+  filterStore.filters.min_area = preset.range.min_area ?? undefined;
+  filterStore.filters.max_area = preset.range.max_area ?? undefined;
 }
 
 function handleReset() {
-  filterStore.filters.min_acreage = undefined
-  filterStore.filters.max_acreage = undefined
+  filterStore.filters.min_area = undefined
+  filterStore.filters.max_area = undefined
 }
 
 function handleApply() {

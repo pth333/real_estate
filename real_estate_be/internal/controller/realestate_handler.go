@@ -120,10 +120,6 @@ func (h *RealEstateHandler) ListBySEOURL(c *fiber.Ctx) error {
 					req.Filter.MaxAcreage = *filterRange.MaxVal
 				}
 			}
-
-			fmt.Printf("data: MinPrice=%.0f MaxPrice=%.0f MinAcreage=%.0f MaxAcreage=%.0f\n",
-				req.Filter.MinPrice, req.Filter.MaxPrice, req.Filter.MinAcreage, req.Filter.MaxAcreage)
-			// → data: MinPrice=3000000000 MaxPrice=5000000000 MinAcreage=0 MaxAcreage=0
 		}
 	}
 
@@ -186,7 +182,6 @@ func applyAdvancedFilter(c *fiber.Ctx, req *dto.RealEstateSearchRequest) {
 	req.Filter.MaxAcreage = parseFloatQuery(c, "max_acreage")
 
 	// Vị trí (city/district/ward lưu thẳng tên/code, không cần slug hoá)
-	req.Filter.City = c.Query("city")
 	req.Filter.District = c.Query("district")
 	req.Filter.Ward = c.Query("ward")
 }

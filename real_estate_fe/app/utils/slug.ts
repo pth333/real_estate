@@ -123,7 +123,7 @@ export function buildListUrl(
   const hasPriceSeg = priceSeg !== "";
   if (priceSeg) parts.push(priceSeg);
 
-  const areaSeg = buildAreaSegment(f.min_acreage, f.max_acreage);
+  const areaSeg = buildAreaSegment(f.min_area, f.max_area);
   const hasAreaSeg = areaSeg !== "";
   if (areaSeg) parts.push(areaSeg);
 
@@ -134,8 +134,8 @@ export function buildListUrl(
     if (f.max_price != null) params.max_price = String(f.max_price);
   }
   if (!hasAreaSeg) {
-    if (f.min_acreage != null) params.min_acreage = String(f.min_acreage);
-    if (f.max_acreage != null) params.max_acreage = String(f.max_acreage);
+    if (f.min_area != null) params.min_area = String(f.min_area);
+    if (f.max_area != null) params.max_area = String(f.max_area);
   }
   if (f.bedrooms != null) params.bedrooms = String(f.bedrooms);
   if (f.bathrooms != null) params.bathrooms = String(f.bathrooms);

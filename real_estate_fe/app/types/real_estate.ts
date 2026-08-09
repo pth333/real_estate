@@ -53,8 +53,8 @@ export interface Filter {
   // Giá & diện tích (VNĐ / m²)
   min_price?: number;
   max_price?: number;
-  min_acreage?: number;
-  max_acreage?: number;
+  min_area?: number;
+  max_area?: number;
   // Bộ lọc nâng cao (query string)
   bedrooms?: number;
   bathrooms?: number;

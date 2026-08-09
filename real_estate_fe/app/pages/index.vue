@@ -34,6 +34,7 @@
 
     <!-- Bất động sản theo khu vực -->
     <RealEstateByArea />
+    <RealEstateForYou />
   </div>
 </template>
 

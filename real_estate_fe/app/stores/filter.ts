@@ -20,7 +20,7 @@ export const useFilterStore = defineStore("filter", () => {
   const districtOptions = ref<SelectOption[]>([]);
   const wardOptions = ref<SelectOption[]>([]);
 
-  const screen = ref<"main" | "location">("main");
+  const screen = ref<"main" | "location" | "price" | "area">("main");
 
   // Lấy tên tỉnh/thành từ code (VD 79 → "Hà Nội") để ghép vào URL
   // cityOptions là SelectOption[]: value = code, label = name
