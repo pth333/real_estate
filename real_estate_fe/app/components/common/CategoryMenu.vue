@@ -8,23 +8,9 @@
       >
         <button
           @click="handleClick(cat.Slug)"
-          class="px-3 py-2 text-sm font-medium text-gray-700 hover:text-emerald-600 transition-colors"
+          class="px-3 py-2 text-sm font-medium text-gray-700 hover:text-emerald-600 hover:underline underline-offset-4 transition-colors"
         >
           {{ cat.Name }}
-          <svg
-            v-if="cat.children?.length"
-            class="inline w-3 h-3 ml-0.5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M19 9l-7 7-7-7"
-            />
-          </svg>
         </button>
         <ul
           v-if="cat.children?.length"

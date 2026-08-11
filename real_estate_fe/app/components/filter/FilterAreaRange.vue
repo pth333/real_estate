@@ -26,7 +26,7 @@
       <!-- Preset ratios -->
       <div class="mb-3 grid grid-cols-2 gap-1.5">
         <button v-for="preset in presets" :key="preset.label" :class="[
-          'rounded-md px-3 py-1.5 text-xs transition-colors',
+          ' px-3 py-1.5 text-xs transition-colors',
           isPresetActive(preset)
             ? 'bg-emerald-600 text-white'
             : 'bg-gray-100 text-gray-600 hover:bg-gray-200',

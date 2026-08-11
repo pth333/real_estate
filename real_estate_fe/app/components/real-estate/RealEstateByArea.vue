@@ -1,5 +1,6 @@
 <template>
-    <section class="py-8 px-4">
+    <section class="py-8">
+        <div class="container mx-auto px-24">
         <h1 class="text-lg font-bold text-gray-600 mb-4">Bất động sản theo địa điểm</h1>
 
         <div class="flex gap-3" style="height: 360px;">
@@ -28,6 +29,7 @@
                     </div>
                 </div>
             </div>
+        </div>
         </div>
     </section>
 </template>

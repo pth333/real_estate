@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col gap-20">
+  <div class="flex flex-col gap-16">
     <section class="hero-bg py-40 px-2 relative overflow-hidden">
       <!-- Background image -->
       <div class="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -35,6 +35,7 @@
     <!-- Bất động sản theo khu vực -->
     <RealEstateByArea />
     <RealEstateForYou />
+    <FeaturedProjects />
   </div>
 </template>
 

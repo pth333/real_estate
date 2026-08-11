@@ -1,8 +1,8 @@
 <template>
-  <div class="group relative rounded-lg bg-white shadow-sm transition-shadow duration-300 hover:shadow-md">
+  <div class="group relative bg-white shadow-sm transition-shadow duration-300 hover:shadow-md">
     <!-- Badge VIP -->
     <div v-if="estate.badge"
-      class="absolute left-3 top-3 z-10 rounded bg-red-600 px-3 py-1 text-xs font-bold uppercase text-white">
+      class="absolute left-3 top-3 z-10 bg-red-600 px-3 py-1 text-xs font-bold uppercase text-white">
       {{ estate.badge }}
     </div>
 
@@ -38,7 +38,7 @@
     <!-- Thông tin chính -->
     <div class="space-y-3 p-4">
       <h3
-        class="line-clamp-2 text-base font-semibold uppercase leading-tight text-gray-800 cursor-pointer hover:text-blue-600"
+        class="line-clamp-2 text-base font-semibold uppercase leading-tight text-gray-800 cursor-pointer hover:text-emerald-600"
         @click="goToDetail">
         {{ estate.title }}
       </h3>
@@ -67,7 +67,7 @@
       <!-- Footer -->
       <div class="flex items-center justify-between border-t border-gray-200 pt-3">
         <div class="flex items-center gap-2">
-          <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500 text-lg font-bold text-white">
+          <div class="flex h-10 w-10 items-center justify-center bg-emerald-500 text-lg font-bold text-white">
             {{ agentInitial }}
           </div>
           <div>
@@ -78,12 +78,12 @@
 
         <div class="flex gap-2">
           <button v-if="estate.agent_phone"
-            class="flex cursor-pointer items-center gap-1.5 rounded bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600"
+            class="flex cursor-pointer items-center gap-1.5 bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600"
             @click="handleCall">
             <IconPhone /> {{ formattedPhone }}
           </button>
           <button
-            class="flex h-10 w-10 cursor-pointer items-center justify-center rounded border-2 border-gray-300 bg-transparent transition hover:border-red-500"
+            class="flex h-10 w-10 cursor-pointer items-center justify-center border-2 border-gray-300 bg-transparent transition hover:border-emerald-500"
             :class="{ 'border-red-500 bg-red-500 text-white': isFavorite }" @click="handleToggleFavorite">
             <IconHeart />
           </button>

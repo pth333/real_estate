@@ -17,7 +17,7 @@
         class="mb-2" />
       <div class="max-h-72 overflow-y-auto">  
         <button v-for="cat in filteredCategories" :key="cat.id"
-          class="flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors"
+          class="flex w-full items-center justify-between px-3 py-2 text-left text-sm transition-colors"
           :class="isActive(cat.id) ? 'bg-emerald-600 text-white' : 'text-gray-600 hover:bg-gray-100'"
           @click="toggleCategory(cat.id)">
           <span>{{ cat.name }}</span>

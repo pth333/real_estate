@@ -2,7 +2,7 @@
   <div v-if="totalPages > 1" class="flex items-center justify-center gap-2">
     <button
       :disabled="currentPage <= 1"
-      class="cursor-pointer rounded border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-500 transition hover:border-blue-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+      class="cursor-pointer border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-500 transition hover:border-emerald-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
       @click="handlePage(currentPage - 1)"
     >
       ← Trước
@@ -12,11 +12,11 @@
       <button
         v-for="page in visiblePages"
         :key="page"
-        class="cursor-pointer rounded border px-4 py-2 text-sm font-semibold transition"
+        class="cursor-pointer border px-4 py-2 text-sm font-semibold transition"
         :class="
           page === currentPage
-            ? 'border-blue-500 bg-blue-500 text-white'
-            : 'border-gray-300 bg-white text-gray-500 hover:border-blue-500 hover:bg-gray-50'
+            ? 'border-emerald-500 bg-emerald-500 text-white'
+            : 'border-gray-300 bg-white text-gray-500 hover:border-emerald-500 hover:bg-gray-50'
         "
         @click="handlePage(page)"
       >
@@ -26,7 +26,7 @@
 
     <button
       :disabled="currentPage >= totalPages"
-      class="cursor-pointer rounded border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-500 transition hover:border-blue-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+      class="cursor-pointer border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-500 transition hover:border-emerald-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
       @click="handlePage(currentPage + 1)"
     >
       Sau →

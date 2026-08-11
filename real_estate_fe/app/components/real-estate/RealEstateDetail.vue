@@ -22,13 +22,13 @@
           </div>
           <!-- Nav arrow -->
           <button v-if="allImages.length > 1"
-            class="absolute right-3 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded bg-white/80 shadow hover:bg-white"
+            class="absolute right-3 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center bg-white/80 shadow hover:bg-white"
             @click="nextImage">
             <IconChevronRight class="h-5 w-5 text-gray-700" />
           </button>
           <!-- Counter -->
           <span v-if="allImages.length > 0"
-            class="absolute bottom-3 right-3 rounded bg-black/50 px-2 py-0.5 text-xs text-white">
+            class="absolute bottom-3 right-3 bg-black/50 px-2 py-0.5 text-xs text-white">
             {{ activeImageIndex + 1 }} / {{ allImages.length }}
           </span>
         </div>
@@ -36,7 +36,7 @@
         <!-- Thumbnails -->
         <div v-if="allImages.length > 1" class="flex gap-2 bg-gray-800 p-2">
           <button v-for="(img, i) in allImages" :key="i"
-            class="h-16 w-24 flex-shrink-0 overflow-hidden rounded border-2 transition"
+            class="h-16 w-24 flex-shrink-0 overflow-hidden border-2 transition"
             :class="activeImageIndex === i ? 'border-red-500' : 'border-transparent opacity-70 hover:opacity-100'"
             @click="activeImageIndex = i">
             <img :src="img" :alt="`Ảnh ${i + 1}`" class="h-full w-full object-cover" />
@@ -45,7 +45,7 @@
       </div>
 
       <!-- Breadcrumb -->
-      <nav class="text-xs text-blue-600">
+      <nav class="text-xs text-emerald-600">
         <span>Bán</span>
         <span class="mx-1 text-gray-400">/</span>
         <span>{{ listing.city }}</span>
@@ -82,10 +82,10 @@
           </div>
           <!-- Action icons -->
           <div class="ml-auto flex items-center gap-3 text-gray-400">
-            <button class="hover:text-blue-500" @click="handleShare">
+            <button class="hover:text-emerald-500" @click="handleShare">
               <IconShare />
             </button>
-            <button class="hover:text-red-500">
+            <button class="hover:text-emerald-500">
               <IconHeart />
             </button>
           </div>
@@ -132,7 +132,7 @@
         <h2 class="mb-3 border-b border-gray-200 pb-2 text-base font-bold text-gray-800">Liên hệ</h2>
         <div class="flex items-center gap-3">
           <div
-            class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-blue-500 text-lg font-bold text-white">
+            class="flex h-12 w-12 flex-shrink-0 items-center justify-center bg-emerald-500 text-lg font-bold text-white">
             {{ agentInitial }}
           </div>
           <div>
@@ -162,7 +162,7 @@
         <div v-if="listing.source">
           <p class="text-xs text-gray-500">Nguồn</p>
           <a v-if="listing.source_url" :href="listing.source_url" target="_blank"
-            class="text-sm font-medium text-blue-600 hover:underline">
+            class="text-sm font-medium text-emerald-600 hover:underline">
             {{ listing.source }}
           </a>
           <p v-else class="text-sm font-medium text-gray-800">{{ listing.source }}</p>

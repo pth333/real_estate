@@ -1,5 +1,6 @@
 <template>
   <section class="py-8">
+    <div class="container mx-auto px-24">
     <!-- Header -->
     <div class="flex items-center justify-between mb-5">
       <h2 class="text-xl font-bold text-gray-900">Bất động sản dành cho bạn</h2>
@@ -15,7 +16,7 @@
       <div
         v-for="item in visibleItems"
         :key="item.id"
-        class="bg-white rounded-lg overflow-hidden border border-gray-100 hover:shadow-md transition-shadow cursor-pointer"
+        class="bg-white overflow-hidden border border-gray-100 hover:shadow-md transition-shadow cursor-pointer"
       >
         <!-- Ảnh -->
         <div class="relative aspect-[4/3] overflow-hidden bg-gray-100">
@@ -54,7 +55,7 @@
           <div class="flex items-center justify-between mt-1">
             <span class="text-xs text-gray-400">{{ item.postedAt }}</span>
             <button
-              class="p-1.5 rounded-md border border-gray-200 hover:border-red-300 hover:text-red-500 transition-colors"
+              class="p-1.5 border border-gray-200 hover:border-red-300 hover:text-red-500 transition-colors"
               @click.stop="toggleFavorite(item.id)"
             >
               <IconHeart
@@ -70,12 +71,13 @@
     <!-- Mở rộng -->
     <div class="flex justify-center mt-6">
       <button
-        class="flex items-center gap-2 px-6 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-700 hover:border-gray-400 transition-colors"
+        class="flex items-center gap-2 px-6 py-2.5 border border-gray-300 text-sm text-gray-700 hover:border-gray-400 transition-colors"
         @click="expanded = !expanded"
       >
         {{ expanded ? 'Thu gọn' : 'Mở rộng' }}
         <IconChevronDown class="h-4 w-4 transition-transform" :class="{ 'rotate-180': expanded }" />
       </button>
+    </div>
     </div>
   </section>
 </template>

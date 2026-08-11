@@ -8,7 +8,7 @@
                 </template>
                 Bộ lọc
                 <!-- <span v-if="activeFilterCount > 0"
-                class="ml-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-[11px] text-white">
+                class="ml-1.5 flex h-5 w-5 items-center justify-center bg-blue-500 text-[11px] text-white">
                 {{ activeFilterCount }}
             </span> -->
             </n-button>

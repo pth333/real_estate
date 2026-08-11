@@ -1,5 +1,5 @@
 <template>
-  <header class="bg-white shadow-sm border-b border-gray-200">
+  <header class="sticky top-0 z-50 bg-white shadow-sm">
     <div class="container mx-auto flex justify-between items-center p-2 gap-4">
       <!-- <h1 class="text-xl font-bold text-blue-600 whitespace-nowrap">
         RealEstate
@@ -14,12 +14,12 @@
 
         </template>
         <template v-else>
-          <n-button type="primary" tertiary size="small" class="text-sm text-gray-600 hover:text-blue-600 transition"
+          <n-button type="primary" tertiary size="small" class="text-sm text-gray-600 hover:text-emerald-600 transition"
             @click="$router.push('/login')">
             Đăng nhập
           </n-button>
           <n-button type="primary" size="small"
-            class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+            class=" bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
             @click="$router.push('/register')">
             Đăng ký
           </n-button>

@@ -1,7 +1,7 @@
 <template>
 
   <div
-    class="absolute right-0 top-full z-50 mt-2 w-80 rounded-lg border border-gray-200 bg-white shadow-lg"
+    class="absolute right-0 top-full z-50 mt-2 w-80 border border-gray-200 bg-white shadow-lg"
   >
 
     <div class="flex items-center justify-between border-b px-4 py-3">
@@ -30,7 +30,7 @@
       >
          <!-- Dot cho chưa đọc --> <span
           v-if="!notif.is_read"
-          class="mt-1.5 size-2 shrink-0 rounded-full bg-blue-500"
+          class="mt-1.5 size-2 shrink-0 bg-blue-500"
         />
         <div class="min-w-0 flex-1">
 

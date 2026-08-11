@@ -12,10 +12,10 @@
             <div class="grid grid-cols-2 gap-3">
                 <!-- Bán: active -->
                 <div @click="postStore.form.listingType = 'sell'" :class="[
-                    'flex items-center gap-2.5 px-5 py-3.5 rounded-lg cursor-pointer text-sm border transition-colors',
+                    'flex items-center gap-2.5 px-5 py-3.5 cursor-pointer text-sm border transition-colors',
                     postStore.form.listingType === 'sell'
                         ? 'border-gray-900 text-gray-900 font-semibold'
-                        : 'border-gray-300 text-gray-600 hover:border-red-500 hover:text-red-500'
+                        : 'border-gray-300 text-gray-600 hover:border-emerald-500 hover:text-emerald-500'
                 ]">
                     <n-icon size="20">
                         <IconPricetagOutline />
@@ -24,10 +24,10 @@
                 </div>
                 <!-- Cho thuê -->
                 <div @click="postStore.form.listingType = 'rent'" :class="[
-                    'flex items-center gap-2.5 px-5 py-3.5 rounded-lg cursor-pointer text-sm border transition-colors',
+                    'flex items-center gap-2.5 px-5 py-3.5 cursor-pointer text-sm border transition-colors',
                     postStore.form.listingType === 'rent'
                         ? 'border-gray-900 text-gray-900 font-semibold'
-                        : 'border-gray-300 text-gray-600 hover:border-red-500 hover:text-red-500'
+                        : 'border-gray-300 text-gray-600 hover:border-emerald-500 hover:text-emerald-500'
                 ]">
                     <n-icon size="20">
                         <IconKeyOutline />
