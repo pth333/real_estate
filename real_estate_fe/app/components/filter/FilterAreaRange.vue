@@ -53,18 +53,6 @@ const filterStore = useFilterStore();
 const realEstateStore = useRealEstateStore();
 const route = useRoute();
 
-// const localMin = ref<number | null>(null);
-// const localMax = ref<number | null>(null);
-
-// Mở popover → đồng bộ local state từ store
-// function syncLocalFromStore() {
-//   localMin.value = filterStore.filters?.min_acreage ?? null;
-//   localMax.value = filterStore.filters?.max_acreage ?? null;
-// }
-
-// watch(() => filterStore.showAreaPopover, (val) => {
-//   if (val) syncLocalFromStore();
-// });
 
 interface AreaPreset {
   label: string

@@ -72,6 +72,7 @@ const fetchDataRealEstate = async () => {
         params: {
           page: realEstateStore.currentPage,
           size: pageSize.value,
+          ...buildListParams(filterStore.filters)
         },
       },
     );

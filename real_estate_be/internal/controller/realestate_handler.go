@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -90,7 +89,6 @@ func (h *RealEstateHandler) ListBySEOURL(c *fiber.Ctx) error {
 					break
 				}
 				req.Filter.City = province
-				fmt.Println("city:", req.Filter.City)
 			}
 			break
 		}

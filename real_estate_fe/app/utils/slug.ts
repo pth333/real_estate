@@ -120,23 +120,16 @@ export function buildListUrl(
 
   // Segment 2+: giá, diện tích (nếu khớp menu chuẩn → append vào path)
   const priceSeg = buildPriceSegment(f.min_price, f.max_price);
-  const hasPriceSeg = priceSeg !== "";
+  // const hasPriceSeg = priceSeg !== "";
   if (priceSeg) parts.push(priceSeg);
 
   const areaSeg = buildAreaSegment(f.min_area, f.max_area);
-  const hasAreaSeg = areaSeg !== "";
+  // const hasAreaSeg = areaSeg !== "";
   if (areaSeg) parts.push(areaSeg);
 
   // Query: advanced + fallback giá/diện tích (khoảng không khớp menu)
   const params: Record<string, string> = {};
-  if (!hasPriceSeg) {
-    if (f.min_price != null) params.min_price = String(f.min_price);
-    if (f.max_price != null) params.max_price = String(f.max_price);
-  }
-  if (!hasAreaSeg) {
-    if (f.min_area != null) params.min_area = String(f.min_area);
-    if (f.max_area != null) params.max_area = String(f.max_area);
-  }
+
   if (f.bedrooms != null) params.bedrooms = String(f.bedrooms);
   if (f.bathrooms != null) params.bathrooms = String(f.bathrooms);
   if (f.house_direction) params.house_direction = f.house_direction;
@@ -148,7 +141,6 @@ export function buildListUrl(
   return `/${parts.join("/")}${qs}`;
 }
 
-/** Chuyển object → query string ("a=b&c=d"), trả "" nếu rỗng. */
 export function objectToQueryString(params: Record<string, string>): string {
   const pairs = Object.entries(params)
     .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
@@ -160,16 +152,17 @@ export function objectToQueryString(params: Record<string, string>): string {
  * Build object params từ toàn bộ Filter phẳng — dùng cho axios (query).
  * (FE giữ nguyên, backend đọc query string riêng; không cần thiết trong API.)
  */
-// export function buildListParams(f: Filter | undefined): Record<string, string> {
-//   const params: Record<string, string> = {};
-//   if (!f) return params;
-//   for (const [key, value] of Object.entries(f)) {
-//     if (value !== undefined && value !== null && value !== "") {
-//       params[key] = String(value);
-//     }
-//   }
-//   return params;
-// }
+export function buildListParams(f: Filter | undefined): Record<string, string> {
+  const notKey = ["city", "min_price", "max_price", "min_area", "max_area"]
+  const params: Record<string, string> = {};
+  if (!f) return params;
+  for (const [key, value] of Object.entries(f)) {
+    if (value !== "" && !notKey.includes(key)) {
+      params[key] = String(value);
+    }
+  }
+  return params;
+}
 
 /**
  * Build URL trang chi tiết từ slug listing (đã chứa "-rs{id}").
