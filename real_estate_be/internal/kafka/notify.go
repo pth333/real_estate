@@ -3,38 +3,38 @@ package kafka
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
+	"time"
 
 	"real_estate_be/internal/global"
 	model "real_estate_be/internal/models"
+	"real_estate_be/internal/repo"
 	kafkapkg "real_estate_be/pkg/kafka"
 
 	kafkago "github.com/segmentio/kafka-go"
-	"gorm.io/gorm"
 )
 
-// NotifyConsumer xử lý RealEstateEnrichedEvent, tạo notification và broadcast SSE.
+// NotifyConsumer xử lý RealEstateNewListingEvent, tạo notification và broadcast SSE.
 type NotifyConsumer struct {
 	consumer *kafkapkg.Consumer
-	db       *gorm.DB
+	repo     repo.INotificationRepository
 }
 
-func NewNotifyConsumer(db *gorm.DB) *NotifyConsumer {
+func NewNotifyConsumer(repo repo.INotificationRepository) *NotifyConsumer {
 	cfg := global.Config.Kafka
-	consumer := kafkapkg.NewConsumer(kafkapkg.ConsumerConfig{
-		Topic:       cfg.Topics.RealEstateEnriched,
-		GroupSuffix: "notify",
-		Handler:     nil,
-		Concurrency: 1,
-	})
+
+	topic := cfg.Topics.RealEstateNotified
+	if topic == "" {
+		topic = "real_estate_new_listing"
+	}
 
 	nc := &NotifyConsumer{
-		consumer: consumer,
-		db:       db,
+		repo: repo,
 	}
 
 	nc.consumer = kafkapkg.NewConsumer(kafkapkg.ConsumerConfig{
-		Topic:       cfg.Topics.RealEstateEnriched,
+		Topic:       topic,
 		GroupSuffix: "notify",
 		Handler:     nc.handle,
 		Concurrency: 1,
@@ -53,69 +53,42 @@ func (n *NotifyConsumer) Close() error {
 }
 
 func (n *NotifyConsumer) handle(ctx context.Context, msg kafkago.Message) error {
-	event, err := kafkapkg.UnmarshalMsg[kafkapkg.RealEstateEnrichedEvent](msg)
+	event, err := kafkapkg.UnmarshalMsg[kafkapkg.RealEstateNewListingEvent](msg)
 	if err != nil {
 		log.Printf("❌ [NotifyConsumer] unmarshal error: %v", err)
 		return nil
 	}
 
-	log.Printf("🔔 [NotifyConsumer] new listing: %s", event.SourceURL)
+	log.Printf("🔔 [NotifyConsumer] new notify for listing: %d", event.ListingID)
 
-	// Lưu notification vào DB cho tất cả user
-	// Broadcast message
-	type notificationPayload struct {
-		Type    string `json:"type"`
-		Title   string `json:"title"`
-		Message string `json:"message"`
-		Price   float64 `json:"price_vnd"`
-		Area    float64 `json:"acreage"`
-		Address string  `json:"address"`
-		URL     string  `json:"source_url"`
+	// Tạo payload cho SSE và DB
+	payloadMap := map[string]interface{}{
+		"title":   event.Title,
+		"address": event.Address,
+		"price":   event.PriceVND,
+		"acreage": event.Acreage,
+		"slug":    event.Slug,
+		"url":     fmt.Sprintf("/listing/%s", event.Slug),
 	}
 
-	payload := notificationPayload{
-		Type:    "new_listing",
-		Title:   event.Title,
-		Message: "Bất động sản mới: " + event.Title,
-		Price:   event.PriceVND,
-		Area:    event.Acreage,
-		Address: event.Address,
-		URL:     event.SourceURL,
+	payloadBytes, _ := json.Marshal(payloadMap)
+
+	// Lưu notification vào DB
+	notif := &model.Notification{
+		ListingID: event.ListingID,
+		Type:      "new_listing",
+		Payload:   string(payloadBytes),
+		CreatedAt: time.Now(),
 	}
 
-	data, err := json.Marshal(payload)
-	if err != nil {
-		return err
+	if err := n.repo.Create(notif); err != nil {
+		log.Printf("⚠️ [NotifyConsumer] save notification error: %v", err)
 	}
 
-	// Lưu notification cho mỗi user vào DB
-	n.saveNotifications(event)
-
-	// Broadcast SSE đến tất cả client đang online
-	hub := global.SSEHub
-	if hub != nil {
-		hub.Broadcast(data)
+	// Broadcast SSE
+	if global.SSEHub != nil {
+		global.SSEHub.Broadcast(payloadBytes)
 	}
 
 	return nil
-}
-
-// saveNotifications lưu notification record cho mỗi user.
-func (n *NotifyConsumer) saveNotifications(event *kafkapkg.RealEstateEnrichedEvent) {
-	var users []model.User
-	if err := n.db.Model(&model.User{}).Find(&users).Error; err != nil {
-		log.Printf("⚠️ [NotifyConsumer] get users error: %v", err)
-		return
-	}
-
-	for _, user := range users {
-		notif := model.Notification{
-			UserID:  user.ID,
-			Title:   "Bất động sản mới",
-			Message: event.Title + " - " + event.Address,
-		}
-		if err := n.db.Create(&notif).Error; err != nil {
-			log.Printf("⚠️ [NotifyConsumer] save notification error: %v", err)
-		}
-	}
 }

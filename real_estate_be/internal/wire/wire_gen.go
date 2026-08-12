@@ -10,6 +10,7 @@ import (
 	"real_estate_be/internal/controller"
 	"real_estate_be/internal/repo"
 	"real_estate_be/internal/usecase"
+	"real_estate_be/pkg/kafka"
 )
 
 // Injectors from ai.wire.go:
@@ -52,6 +53,16 @@ func InitializeDashboardHandler() (*controller.DashboardHandler, error) {
 	return dashboardHandler, nil
 }
 
+// Injectors from notification.wire.go:
+
+func InitializeNotificationHandler() (*controller.NotificationHandler, error) {
+	db := providerDB()
+	iNotificationRepository := repo.NewNotificationRepository(db)
+	iNotificationService := usecase.NewNotificationService(iNotificationRepository)
+	notificationHandler := controller.NewNotificationHandler(iNotificationService)
+	return notificationHandler, nil
+}
+
 // Injectors from realestate.wire.go:
 
 func InitializeRealEstateHandler() (*controller.RealEstateHandler, error) {
@@ -60,7 +71,8 @@ func InitializeRealEstateHandler() (*controller.RealEstateHandler, error) {
 	iCategoryRepository := repo.NewCategoryRepository(db)
 	imageRepository := repo.NewImageRepository(db)
 	iUserRepository := repo.NewUserRepository(db)
-	iRealEstateService := usecase.NewRealEstateService(realEstateRepository, iCategoryRepository, imageRepository, iUserRepository)
+	producer := kafka.NewProducer()
+	iRealEstateService := usecase.NewRealEstateService(realEstateRepository, iCategoryRepository, imageRepository, iUserRepository, producer)
 	realEstateHandler := controller.NewRealEstateHandler(iRealEstateService, realEstateRepository)
 	return realEstateHandler, nil
 }

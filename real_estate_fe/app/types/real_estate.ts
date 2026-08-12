@@ -78,21 +78,18 @@ export interface PaginatedResponse<T> {
 
 export interface NotificationItem {
   id: number;
-  user_id: number;
-  title: string;
-  message: string;
-  is_read: boolean;
+  listing_id?: number;
+  type: string;
+  payload: any;
   created_at: string;
 }
 
 export interface NotificationSSEPayload {
-  type: "new_listing";
   title: string;
-  message: string;
-  price_vnd: number;
-  acreage: number;
   address: string;
-  source_url: string;
+  price: number;
+  acreage: number;
+  url: string;
 }
 
 export class InformationRealestate {

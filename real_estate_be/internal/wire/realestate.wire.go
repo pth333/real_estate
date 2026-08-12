@@ -7,6 +7,7 @@ import (
 	"real_estate_be/internal/controller"
 	"real_estate_be/internal/repo"
 	"real_estate_be/internal/usecase"
+	"real_estate_be/pkg/kafka"
 
 	"github.com/google/wire"
 )
@@ -18,6 +19,7 @@ func InitializeRealEstateHandler() (*controller.RealEstateHandler, error) {
 		repo.NewCategoryRepository,
 		repo.NewImageRepository,
 		repo.NewUserRepository,
+		kafka.NewProducer,
 		usecase.NewRealEstateService,
 		controller.NewRealEstateHandler,
 	)

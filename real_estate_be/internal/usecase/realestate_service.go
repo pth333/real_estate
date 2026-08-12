@@ -1,14 +1,18 @@
 package usecase
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 
 	"real_estate_be/internal/dto"
+	"real_estate_be/internal/global"
 	model "real_estate_be/internal/models"
 	"real_estate_be/internal/repo"
+	"real_estate_be/pkg/kafka"
 )
 
 // Tỷ giá tạm để quy đổi unit usd/eur → VND. Nên chuyển sang config sau.
@@ -22,12 +26,12 @@ type RealEstateService struct {
 	categoryRepo repo.ICategoryRepository
 	imageRepo    repo.ImageRepository
 	userRepo     repo.IUserRepository
+	producer     *kafka.Producer
 }
 
 type IRealEstateService interface {
 	ListRealEstate(req dto.RealEstateSearchRequest) ([]dto.RealEstateResponse, int64, error)
 	ListRealEstateByCategory(req dto.RealEstateSearchRequest) ([]dto.RealEstateResponse, int64, error)
-	// GetByID lấy 1 tin đăng theo ID (trang chi tiết slug -rs{id}); trả nil nếu không tồn tại.
 	GetByID(id uint64) (*dto.RealEstateResponse, error)
 	GetListCity() ([]model.Province, error)
 	GetListWard(provinceCode string) ([]model.Ward, error)
@@ -37,14 +41,11 @@ type IRealEstateService interface {
 	GetTopCity(limit int) ([]model.CityStat, error)
 	GetFirstCategorySlug() (string, error)
 	ToSlug(city string) string
-
-	// ApplyFilterSegment(seg string, filter *dto.Filter) error
-	// GenerateListingSlug tạo slug trang chi tiết "{title-slug}-rs{id}".
 	GenerateListingSlug(title string, id uint64) string
 }
 
-func NewRealEstateService(repo repo.RealEstateRepository, categoryRepo repo.ICategoryRepository, imageRepo repo.ImageRepository, userRepo repo.IUserRepository) IRealEstateService {
-	return &RealEstateService{repo: repo, categoryRepo: categoryRepo, imageRepo: imageRepo, userRepo: userRepo}
+func NewRealEstateService(repo repo.RealEstateRepository, categoryRepo repo.ICategoryRepository, imageRepo repo.ImageRepository, userRepo repo.IUserRepository, producer *kafka.Producer) IRealEstateService {
+	return &RealEstateService{repo: repo, categoryRepo: categoryRepo, imageRepo: imageRepo, userRepo: userRepo, producer: producer}
 }
 
 func (s *RealEstateService) ListRealEstate(req dto.RealEstateSearchRequest) ([]dto.RealEstateResponse, int64, error) {
@@ -66,16 +67,11 @@ func (s *RealEstateService) ListRealEstateByCategory(req dto.RealEstateSearchReq
 		limit = 10
 	}
 	offset := (req.Page - 1) * limit
-	jsonData, _ := json.MarshalIndent(req, "", "  ")
-	fmt.Println("Data:", string(jsonData))
-
 	if req.Slug != "" {
 		if id, err := s.categoryRepo.GetCategoryIdBySlug(req.Slug); err == nil && id > 0 {
 			return s.repo.GetListByCategory(offset, req, limit)
 		}
 	}
-
-	// Không khớp category → fallback: query theo payload filter (bỏ category)
 	return s.repo.GetList(req, offset, limit)
 }
 
@@ -90,18 +86,14 @@ func (s *RealEstateService) GetListRealEstateTypes() ([]model.Category, error) {
 	return s.repo.GetListRealEstateTypes()
 }
 
-// GetTopCity trả về N thành phố có nhiều BĐS nhất, kèm slug để FE điều hướng.
 func (s *RealEstateService) GetTopCity(limit int) ([]model.CityStat, error) {
 	cities, err := s.repo.GetTopCityByCount(limit)
 	if err != nil {
 		return nil, err
 	}
-
 	return cities, nil
 }
 
-// GetFirstCategorySlug lấy slug của category đầu tiên trong menu (theo name ASC),
-// dùng làm segment `{category}` cho khối "Bất động sản theo địa điểm" trên trang chủ.
 func (s *RealEstateService) GetFirstCategorySlug() (string, error) {
 	categories, err := s.categoryRepo.GetAll()
 	if err != nil {
@@ -119,9 +111,7 @@ func (s *RealEstateService) GetUserByEmail(email string) (*model.User, error) {
 	return s.userRepo.FindByEmail(email)
 }
 
-// CreateRealEstate tạo tin đăng: lưu RealEstate rồi gắn các ảnh đã upload vào tin
 func (s *RealEstateService) CreateRealEstate(req dto.CreateRealEstateRequest, userID uint64) (uint64, error) {
-	// Map category theo real_estate_type (FE gửi thẳng id, dạng chuỗi số)
 	var categoryID *int64
 	if req.RealEstateType != "" {
 		if id, err := strconv.ParseInt(req.RealEstateType, 10, 64); err == nil {
@@ -148,13 +138,11 @@ func (s *RealEstateService) CreateRealEstate(req dto.CreateRealEstateRequest, us
 		return 0, fmt.Errorf("không tìm thấy phường/xã: %s", req.Ward)
 	}
 
-	// Tiện ích (mảng) → JSON string để lưu vào cột amenities (MySQL không có kiểu array)
 	amenitiesJSON, err := json.Marshal(req.Amenities)
 	if err != nil {
 		return 0, fmt.Errorf("lỗi mã hoá tiện ích: %w", err)
 	}
 
-	// Địa chỉ ghép từ detail + tên phường/xã + tên tỉnh/thành
 	address := strings.TrimSpace(strings.Join([]string{
 		req.DetailAddress, wardName, cityName,
 	}, " "))
@@ -187,7 +175,6 @@ func (s *RealEstateService) CreateRealEstate(req dto.CreateRealEstateRequest, us
 		return 0, err
 	}
 
-	// Generate slug trang chi tiết sau khi có ID: "{title-slug}-rs{id}".
 	if estate.Slug == "" {
 		estate.Slug = s.GenerateListingSlug(estate.Title, estate.ID)
 		if err := s.repo.Save(estate); err != nil {
@@ -195,15 +182,31 @@ func (s *RealEstateService) CreateRealEstate(req dto.CreateRealEstateRequest, us
 		}
 	}
 
-	// Gắn ảnh đã upload vào tin đăng
 	if err := s.imageRepo.LinkToRealEstate(req.ImageIDs, estate.ID); err != nil {
 		return 0, err
+	}
+
+	// Gửi Kafka event chuẩn cho Notify
+	if s.producer != nil {
+		topic := global.Config.Kafka.Topics.RealEstateNotified // Giả định config topic cho notify
+		if topic == "" {
+			topic = "real_estate_new_listing" // Fallback topic name
+		}
+		s.producer.SetTopic(topic)
+
+		event := kafka.NewRealEstateNewListingEvent(*estate)
+		key := strconv.FormatUint(estate.ID, 10) // Key là ID BĐS
+
+		if err := s.producer.Publish(context.Background(), key, event); err != nil {
+			log.Printf("⚠️ [Kafka] publish notify error: %v", err)
+		} else {
+			log.Printf("✅ [Kafka] published new listing notify event for ID: %d", estate.ID)
+		}
 	}
 
 	return estate.ID, nil
 }
 
-// ToSlug chuyển tên tiếng Việt sang slug không dấu, VD "Hồ Chí Minh" → "ho-chi-minh".
 func (s *RealEstateService) ToSlug(input string) string {
 	var accents = map[rune]string{
 		'à': "a", 'á': "a", 'ả': "a", 'ã': "a", 'ạ': "a", 'ă': "a", 'ắ': "a", 'ằ': "a", 'ẳ': "a", 'ẵ': "a", 'ặ': "a", 'â': "a", 'ấ': "a", 'ầ': "a", 'ẩ': "a", 'ẫ': "a", 'ậ': "a",
@@ -221,7 +224,6 @@ func (s *RealEstateService) ToSlug(input string) string {
 		case r >= 'a' && r <= 'z' || r >= '0' && r <= '9':
 			b.WriteRune(r)
 		case r == ' ' || r == '-' || r == '.' || r == ',' || r == '_':
-			// Tránh gạch nối kép
 			if b.Len() > 0 && b.String()[b.Len()-1] != '-' {
 				b.WriteRune('-')
 			}
@@ -234,47 +236,6 @@ func (s *RealEstateService) ToSlug(input string) string {
 	return strings.Trim(b.String(), "-")
 }
 
-// Slug không khớp bất kỳ range nào → bỏ qua (không lỗi), để URL thừa
-// 1 đoạn không làm hỏng trang.
-// func (s *RealEstateService) ApplyFilterSegment(seg string, filter *dto.Filter) error {
-// 	if seg == "" || filter == nil {
-// 		return nil
-// 	}
-// 	f, err := s.repo.GetFilterRangeBySlug(seg)
-// 	if err != nil {
-// 		// Lỗi DB thực → báo lỗi; không tìm thấy → trả nil, nil.
-// 		return err
-// 	}
-// 	if f == nil {
-// 		// Slug không nằm trong filter_ranges → URL thừa → bỏ qua.
-// 		return nil
-// 	}
-// 	switch f.Type {
-// 	case "price":
-// 		if f.MinVal != nil {
-// 			filter.MinPrice = *f.MinVal
-// 		}
-// 		if f.MaxVal != nil {
-// 			filter.MaxPrice = *f.MaxVal
-// 		}
-// 	case "area":
-// 		if f.MinVal != nil {
-// 			filter.MinAcreage = *f.MinVal
-// 		}
-// 		if f.MaxVal != nil {
-// 			filter.MaxAcreage = *f.MaxVal
-// 		}
-// 	}
-// 	return nil
-// }
-
-// GenerateListingSlug tạo slug trang chi tiết cho 1 tin đăng: "{title-slug}-rs{id}".
-// VD title "Nhà phố 2 tầng Cầu Giấy" id 123 → "nha-pho-2-tang-cau-giay-rs123".
-// Phần "-rs{id}" giúp backend detect (regex -rs\d+$) và đảm bảo unique theo id.
 func (s *RealEstateService) GenerateListingSlug(title string, id uint64) string {
 	return fmt.Sprintf("%s-rs%d", s.ToSlug(title), id)
-}
-
-func (s *RealEstateService) GetCategory() ([]model.Category, error) {
-	return s.repo.GetCategory()
 }

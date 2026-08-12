@@ -28,8 +28,6 @@ func InitRealEstateRoutes(Router fiber.Router) {
 		realEstateRouter.Get("/list/ward", realEstateHandler.ListWard)
 		realEstateRouter.Get("/list/types", realEstateHandler.ListRealEstateTypes)
 
-		// Trang chi tiết: GET /real-estate/detail/:id — query theo id của real estate.
-		// Đặt TRƯỚC wildcard /:category để Fiber match static trước.
 		realEstateRouter.Get("/detail/:id", realEstateHandler.Detail)
 
 		realEstateRouter.Get("/:category", realEstateHandler.ListBySEOURL)

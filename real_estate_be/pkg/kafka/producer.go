@@ -23,7 +23,7 @@ func NewProducer() *Producer {
 	cfg := global.Config.Kafka
 	w := &kafkago.Writer{
 		Addr:                   kafkago.TCP(cfg.Brokers...),
-		Topic:                  cfg.Topics.RealEstateCrawled,
+		Topic:                  cfg.Topics.RealEstateNotified,
 		Balancer:               &kafkago.LeastBytes{},
 		RequiredAcks:           kafkago.RequireOne,
 		BatchTimeout:           10 * time.Millisecond,

@@ -40,18 +40,20 @@ func (e BaseEvent) GetVersion() string   { return e.Version }
 // ── Event type constants ──
 
 const (
-	EventTypeCrawled  = "real_estate.crawled.v1"
-	EventTypeEnriched = "real_estate.enriched.v1"
-	EventTypeNotified = "real_estate.notified.v1"
+	EventTypeCrawled    = "real_estate.crawled.v1"
+	EventTypeEnriched   = "real_estate.enriched.v1"
+	EventTypeNewListing = "real_estate.new_listing.v1"
+	EventTypeNotified   = "real_estate.notified.v1"
 
 	SourceCrawler = "crawler"
 	SourceEnrich  = "enrich-consumer"
+	SourceApp     = "real-estate-app"
 	SourceNotify  = "notify-consumer"
 
 	VersionV1 = "v1"
 )
 
-// ── RealEstateCrawledEvent ──
+// ── RealEstateCrawledEvent (Giữ lại cho crawler) ──
 
 type RealEstateCrawledEvent struct {
 	BaseEvent
@@ -70,26 +72,7 @@ type RealEstateCrawledEvent struct {
 
 func (e RealEstateCrawledEvent) GetKey() string { return e.SourceURL }
 
-func NewRealEstateCrawledEvent(m model.RealEstate) RealEstateCrawledEvent {
-	return RealEstateCrawledEvent{
-		BaseEvent: BaseEvent{
-			EventType: EventTypeCrawled,
-			Source:    SourceCrawler,
-			Version:   VersionV1,
-			Timestamp: time.Now(),
-		},
-		Title:       m.Title,
-		Address:     m.Address,
-		District:    m.District,
-		City:        m.City,
-		PriceVND:    m.PriceVND,
-		Acreage:     m.Acreage,
-		PricePerM2:  m.PricePerM2,
-		PublishedAt: nil,
-	}
-}
-
-// ── RealEstateEnrichedEvent ──
+// ── RealEstateEnrichedEvent (Giữ lại cho enricher) ──
 
 type RealEstateEnrichedEvent struct {
 	BaseEvent
@@ -105,31 +88,43 @@ type RealEstateEnrichedEvent struct {
 	CrawledAt   time.Time  `json:"crawled_at"`
 	PublishedAt *time.Time `json:"published_at,omitempty"`
 
-	// Enriched fields
 	Latitude  *float64 `json:"latitude,omitempty"`
 	Longitude *float64 `json:"longitude,omitempty"`
 }
 
 func (e RealEstateEnrichedEvent) GetKey() string { return e.SourceURL }
 
-func NewRealEstateEnrichedEvent(crawled RealEstateCrawledEvent, typeStr string) RealEstateEnrichedEvent {
-	return RealEstateEnrichedEvent{
+// ── RealEstateNewListingEvent (Mới - Chuyên cho Notify) ──
+
+type RealEstateNewListingEvent struct {
+	BaseEvent
+
+	ListingID uint64  `json:"listing_id"`
+	Title     string  `json:"title"`
+	Address   string  `json:"address"`
+	PriceVND  float64 `json:"price_vnd"`
+	Acreage   float64 `json:"acreage"`
+	Slug      string  `json:"slug"`
+}
+
+func (e RealEstateNewListingEvent) GetKey() string {
+	return time.Now().Format("20060102") // Partition key theo ngày hoặc ID
+}
+
+func NewRealEstateNewListingEvent(m model.RealEstate) RealEstateNewListingEvent {
+	return RealEstateNewListingEvent{
 		BaseEvent: BaseEvent{
-			EventType: EventTypeEnriched,
-			Source:    SourceEnrich,
+			EventType: EventTypeNewListing,
+			Source:    SourceApp,
 			Version:   VersionV1,
 			Timestamp: time.Now(),
 		},
-		SourceURL:   crawled.SourceURL,
-		Title:       crawled.Title,
-		Address:     crawled.Address,
-		District:    crawled.District,
-		City:        crawled.City,
-		PriceVND:    crawled.PriceVND,
-		Acreage:     crawled.Acreage,
-		PricePerM2:  crawled.PricePerM2,
-		CrawledAt:   crawled.CrawledAt,
-		PublishedAt: crawled.PublishedAt,
+		ListingID: m.ID,
+		Title:     m.Title,
+		Address:   m.Address,
+		PriceVND:  m.PriceVND,
+		Acreage:   m.Acreage,
+		Slug:      m.Slug,
 	}
 }
 

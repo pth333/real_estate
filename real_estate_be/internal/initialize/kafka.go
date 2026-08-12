@@ -7,6 +7,7 @@ import (
 	"real_estate_be/internal/global"
 	kafkaconsumer "real_estate_be/internal/kafka"
 	model "real_estate_be/internal/models"
+	"real_estate_be/internal/repo"
 	"real_estate_be/internal/sse"
 	"real_estate_be/pkg/kafka"
 
@@ -28,25 +29,26 @@ func InitKafka() *kafka.Producer {
 	return producer
 }
 
-// StartKafkaConsumers khởi động EnrichConsumer và NotifyConsumer trong goroutine.
+// StartKafkaConsumers khởi động NotifyConsumer trong goroutine.
 func StartKafkaConsumers(ctx context.Context, db *gorm.DB) {
 	if len(global.Config.Kafka.Brokers) == 0 {
 		return
 	}
 
 	// Dùng chung 1 producer
-	producer := kafka.NewProducer()
+	// producer := kafka.NewProducer()
 
 	// EnrichConsumer
-	go func() {
-		enrich := kafkaconsumer.NewEnrichConsumer(db, producer)
-		defer enrich.Close()
-		enrich.Start(ctx)
-	}()
+	// go func() {
+	// 	enrich := kafkaconsumer.NewEnrichConsumer(db, producer)
+	// 	defer enrich.Close()
+	// 	enrich.Start(ctx)
+	// }()
 
 	// NotifyConsumer
 	go func() {
-		notify := kafkaconsumer.NewNotifyConsumer(db)
+		notificationRepo := repo.NewNotificationRepository(db)
+		notify := kafkaconsumer.NewNotifyConsumer(notificationRepo)
 		defer notify.Close()
 		notify.Start(ctx)
 	}()

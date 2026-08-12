@@ -172,16 +172,6 @@ func applyAdvancedFilter(c *fiber.Ctx, req *dto.RealEstateSearchRequest) {
 	req.Filter.BalconyDirection = c.Query("balcony_direction")
 	req.Filter.LegalDocs = c.Query("legal_docs")
 	req.Filter.Interior = c.Query("interior")
-
-	// Khoảng giá / diện tích (từ popover hoặc modal nâng cao)
-	req.Filter.MinPrice = parseFloatQuery(c, "min_price")
-	req.Filter.MaxPrice = parseFloatQuery(c, "max_price")
-	req.Filter.MinAcreage = parseFloatQuery(c, "min_acreage")
-	req.Filter.MaxAcreage = parseFloatQuery(c, "max_acreage")
-
-	// Vị trí (city/district/ward lưu thẳng tên/code, không cần slug hoá)
-	req.Filter.District = c.Query("district")
-	req.Filter.Ward = c.Query("ward")
 }
 
 // parseFloatQuery đọc 1 query string → float64 (0/NaN/thiếu → 0 để bỏ qua điều kiện)
