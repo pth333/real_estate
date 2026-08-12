@@ -20,12 +20,19 @@
           <div v-else class="flex h-[420px] w-full items-center justify-center bg-gray-200 text-gray-400">
             Không có ảnh
           </div>
-          <!-- Nav arrow -->
-          <button v-if="allImages.length > 1"
-            class="absolute right-3 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center bg-white/80 shadow hover:bg-white"
-            @click="nextImage">
-            <IconChevronRight class="h-5 w-5 text-gray-700" />
-          </button>
+          <!-- Nav arrows -->
+          <template v-if="allImages.length > 1">
+            <button
+              class="absolute left-3 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center bg-white/80 shadow hover:bg-white"
+              @click="prevImage">
+              <IconChevronLeft class="h-5 w-5 text-gray-700" />
+            </button>
+            <button
+              class="absolute right-3 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center bg-white/80 shadow hover:bg-white"
+              @click="nextImage">
+              <IconChevronRight class="h-5 w-5 text-gray-700" />
+            </button>
+          </template>
           <!-- Counter -->
           <span v-if="allImages.length > 0"
             class="absolute bottom-3 right-3 bg-black/50 px-2 py-0.5 text-xs text-white">
@@ -203,6 +210,12 @@ const maskedPhone = computed(() => {
 function nextImage() {
   if (allImages.value.length > 1) {
     activeImageIndex.value = (activeImageIndex.value + 1) % allImages.value.length;
+  }
+}
+
+function prevImage() {
+  if (allImages.value.length > 1) {
+    activeImageIndex.value = (activeImageIndex.value - 1 + allImages.value.length) % allImages.value.length;
   }
 }
 

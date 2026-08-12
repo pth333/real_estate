@@ -104,7 +104,6 @@ const props = defineProps({
   }
 })
 
-console.log(props.estate.slug)
 const emit = defineEmits<{
   call: [phone: string]
   toggleFavorite: [id: number]

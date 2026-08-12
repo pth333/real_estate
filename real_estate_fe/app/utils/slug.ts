@@ -157,7 +157,7 @@ export function buildListParams(f: Filter | undefined): Record<string, string> {
   const params: Record<string, string> = {};
   if (!f) return params;
   for (const [key, value] of Object.entries(f)) {
-    if (value !== "" && !notKey.includes(key)) {
+    if (value !== "" && !notKey.includes(key) && value !== undefined) {
       params[key] = String(value);
     }
   }

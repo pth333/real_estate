@@ -163,11 +163,6 @@ export interface WardOption {
   code: string;
 }
 
-export interface OptionTypeRealestate {
-  id: number;
-  name: string;
-}
-
 // Ảnh/video đã upload thành công — id + url S3 (public_url/thumbnail)
 // Dùng để khôi phục preview khi quay lại bản nháp.
 // name + type (MIME thật) lưu kèm để hiển thị alt text và giữ đúng định dạng

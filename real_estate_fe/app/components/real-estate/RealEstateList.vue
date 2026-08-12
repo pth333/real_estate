@@ -89,7 +89,6 @@ const fetchDataRealEstate = async () => {
 
 function goToPage(page: number) {
   if (page < 1 || page > totalPages.value) return;
-  realEstateStore.currentPage = page;
   const parts: string[] = [categorySlug.value];
   if (filterSegments.value.length > 0) parts.push(filterSegments.value.join("/"));
   // page > 1 → query string (cấu trúc [...filters] không có segment page)
@@ -100,14 +99,17 @@ function goToPage(page: number) {
 
 watch(
   () => [route.params.category, route.params.filters, route.query],
-  ([_cat, _filt, newPage]) => {
+  ([_cat, _filt, newQuery]) => {
     realEstates.value = [];
     totalRecords.value = 0;
 
-    const pageNumber = newPage ? Number(newPage) : 1;
+    const query = newQuery as Record<string, string>;
+    const pageNumber = query?.page ? Number(query.page) : 1;
     realEstateStore.currentPage = Number.isNaN(pageNumber) ? 1 : pageNumber;
 
     fetchDataRealEstate();
+    // console.log(realEstateStore.currentPage);
+    
   },
   { immediate: true },
 );

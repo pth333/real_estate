@@ -71,10 +71,10 @@ func (h *RealEstateHandler) ListBySEOURL(c *fiber.Ctx) error {
 				continue
 			}
 
-			if catParam == category.Slug {
-				req.Slug = category.Slug
-				break
-			}
+			// if catParam == category.Slug {
+			req.Slug = category.Slug
+			// break
+			// }
 
 			// Tách location slug (phần sau category.Slug + "-")
 			locationSlug := strings.TrimPrefix(catParam, category.Slug)

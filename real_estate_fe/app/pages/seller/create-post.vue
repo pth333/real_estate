@@ -121,10 +121,10 @@ const onDraftModalClose = () => {
 const nextPage = () => {
 
     if (postStore.form.isTabInformation()) {
-        // if (!postStore.validateInformation()) {
-        //     window.message?.warning('Vui lòng nhập đầy đủ thông tin')
-        //     return
-        // }
+        if (!postStore.validateInformation()) {
+            window.message?.warning('Vui lòng nhập đầy đủ thông tin')
+            return
+        }
         postStore.form.tab = 'upload'
     } else if (postStore.form.isTabUpload()) {
         if (!uploadComponent.value.validateImageCount()) return

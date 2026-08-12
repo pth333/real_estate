@@ -32,7 +32,6 @@
       </div>
     </section>
 
-    <!-- Bất động sản theo khu vực -->
     <RealEstateByArea />
     <RealEstateForYou />
     <FeaturedProjects />
@@ -42,21 +41,8 @@
 <script setup lang="ts">
 const searchQuery = ref('')
 
-const trackSearch = async (query: string) => {
-  const { $api } = useNuxtApp()
-  try {
-    await $api.post('/tracking/search', {
-      query,
-      user_id: window.menu?.user_id || '',
-    })
-  } catch (err) {
-    console.error('Tracking search error:', err)
-  }
-}
-
 const handleSearch = async () => {
   if (!searchQuery.value.trim()) return
-  await trackSearch(searchQuery.value)
   navigateTo(`?search=${encodeURIComponent(searchQuery.value)}`)
 }
 </script>
