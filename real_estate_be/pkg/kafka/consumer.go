@@ -30,20 +30,27 @@ type Consumer struct {
 }
 
 func NewConsumer(cfg ConsumerConfig) *Consumer {
-	groupID := global.Config.Kafka.GroupPrefix + "-" + cfg.GroupSuffix
 	if cfg.Concurrency < 1 {
 		cfg.Concurrency = 1
 	}
 
-	reader := kafkago.NewReader(kafkago.ReaderConfig{
+	readerConfig := kafkago.ReaderConfig{
 		Brokers:        global.Config.Kafka.Brokers,
-		GroupID:        groupID,
 		Topic:          cfg.Topic,
 		StartOffset:    kafkago.FirstOffset,
 		CommitInterval: time.Second,
 		MaxWait:        3 * time.Second,
-	})
+	}
 
+	// Nếu GroupSuffix bằng "no-group" -> Đọc độc lập trực tiếp (Tránh lỗi Coordinator Docker WSL2)
+	if cfg.GroupSuffix != "no-group" && cfg.GroupSuffix != "" {
+		groupID := global.Config.Kafka.GroupPrefix + "-" + cfg.GroupSuffix
+		readerConfig.GroupID = groupID
+	} else {
+		log.Printf("ℹ️ [Kafka] Consumer starting in STANDALONE mode (No GroupID) for topic: %s", cfg.Topic)
+	}
+
+	reader := kafkago.NewReader(readerConfig)
 	return &Consumer{reader: reader, cfg: cfg}
 }
 
@@ -67,7 +74,8 @@ func (c *Consumer) loop(ctx context.Context) {
 			if ctx.Err() != nil {
 				return
 			}
-			log.Printf("❌ [Kafka] FetchMessage error: %v", err)
+			log.Printf("❌ [Kafka] FetchMessage error on topic %s: %v. Retrying in 3 seconds...", c.cfg.Topic, err)
+			time.Sleep(3 * time.Second) // Thêm delay tránh spam khi mất kết nối/Broker đóng socket (EOF)
 			continue
 		}
 
@@ -75,8 +83,11 @@ func (c *Consumer) loop(ctx context.Context) {
 			log.Printf("⚠️ [Kafka] handler error (will commit anyway): %v", err)
 		}
 
-		if err := c.reader.CommitMessages(ctx, msg); err != nil {
-			log.Printf("❌ [Kafka] CommitMessages error: %v", err)
+		// Chỉ gọi Commit khi có GroupID
+		if c.reader.Config().GroupID != "" {
+			if err := c.reader.CommitMessages(ctx, msg); err != nil {
+				log.Printf("❌ [Kafka] CommitMessages error: %v", err)
+			}
 		}
 	}
 }
@@ -91,7 +102,8 @@ func (c *Consumer) loopConcurrent(ctx context.Context) {
 			if ctx.Err() != nil {
 				return
 			}
-			log.Printf("❌ [Kafka] FetchMessage error: %v", err)
+			log.Printf("❌ [Kafka] FetchMessage error on topic %s: %v. Retrying in 3 seconds...", c.cfg.Topic, err)
+			time.Sleep(3 * time.Second) // Thêm delay tránh spam khi mất kết nối/Broker đóng socket (EOF)
 			continue
 		}
 
@@ -107,8 +119,10 @@ func (c *Consumer) loopConcurrent(ctx context.Context) {
 				log.Printf("⚠️ [Kafka] handler error: %v", err)
 			}
 
-			if err := c.reader.CommitMessages(ctx, m); err != nil {
-				log.Printf("❌ [Kafka] CommitMessages error: %v", err)
+			if c.reader.Config().GroupID != "" {
+				if err := c.reader.CommitMessages(ctx, m); err != nil {
+					log.Printf("❌ [Kafka] CommitMessages error: %v", err)
+				}
 			}
 		}()
 	}

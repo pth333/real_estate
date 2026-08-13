@@ -3,7 +3,6 @@ package kafka
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"time"
 
@@ -26,7 +25,7 @@ func NewNotifyConsumer(repo repo.INotificationRepository) *NotifyConsumer {
 
 	topic := cfg.Topics.RealEstateNotified
 	if topic == "" {
-		topic = "real_estate_new_listing"
+		topic = "real_estate.notified.v1"
 	}
 
 	nc := &NotifyConsumer{
@@ -68,7 +67,6 @@ func (n *NotifyConsumer) handle(ctx context.Context, msg kafkago.Message) error 
 		"price":   event.PriceVND,
 		"acreage": event.Acreage,
 		"slug":    event.Slug,
-		"url":     fmt.Sprintf("/listing/%s", event.Slug),
 	}
 
 	payloadBytes, _ := json.Marshal(payloadMap)

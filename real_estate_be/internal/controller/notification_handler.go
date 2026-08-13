@@ -73,7 +73,7 @@ func (h *NotificationHandler) GetNotifications(c *fiber.Ctx) error {
 	}
 
 	type notifResponse struct {
-		ID        uint64      `json:"id" any`
+		ID        uint64      `json:"id"`
 		ListingID uint64      `json:"listing_id"`
 		Type      string      `json:"type"`
 		Payload   interface{} `json:"payload"`

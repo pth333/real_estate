@@ -188,19 +188,18 @@ func (s *RealEstateService) CreateRealEstate(req dto.CreateRealEstateRequest, us
 
 	// Gửi Kafka event chuẩn cho Notify
 	if s.producer != nil {
-		topic := global.Config.Kafka.Topics.RealEstateNotified // Giả định config topic cho notify
+		topic := global.Config.Kafka.Topics.RealEstateNotified
 		if topic == "" {
-			topic = "real_estate_new_listing" // Fallback topic name
+			topic = "real_estate.notified.v1" // Fallback topic name chuẩn
 		}
-		s.producer.SetTopic(topic)
 
 		event := kafka.NewRealEstateNewListingEvent(*estate)
 		key := strconv.FormatUint(estate.ID, 10) // Key là ID BĐS
 
-		if err := s.producer.Publish(context.Background(), key, event); err != nil {
+		if err := s.producer.Publish(context.Background(), topic, key, event); err != nil {
 			log.Printf("⚠️ [Kafka] publish notify error: %v", err)
 		} else {
-			log.Printf("✅ [Kafka] published new listing notify event for ID: %d", estate.ID)
+			log.Printf("✅ [Kafka] published new listing notify event for ID: %d to topic: %s", estate.ID, topic)
 		}
 	}
 

@@ -23,7 +23,6 @@ func NewProducer() *Producer {
 	cfg := global.Config.Kafka
 	w := &kafkago.Writer{
 		Addr:                   kafkago.TCP(cfg.Brokers...),
-		Topic:                  cfg.Topics.RealEstateNotified,
 		Balancer:               &kafkago.LeastBytes{},
 		RequiredAcks:           kafkago.RequireOne,
 		BatchTimeout:           10 * time.Millisecond,
@@ -33,8 +32,8 @@ func NewProducer() *Producer {
 	return &Producer{writer: w}
 }
 
-// Publish gửi 1 message lên Kafka.
-func (p *Producer) Publish(ctx context.Context, key string, event any) error {
+// Publish gửi 1 message lên Kafka vào topic cụ thể.
+func (p *Producer) Publish(ctx context.Context, topic string, key string, event any) error {
 	p.mu.Lock()
 	if p.closed {
 		p.mu.Unlock()
@@ -47,12 +46,12 @@ func (p *Producer) Publish(ctx context.Context, key string, event any) error {
 		return fmt.Errorf("json.Marshal: %w", err)
 	}
 
-	msg := p.buildMessage(key, data, event)
+	msg := p.buildMessage(topic, key, data, event)
 	return p.writer.WriteMessages(ctx, msg)
 }
 
-// PublishBatch gửi nhiều message cùng lúc (atomic write).
-func (p *Producer) PublishBatch(ctx context.Context, keys []string, events []any) error {
+// PublishBatch gửi nhiều message cùng lúc (atomic write) vào topic cụ thể.
+func (p *Producer) PublishBatch(ctx context.Context, topic string, keys []string, events []any) error {
 	if len(keys) != len(events) {
 		return fmt.Errorf("keys and events length mismatch")
 	}
@@ -69,16 +68,9 @@ func (p *Producer) PublishBatch(ctx context.Context, keys []string, events []any
 		if err != nil {
 			return fmt.Errorf("json.Marshal[%d]: %w", i, err)
 		}
-		msgs[i] = p.buildMessage(keys[i], data, event)
+		msgs[i] = p.buildMessage(topic, keys[i], data, event)
 	}
 	return p.writer.WriteMessages(ctx, msgs...)
-}
-
-// SetTopic cho phép đổi topic — dùng trong EnrichConsumer.
-func (p *Producer) SetTopic(topic string) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	p.writer.Topic = topic
 }
 
 func (p *Producer) Close() error {
@@ -91,9 +83,10 @@ func (p *Producer) Close() error {
 	return p.writer.Close()
 }
 
-// buildMessage gắn headers tự động dựa trên interface event implement.
-func (p *Producer) buildMessage(key string, data []byte, event any) kafkago.Message {
+// buildMessage gắn headers tự động dựa trên interface event implement và gán Topic.
+func (p *Producer) buildMessage(topic string, key string, data []byte, event any) kafkago.Message {
 	msg := kafkago.Message{
+		Topic: topic,
 		Key:   []byte(key),
 		Value: data,
 		Headers: []kafkago.Header{
@@ -111,6 +104,6 @@ func (p *Producer) buildMessage(key string, data []byte, event any) kafkago.Mess
 		msg.Headers = append(msg.Headers, kafkago.Header{Key: HeaderVersion, Value: []byte(e.GetVersion())})
 	}
 
-	log.Printf("📤 [Kafka] publishing key=%s headers=%v", key, msg.Headers)
+	log.Printf("📤 [Kafka] publishing to topic=%s key=%s headers=%v", topic, key, msg.Headers)
 	return msg
 }

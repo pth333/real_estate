@@ -8,7 +8,7 @@ mysql:
   database: real_estate_db
 kafka:
   brokers:
-    - localhost:9092
+    - 127.0.0.1:9092
   client_id: real-estate-be
   group_prefix: real-estate-be
   topics:
