@@ -89,14 +89,12 @@ import { useCreatePost } from '~/stores/create-post'
 definePageMeta({
     alias: "/nguoi-ban/dang-tin",
 })
-const { phoneVerified } = usePhoneVerification()
+const { phoneVerified, verifiedPhone, showOTPModal } = usePhoneVerification()
 const { $api } = useNuxtApp()
 
 const postStore = useCreatePost()
-const showOTPModal = ref(false)
 const uploadComponent = ref()
 
-// ── Bản nháp: lưu khi Thoát, hỏi khi vào lại trang ──
 const showDraftModal = ref(false)
 
 const handleExit = () => {
@@ -119,7 +117,6 @@ const onDraftModalClose = () => {
     showDraftModal.value = false
 }
 const nextPage = () => {
-
     if (postStore.form.isTabInformation()) {
         if (!postStore.validateInformation()) {
             window.message?.warning('Vui lòng nhập đầy đủ thông tin')
@@ -167,10 +164,22 @@ const submitCreatePost = async () => {
     }
 };
 
+
+// Tự động điền số điện thoại khi đã xác thực thành công hoặc khi số xác thực thay đổi
+watch(verifiedPhone, (newPhone) => {
+    if (newPhone && !postStore.form.contact_phone) {
+        postStore.form.contact_phone = newPhone
+    }
+}, { immediate: true })
+
 onMounted(() => {
     if (!phoneVerified.value) {
         showOTPModal.value = true
         return
+    }
+    // Điền số điện thoại mặc định từ localStorage nếu chưa có
+    if (verifiedPhone.value && !postStore.form.contact_phone) {
+        postStore.form.contact_phone = verifiedPhone.value
     }
     // Có bản nháp cũ → hỏi người dùng có tiếp tục không
     if (postStore.loadCurrentDraft()) {

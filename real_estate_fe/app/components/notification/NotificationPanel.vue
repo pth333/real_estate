@@ -105,12 +105,25 @@ onMounted(() => {
 function isUnread(notif: NotificationItem): boolean {
   if (typeof window !== "undefined") {
     const lastRead = localStorage.getItem("last_notif_read_at") || "0";
-    return new Date(notif.created_at).getTime() > parseInt(lastRead);
+    const readIdsStr = localStorage.getItem("read_notification_ids") || "[]";
+    let readIds: number[] = [];
+    try {
+      readIds = JSON.parse(readIdsStr);
+    } catch (e) {
+      readIds = [];
+    }
+
+    const isReadById = readIds.includes(Number(notif.id));
+    const isReadByTime = new Date(notif.created_at).getTime() <= parseInt(lastRead);
+    return !isReadById && !isReadByTime;
   }
   return false;
 }
 
 function handleClick(notif: NotificationItem) {
+  // Đánh dấu đã đọc trên client tab hiện tại ngay lập tức
+  store.markAsRead(notif.id);
+
   if (notif.payload?.slug) {
     // Nếu là URL internal hoặc external
     window.open(notif.payload.slug, "_blank");

@@ -1,10 +1,10 @@
 <template>
-    <n-modal v-model:show="show" :style="{ maxWidth: '440px' }" :mask-closable="false" preset="card"
-        :title="step === 'phone' ? 'Xác thực số điện thoại' : 'Nhập mã OTP'" :closable="false">
+    <n-modal v-if="show" v-model:show="show" :style="{ maxWidth: '440px' }" :mask-closable="phoneVerified" preset="card"
+        :title="step === 'phone' ? 'Xác thực số điện thoại' : 'Nhập mã OTP'" :closable="phoneVerified">
 
         <div class="flex flex-col gap-5">
             <!-- Error message -->
-            <n-alert v-if="errorText" type="error" closable @close="errorText = ''" class="!text-sm">
+            <n-alert v-if="errorText" type="error" closable @close="errorText = ''" class="text-sm!">
                 {{ errorText }}
             </n-alert>
 
@@ -77,7 +77,7 @@ const emit = defineEmits<{
 }>()
 
 const { $api } = useNuxtApp()
-const { setPhoneVerified } = usePhoneVerification()
+const { setPhoneVerified, phoneVerified } = usePhoneVerification()
 
 const show = defineModel<boolean>('show', { default: false })
 
@@ -127,8 +127,12 @@ const handleVerifyOTP = async () => {
         if (res.success) {
             if (countdownTimer) clearInterval(countdownTimer)
             errorText.value = ''
-            setPhoneVerified()
+            setPhoneVerified(phone.value.trim())
             show.value = false
+            // Reset state
+            step.value = 'phone'
+            phone.value = ''
+            otp.value = ''
         } else {
             errorText.value = res.message || 'Mã OTP không đúng'
         }

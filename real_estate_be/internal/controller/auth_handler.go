@@ -4,6 +4,7 @@ import (
 	"real_estate_be/internal/dto"
 	"real_estate_be/internal/response"
 	"real_estate_be/internal/usecase"
+	"real_estate_be/pkg/jwt"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -131,7 +132,21 @@ func (h *UserHandler) VerifyOTP(c *fiber.Ctx) error {
 		return response.BadRequest(c, "Invalid request body", err.Error())
 	}
 
-	if err := h.service.VerifyOTP(req); err != nil {
+	// Trích xuất email từ access token (nếu người dùng đang đăng nhập)
+	currentUserEmail := ""
+	authHeader := c.Get("Authorization")
+	if authHeader != "" {
+		tokenStr := authHeader
+		if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
+			tokenStr = authHeader[7:]
+		}
+		claims, err := jwt.ParseAccessToken(tokenStr)
+		if err == nil {
+			currentUserEmail = claims.Email
+		}
+	}
+
+	if err := h.service.VerifyOTP(req, currentUserEmail); err != nil {
 		return response.Unauthorized(c, "Xác thực OTP thất bại", err.Error())
 	}
 

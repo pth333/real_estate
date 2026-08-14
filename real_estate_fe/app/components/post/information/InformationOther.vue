@@ -52,14 +52,14 @@
             </div>
 
             <!-- Thời gian vào ở -->
-            <div class="mb-4">
+            <div class="mb-4" v-if="postStore.form.listingType === 'rent'">
                 <label class="text-sm text-gray-700 block mb-1.5">Thời gian vào ở</label>
                 <n-select v-model:value="postStore.form.move_in_time" placeholder="Chọn thời gian vào ở"
                     :options="moveInTimeOptions" />
             </div>
 
             <!-- Mức giá điện / nước / internet -->
-            <div class="flex gap-2 mb-4">
+            <div class="flex gap-2 mb-4" v-if="postStore.form.listingType === 'rent'">
                 <div class="flex flex-col flex-1">
                     <label class="text-sm text-gray-700 mb-1.5">Mức giá điện</label>
                     <NumberFormatInput v-model="postStore.form.price_electricity" placeholder="VD: 3.500"
@@ -78,7 +78,7 @@
             </div>
 
             <!-- Tiện ích -->
-            <div>
+            <div v-if="postStore.form.listingType === 'rent'">
                 <label class="text-sm text-gray-700 block mb-1.5">Tiện ích</label>
                 <n-checkbox-group v-model:value="postStore.form.amenities">
                     <div class="flex gap-4">

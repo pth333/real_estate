@@ -92,6 +92,11 @@ export interface NotificationSSEPayload {
   url: string;
 }
 
+export interface OptionTypeRealestate {
+  id: number;
+  name: string;
+}
+
 export class InformationRealestate {
   // Nhu cầu
   listingType: "sell" | "rent" = "sell";

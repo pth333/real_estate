@@ -32,7 +32,7 @@ type AuthServiceInterface interface {
 	Login(req dto.LoginRequest) (string, string, error)
 	RefreshToken(refreshToken string) (string, string, error)
 	SendOTP(req dto.SendOTPRequest) error
-	VerifyOTP(req dto.VerifyOTPRequest) error
+	VerifyOTP(req dto.VerifyOTPRequest, currentUserEmail string) error
 }
 
 func NewAuthService(repo repo.IUserRepository, smsProvider sms.Provider) AuthServiceInterface {
@@ -120,7 +120,7 @@ func (s *AuthService) SendOTP(req dto.SendOTPRequest) error {
 	return nil
 }
 
-func (s *AuthService) VerifyOTP(req dto.VerifyOTPRequest) error {
+func (s *AuthService) VerifyOTP(req dto.VerifyOTPRequest, currentUserEmail string) error {
 	ctx := context.Background()
 
 	// Lấy OTP từ Redis
@@ -137,6 +137,15 @@ func (s *AuthService) VerifyOTP(req dto.VerifyOTPRequest) error {
 	// Xoá OTP khỏi Redis (chỉ dùng 1 lần)
 	global.RedisClient.Del(ctx, key)
 
+	// Nếu có user đang đăng nhập hiện tại, lưu thẳng số điện thoại vào tài khoản của họ
+	if currentUserEmail != "" {
+		if err := s.repo.UpdatePhoneByEmail(currentUserEmail, req.Phone); err != nil {
+			return fmt.Errorf("không thể cập nhật số điện thoại cho tài khoản: %w", err)
+		}
+		return nil
+	}
+
+	// Trường hợp Public (Không đăng nhập, ví dụ đăng nhập trực tiếp qua SĐT)
 	// Kiểm tra user đã tồn tại chưa
 	_, findErr := s.repo.FindByPhone(req.Phone)
 	if findErr != nil {
