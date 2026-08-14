@@ -1,135 +1,161 @@
 <template>
-  <div class="container mx-auto px-24 py-8">
-    <!-- Breadcrumb -->
-    <div class="mb-5 text-sm text-gray-500">
-      <span class="cursor-pointer hover:text-emerald-600" @click="navigateTo('/')">Trang chủ</span>
-      <span class="mx-2">/</span>
-      <span class="cursor-pointer hover:text-emerald-600" @click="navigateTo('/du-an')">Dự án</span>
-      <span class="mx-2">/</span>
-      <span class="text-gray-900 font-medium">{{ project?.name || 'Chi tiết dự án' }}</span>
-    </div>
+  <n-layout class="bg-transparent">
+    <n-layout-content class="mx-auto max-w-[1200px] px-6 py-6 bg-transparent">
+      <!-- Breadcrumb Naive UI chuyên nghiệp -->
+      <n-breadcrumb class="mb-5">
+        <n-breadcrumb-item @click="navigateTo('/')">Trang chủ</n-breadcrumb-item>
+        <n-breadcrumb-item @click="navigateTo('/du-an')">Dự án</n-breadcrumb-item>
+        <n-breadcrumb-item>{{ project?.name || 'Chi tiết dự án' }}</n-breadcrumb-item>
+      </n-breadcrumb>
 
-    <!-- Loading State -->
-    <div v-if="loading" class="animate-pulse flex flex-col gap-6">
-      <div class="h-96 bg-gray-200 rounded-lg w-full"></div>
-      <div class="h-8 bg-gray-200 rounded w-1/3"></div>
-      <div class="h-4 bg-gray-200 rounded w-1/2"></div>
-      <div class="h-24 bg-gray-200 rounded w-full"></div>
-    </div>
+      <!-- Loading State bằng n-spin cực xịn bọc toàn bộ nội dung để tránh layout giật lag -->
+      <n-spin :show="loading" size="large">
+        <template #description>
+          Đang tải thông tin dự án...
+        </template>
 
-    <!-- Error/Not Found State -->
-    <div v-else-if="!project" class="text-center py-16 text-gray-500">
-      <p class="text-lg">Không tìm thấy thông tin dự án này hoặc đã xảy ra lỗi.</p>
-      <n-button type="primary" class="mt-4" @click="navigateTo('/')">Quay lại trang chủ</n-button>
-    </div>
+        <!-- Khi lỗi/không tìm thấy -->
+        <n-empty v-if="!loading && !project" description="Không tìm thấy thông tin dự án này hoặc đã xảy ra lỗi." class="py-20">
+          <template #extra>
+            <n-button type="primary" @click="navigateTo('/')">Quay lại trang chủ</n-button>
+          </template>
+        </n-empty>
 
-    <!-- Main Content -->
-    <div v-else class="grid grid-cols-3 gap-8">
-      <!-- Cột trái: Thông tin chính -->
-      <div class="col-span-2 flex flex-col gap-6">
-        <!-- Gallery ảnh (placeholder) -->
-        <div class="relative h-[450px] overflow-hidden rounded-xl bg-gray-100 shadow-sm border border-gray-100">
-          <img :src="project.thumbnail" :alt="project.name" class="w-full h-full object-cover" />
-          <div
-            class="absolute bottom-4 right-4 bg-black/60 text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-1.5 font-medium">
-            <IconImage class="h-3.5 w-3.5" />
-            Xem tất cả hình ảnh
-          </div>
-        </div>
+        <!-- Layout chính chia cột - Chỉ hiển thị khi project đã load thành công (khác null) -->
+        <n-grid v-else-if="project" :cols="4" :x-gap="24" :y-gap="24" item-responsive>
+          <!-- Cột trái: Thông tin chính (Chiếm 3/4) -->
+          <n-grid-item :span="3" class="min-w-0">
+            <n-space vertical :size="24">
+              <!-- Gallery ảnh -->
+              <n-card content-style="padding: 0;" class="overflow-hidden rounded-xl border border-gray-100 shadow-sm relative h-[450px]">
+                <img :src="project.thumbnail" :alt="project.name" class="w-full h-full object-cover" />
+                <div class="absolute bottom-4 right-4">
+                  <n-button secondary strong round type="tertiary" size="small" class="bg-black/60! text-white! flex items-center gap-1">
+                    <IconImage class="h-3.5 w-3.5" />
+                    Xem tất cả hình ảnh
+                  </n-button>
+                </div>
+              </n-card>
 
-        <!-- Tiêu đề, địa chỉ và trạng thái -->
-        <div>
-          <div class="flex items-center gap-3 mb-2.5">
-            <span class="text-xs font-semibold px-2.5 py-1 border rounded-md" :class="statusClass(project.status)">
-              {{ formatStatus(project.status) }}
-            </span>
-            <span class="text-xs text-gray-500 flex items-center gap-1">
-              <IconEye class="h-3.5 w-3.5" />
-              Lượt xem: {{ project.view_count || 0 }}
-            </span>
-          </div>
-          <h1 class="text-2xl font-bold text-gray-900 mb-2">{{ project.name }}</h1>
-          <p class="text-sm text-gray-500 flex items-start gap-1.5">
-            <IconMapPin class="h-4 w-4 text-gray-400 mt-0.5 shrink-0" />
-            {{ project.full_address || 'Địa chỉ đang cập nhật' }}
-          </p>
-        </div>
+              <!-- Tiêu đề, địa chỉ và trạng thái -->
+              <n-space vertical :size="8">
+                <n-space align="center" :size="12">
+                  <n-tag :type="statusTagType(project.status)" size="small" round class="font-semibold shadow-sm">
+                    {{ formatStatus(project.status) }}
+                  </n-tag>
+                  <n-text depth="3" class="text-xs flex items-center gap-1">
+                    <IconEye class="h-3.5 w-3.5 text-gray-400" />
+                    Lượt xem: {{ project.view_count || 0 }}
+                  </n-text>
+                </n-space>
 
-        <hr class="border-gray-100" />
+                <n-h1 class="text-2xl! font-bold! m-0! text-gray-900! leading-snug">{{ project.name }}</n-h1>
+                <n-text depth="3" class="text-sm flex items-start gap-1">
+                  <IconMapPin class="h-4 w-4 text-gray-400 mt-0.5 shrink-0" />
+                  {{ project.full_address || 'Địa chỉ đang cập nhật' }}
+                </n-text>
+              </n-space>
 
-        <!-- Thông tin cơ bản: Diện tích, quy mô -->
-        <div class="grid grid-cols-3 gap-4 py-2">
-          <div class="bg-gray-50/50 p-4 rounded-xl border border-gray-100/50 flex flex-col gap-1">
-            <span class="text-xs text-gray-400 font-medium">QUY MÔ</span>
-            <span class="text-base font-bold text-gray-800">
-              {{ project.total_area_ha ? project.total_area_ha + ' ha' : 'Đang cập nhật' }}
-            </span>
-          </div>
-          <div class="bg-gray-50/50 p-4 rounded-xl border border-gray-100/50 flex flex-col gap-1">
-            <span class="text-xs text-gray-400 font-medium">SỐ CĂN HỘ / NỀN</span>
-            <span class="text-base font-bold text-gray-800">
-              {{ project.total_units ? project.total_units + ' căn' : 'Đang cập nhật' }}
-            </span>
-          </div>
-          <div class="bg-gray-50/50 p-4 rounded-xl border border-gray-100/50 flex flex-col gap-1">
-            <span class="text-xs text-gray-400 font-medium">KHOẢNG GIÁ</span>
-            <span class="text-base font-bold text-emerald-600">
-              {{ formatPriceRange(project.price_min, project.price_max) }}
-            </span>
-          </div>
-        </div>
+              <!-- Thông tin cơ bản dạng Grid/Cards Naive UI -->
+              <n-grid :cols="3" :x-gap="16" :y-gap="16" item-responsive class="w-full">
+                <n-grid-item>
+                  <n-card size="small" class="bg-gray-50/50 border border-gray-100/50 rounded-xl">
+                    <n-space vertical :size="4">
+                      <n-text depth="3" class="text-[10px] font-bold tracking-wider uppercase">QUY MÔ</n-text>
+                      <n-text class="text-base font-bold text-gray-800">
+                        {{ project.total_area_ha ? project.total_area_ha + ' ha' : 'Đang cập nhật' }}
+                      </n-text>
+                    </n-space>
+                  </n-card>
+                </n-grid-item>
 
-        <hr class="border-gray-100" />
+                <n-grid-item>
+                  <n-card size="small" class="bg-gray-50/50 border border-gray-100/50 rounded-xl">
+                    <n-space vertical :size="4">
+                      <n-text depth="3" class="text-[10px] font-bold tracking-wider uppercase">SỐ CĂN HỘ / NỀN</n-text>
+                      <n-text class="text-base font-bold text-gray-800">
+                        {{ project.total_units ? project.total_units + ' căn' : 'Đang cập nhật' }}
+                      </n-text>
+                    </n-space>
+                  </n-card>
+                </n-grid-item>
 
-        <!-- Giới thiệu dự án -->
-        <div>
-          <h3 class="text-lg font-bold text-gray-900 mb-3">Thông tin chi tiết</h3>
-          <div class="text-sm text-gray-600 leading-relaxed space-y-3">
-            <p>
-              Dự án <strong>{{ project.name }}</strong> tọa lạc tại vị trí đắc địa thuộc khu vực {{ project.full_address
-              }}.
-              Với tổng quy mô đầu tư phát triển lên đến {{ project.total_area_ha ? project.total_area_ha + ' ha' :
-                'nhiều ha' }},
-              dự án hứa hẹn sẽ mang đến không gian sống đẳng cấp, tiện nghi cùng cơ hội đầu tư sinh lời vượt trội cho
-              quý khách hàng.
-            </p>
-            <p>
-              Được quy hoạch bài bản đồng bộ với tổng số lượng sản phẩm khoảng {{ project.total_units ?
-                project.total_units + ' căn hộ/nhà phố' : 'nhiều sản phẩm đa dạng' }},
-              thiết kế hiện đại chuẩn xanh, tối ưu hóa công năng và ánh sáng tự nhiên.
-            </p>
-          </div>
-        </div>
-      </div>
+                <n-grid-item>
+                  <n-card size="small" class="bg-gray-50/50 border border-gray-100/50 rounded-xl">
+                    <n-space vertical :size="4">
+                      <n-text depth="3" class="text-[10px] font-bold tracking-wider uppercase">KHOẢNG GIÁ</n-text>
+                      <n-text type="success" class="text-base font-bold text-emerald-600">
+                        {{ formatPriceRange(project.price_min, project.price_max) }}
+                      </n-text>
+                    </n-space>
+                  </n-card>
+                </n-grid-item>
+              </n-grid>
 
-      <!-- Cột phải: Form liên hệ / Tư vấn -->
-      <div class="col-span-1 flex flex-col gap-6">
-        <div class="bg-white p-6 rounded-xl border border-gray-100 shadow-sm sticky top-6">
-          <div class="flex items-center gap-3 mb-4">
-            <div
-              class="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 font-bold text-lg">
-              S
+              <!-- Giới thiệu dự án -->
+              <n-card title="Thông tin chi tiết" header-style="border-b: 1px solid #f3f4f6; padding: 12px 16px;" class="rounded-xl border border-gray-100 shadow-sm">
+                <n-space vertical :size="12" class="text-sm text-gray-600 leading-relaxed">
+                  <n-text>
+                    Dự án <strong>{{ project.name }}</strong> tọa lạc tại vị trí đắc địa thuộc khu vực {{ project.full_address }}.
+                    Với tổng quy mô đầu tư phát triển lên đến {{ project.total_area_ha ? project.total_area_ha + ' ha' : 'nhiều ha' }},
+                    dự án hứa hẹn sẽ mang đến không gian sống đẳng cấp, tiện nghi cùng cơ hội đầu tư sinh lời vượt trội cho quý khách hàng.
+                  </n-text>
+                  <n-text>
+                    Được quy hoạch bài bản đồng bộ với tổng số lượng sản phẩm khoảng {{ project.total_units ? project.total_units + ' căn hộ/nhà phố' : 'nhiều sản phẩm đa dạng' }},
+                    thiết kế hiện đại chuẩn xanh, tối ưu hóa công năng và ánh sáng tự nhiên.
+                  </n-text>
+                </n-space>
+              </n-card>
+            </n-space>
+          </n-grid-item>
+
+          <!-- Cột phải: Khung liên hệ tư vấn (Chiếm 1/4) -->
+          <n-grid-item :span="1" class="relative">
+            <!-- Sử dụng div với class sticky của tailwind, và bọc gọn gàng bên trong grid-item để không bị trôi -->
+            <div class="sticky top-6">
+              <n-card class="border border-gray-100 shadow-sm rounded-xl">
+                <n-space vertical :size="16">
+                  <!-- Avatar và thông tin liên hệ -->
+                  <n-space align="center" :size="12">
+                    <n-avatar
+                      round
+                      :size="48"
+                      class="bg-emerald-50 text-emerald-600 font-bold border border-emerald-100"
+                    >
+                      S
+                    </n-avatar>
+                    <n-space vertical :size="2">
+                      <n-text class="font-bold text-gray-900 text-sm">Phòng Kinh Doanh</n-text>
+                      <n-text depth="3" class="text-xs">Hỗ trợ tư vấn dự án 24/7</n-text>
+                    </n-space>
+                  </n-space>
+
+                  <!-- Các nút hành động Naive UI chuyên nghiệp -->
+                  <n-space vertical :size="10">
+                    <n-button
+                      type="primary"
+                      size="large"
+                      class="w-full bg-emerald-600! hover:bg-emerald-700! font-semibold! flex items-center justify-center gap-2"
+                    >
+                      <IconPhone class="h-4 w-4 shrink-0" />
+                      Yêu cầu gọi lại tư vấn
+                    </n-button>
+                    <n-button
+                      ghost
+                      size="large"
+                      class="w-full text-gray-700 border-gray-300 font-medium"
+                    >
+                      Tải bảng giá & pháp lý
+                    </n-button>
+                  </n-space>
+                </n-space>
+              </n-card>
             </div>
-            <div>
-              <div class="font-bold text-gray-900 text-sm">Phòng Kinh Doanh</div>
-              <div class="text-xs text-gray-400">Hỗ trợ tư vấn dự án 24/7</div>
-            </div>
-          </div>
-
-          <div class="flex flex-col gap-3">
-            <n-button type="primary" size="large"
-              class="w-full !bg-emerald-600 hover:!bg-emerald-700 font-semibold flex items-center gap-2">
-              <IconPhone class="h-4 w-4" />
-              Yêu cầu gọi lại tư vấn
-            </n-button>
-            <n-button ghost size="large" class="w-full text-gray-700 border-gray-300 font-medium">
-              Tải bảng giá & tài liệu pháp lý
-            </n-button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+          </n-grid-item>
+        </n-grid>
+      </n-spin>
+    </n-layout-content>
+  </n-layout>
 </template>
 
 <script setup lang="ts">
@@ -165,15 +191,12 @@ const formatStatus = (status?: string | boolean): string => {
   return status as string
 }
 
-function statusClass(status?: string) {
+// Trả về type màu chuẩn Naive UI cho tag (success, warning, error, default)
+const statusTagType = (status?: string) => {
   const formatted = formatStatus(status)
-  if (formatted === 'Đang mở bán') {
-    return 'border-green-400 text-green-600 bg-green-50'
-  }
-  if (formatted === 'Sắp mở bán') {
-    return 'border-red-300 text-red-500 bg-red-50'
-  }
-  return 'border-gray-300 text-gray-500 bg-gray-50'
+  if (formatted === 'Đang mở bán') return 'success'
+  if (formatted === 'Sắp mở bán') return 'warning'
+  return 'default'
 }
 
 const { $api } = useNuxtApp()

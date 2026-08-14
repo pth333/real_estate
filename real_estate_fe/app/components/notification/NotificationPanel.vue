@@ -94,7 +94,7 @@ import { useNotificationStore } from "~/stores/notification";
 import type { NotificationItem } from "~/types/real_estate";
 import { formatPrice, fromNow } from "~/utils/format";
 
-defineEmits<{ close: [] }>();
+const emit = defineEmits<{ close: [] }>();
 
 const store = useNotificationStore();
 
@@ -125,8 +125,19 @@ function handleClick(notif: NotificationItem) {
   store.markAsRead(notif.id);
 
   if (notif.payload?.slug) {
-    // Nếu là URL internal hoặc external
-    window.open(notif.payload.slug, "_blank");
+    const slug = notif.payload.slug;
+
+    // Nếu là link ngoài hoàn toàn (external)
+    if (slug.startsWith("http://") || slug.startsWith("https://")) {
+      window.open(slug, "_blank");
+    } else {
+      // Đảm bảo là đường dẫn tuyệt đối bắt đầu bằng / để không bị ghép nối tiếp từ trang hiện tại (/nguoi-ban/...)
+      const targetPath = slug.startsWith("/") ? slug : `/${slug}`;
+      navigateTo(targetPath);
+    }
+
+    // Đóng panel thông báo
+    emit("close");
   }
 }
 </script>

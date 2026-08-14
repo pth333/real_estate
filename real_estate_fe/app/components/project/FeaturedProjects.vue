@@ -163,11 +163,6 @@ const goToProject = (project: Project) => {
     // Sinh SEO URL driven chuyển hướng chi tiết dự án có định dạng dạng `/slug-du-an-pj{id}`
     const slug = project.slug
     navigateTo(`/${slug}-pj${project.id}`)
-
-    // Trigger tăng lượt xem dự án ở backend
-    $api.post(`/real-estate/project/view/${project.id}`).catch(err => {
-        console.error("Lỗi khi tăng lượt xem dự án:", err)
-    })
 }
 
 onMounted(() => {
