@@ -34,6 +34,9 @@ type IRealEstateService interface {
 	ListRealEstateByCategory(req dto.RealEstateSearchRequest) ([]dto.RealEstateResponse, int64, error)
 	GetByID(id uint64) (*dto.RealEstateResponse, error)
 	GetListCity() ([]model.Province, error)
+	GetListProject(provinceCode, wardCode string) ([]model.RealEstateProject, error)
+	GetCategoryBySlug(slug string) (*model.Category, error)
+	GetProjectsByCategoryID(categoryID int64) ([]model.RealEstateProject, error)
 	GetListWard(provinceCode string) ([]model.Ward, error)
 	GetListRealEstateTypes() ([]model.Category, error)
 	GetUserByEmail(email string) (*model.User, error)
@@ -42,6 +45,9 @@ type IRealEstateService interface {
 	GetFirstCategorySlug() (string, error)
 	ToSlug(city string) string
 	GenerateListingSlug(title string, id uint64) string
+	IncrementProjectView(id uint64) error
+	GetFeaturedProjects(limit int) ([]model.RealEstateProject, error)
+		GetProjectByID(id uint64) (*model.RealEstateProject, error)
 }
 
 func NewRealEstateService(repo repo.RealEstateRepository, categoryRepo repo.ICategoryRepository, imageRepo repo.ImageRepository, userRepo repo.IUserRepository, producer *kafka.Producer) IRealEstateService {
@@ -79,6 +85,18 @@ func (s *RealEstateService) GetListCity() ([]model.Province, error) {
 	return s.repo.GetListCity()
 }
 
+func (s *RealEstateService) GetListProject(provinceCode, wardCode string) ([]model.RealEstateProject, error) {
+	return s.repo.GetListProject(provinceCode, wardCode)
+}
+
+func (s *RealEstateService) GetCategoryBySlug(slug string) (*model.Category, error) {
+	return s.categoryRepo.GetCategoryBySlug(slug)
+}
+
+func (s *RealEstateService) GetProjectsByCategoryID(categoryID int64) ([]model.RealEstateProject, error) {
+	return s.repo.GetProjectsByCategoryID(categoryID)
+}
+
 func (s *RealEstateService) GetListWard(provinceCode string) ([]model.Ward, error) {
 	return s.repo.GetListWard(provinceCode)
 }
@@ -113,6 +131,7 @@ func (s *RealEstateService) GetUserByEmail(email string) (*model.User, error) {
 
 func (s *RealEstateService) CreateRealEstate(req dto.CreateRealEstateRequest, userID uint64) (uint64, error) {
 	var categoryID *int64
+	fmt.Println("type", req.RealEstateType)
 	if req.RealEstateType != "" {
 		if id, err := strconv.ParseInt(req.RealEstateType, 10, 64); err == nil {
 			categoryID = &id
@@ -148,6 +167,7 @@ func (s *RealEstateService) CreateRealEstate(req dto.CreateRealEstateRequest, us
 	}, " "))
 
 	estate := &model.RealEstate{
+		ProjectID:        req.ProjectID,
 		UserID:           &userID,
 		Title:            req.Title,
 		PriceVND:         priceVND,
@@ -237,4 +257,16 @@ func (s *RealEstateService) ToSlug(input string) string {
 
 func (s *RealEstateService) GenerateListingSlug(title string, id uint64) string {
 	return fmt.Sprintf("%s-rs%d", s.ToSlug(title), id)
+}
+
+func (s *RealEstateService) IncrementProjectView(id uint64) error {
+	return s.repo.IncrementProjectView(id)
+}
+
+func (s *RealEstateService) GetFeaturedProjects(limit int) ([]model.RealEstateProject, error) {
+	return s.repo.GetFeaturedProjects(limit)
+}
+
+func (s *RealEstateService) GetProjectByID(id uint64) (*model.RealEstateProject, error) {
+	return s.repo.GetProjectByID(id)
 }

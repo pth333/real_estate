@@ -1,5 +1,5 @@
 <template>
-  <div class="mx-auto max-w-[1000px] px-4 py-6">
+  <div class="mx-auto max-w-[1140px] px-3 py-4">
     <!-- Loading -->
     <SkeletonCard v-if="loading" />
 
@@ -10,169 +10,195 @@
     </div>
 
     <!-- Detail -->
-    <div v-else class="space-y-4">
+    <div v-else class="grid grid-cols-1 md:grid-cols-4 gap-5">
 
-      <!-- Gallery -->
-      <div class="overflow-hidden  bg-gray-100">
-        <!-- Main image -->
-        <div class="relative">
-          <img v-if="mainImage" :src="mainImage" :alt="listing.title" class="h-[420px] w-full object-cover" />
-          <div v-else class="flex h-[420px] w-full items-center justify-center bg-gray-200 text-gray-400">
-            Không có ảnh
-          </div>
-          <!-- Nav arrows -->
-          <template v-if="allImages.length > 1">
-            <button
-              class="absolute left-3 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center bg-white/80 shadow hover:bg-white"
-              @click="prevImage">
-              <IconChevronLeft class="h-5 w-5 text-gray-700" />
-            </button>
-            <button
-              class="absolute right-3 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center bg-white/80 shadow hover:bg-white"
-              @click="nextImage">
-              <IconChevronRight class="h-5 w-5 text-gray-700" />
-            </button>
-          </template>
-          <!-- Counter -->
-          <span v-if="allImages.length > 0"
-            class="absolute bottom-3 right-3 bg-black/50 px-2 py-0.5 text-xs text-white">
-            {{ activeImageIndex + 1 }} / {{ allImages.length }}
-          </span>
-        </div>
-
-        <!-- Thumbnails -->
-        <div v-if="allImages.length > 1" class="flex gap-2 bg-gray-800 p-2">
-          <button v-for="(img, i) in allImages" :key="i"
-            class="h-16 w-24 flex-shrink-0 overflow-hidden border-2 transition"
-            :class="activeImageIndex === i ? 'border-red-500' : 'border-transparent opacity-70 hover:opacity-100'"
-            @click="activeImageIndex = i">
-            <img :src="img" :alt="`Ảnh ${i + 1}`" class="h-full w-full object-cover" />
-          </button>
-        </div>
-      </div>
-
-      <!-- Breadcrumb -->
-      <nav class="text-xs text-emerald-600">
-        <span>Bán</span>
-        <span class="mx-1 text-gray-400">/</span>
-        <span>{{ listing.city }}</span>
-        <span v-if="listing.district">
-          <span class="mx-1 text-gray-400">/</span>
-          <span>{{ listing.district }}</span>
-        </span>
-      </nav>
-
-      <!-- Tiêu đề + Giá -->
-      <div class="border border-gray-200 bg-white p-5">
-        <h1 class="text-xl font-bold leading-snug text-gray-800">{{ listing.title }}</h1>
-
-        <!-- Địa chỉ -->
-        <p class="mt-2 flex items-start gap-1 text-sm">
-          <IconLocationOutline class="mt-0.5 h-4 w-4 flex-shrink-0 text-gray-500" />
-          <span class="text-gray-600">{{ listing.address }}</span>
-        </p>
-
-        <!-- Giá / Diện tích / Phòng ngủ -->
-        <div class="mt-4 flex flex-wrap items-end gap-6">
-          <div>
-            <p class="text-xs text-gray-500">Khoảng giá</p>
-            <p class="text-2xl font-bold text-gray-800">{{ formatPrice(listing.price_vnd) }}</p>
-            <p class="text-xs text-gray-500">{{ formatPricePerM2(listing.price_per_m2) }}</p>
-          </div>
-          <div>
-            <p class="text-xs text-gray-500">Diện tích</p>
-            <p class="text-lg font-bold text-gray-800">{{ listing.acreage.toFixed(0) }} m²</p>
-          </div>
-          <div v-if="listing.bedrooms">
-            <p class="text-xs text-gray-500">Phòng ngủ</p>
-            <p class="text-lg font-bold text-gray-800">{{ listing.bedrooms }} PN</p>
-          </div>
-          <!-- Action icons -->
-          <div class="ml-auto flex items-center gap-3 text-gray-400">
-            <button class="hover:text-emerald-500" @click="handleShare">
-              <IconShare />
-            </button>
-            <button class="hover:text-emerald-500">
-              <IconHeart />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Thông tin mô tả -->
-      <div v-if="listing.description" class="border border-gray-200 bg-white p-5">
-        <h2 class="mb-3 border-b border-gray-200 pb-2 text-base font-bold text-gray-800">
-          Thông tin mô tả
-        </h2>
-        <p class="whitespace-pre-line text-sm leading-relaxed text-gray-700">{{ listing.description }}</p>
-
-        <!-- Agent contact -->
-        <div v-if="listing.agent_phone" class="mt-4 flex flex-wrap items-center gap-2 text-sm text-gray-600">
-          <span>Liên hệ ngay để biết thêm thông tin chi tiết:</span>
-          <span class="font-medium text-gray-800">{{ maskedPhone }}</span>
-          <n-button size="small" type="primary" @click="showPhone = true">Hiện số</n-button>
-          <span v-if="listing.agent_name"> - {{ listing.agent_name }}</span>
-        </div>
-      </div>
-
-      <!-- Đặc điểm bất động sản -->
-      <div class=" border border-gray-200 bg-white p-5">
-        <h2 class="mb-4 border-b border-gray-200 pb-2 text-base font-bold text-gray-800">
-          Đặc điểm bất động sản
-        </h2>
-
-        <div class="grid grid-cols-1 gap-x-8 sm:grid-cols-2">
-          <template v-for="attr in attrs" :key="attr.label">
-            <div v-if="attr.value" class="flex items-center justify-between border-b border-gray-100 py-2.5">
-              <span class="flex items-center gap-2 text-sm text-gray-500">
-                <component :is="attr.icon" class="h-4 w-4 flex-shrink-0" />
-                {{ attr.label }}
-              </span>
-              <span class="text-sm font-medium text-gray-800">{{ attr.value }}</span>
+      <!-- Cột trái: Hình ảnh và thông tin chi tiết (md:col-span-3 - chiếm 75% độ rộng) -->
+      <div class="md:col-span-3 space-y-4">
+        <!-- Gallery -->
+        <div class="overflow-hidden rounded-lg border border-gray-200 bg-gray-100 shadow-sm">
+          <!-- Main image -->
+          <div class="relative">
+            <img v-if="mainImage" :src="mainImage" :alt="listing.title" class="h-[420px] w-full object-cover" />
+            <div v-else class="flex h-[420px] w-full items-center justify-center bg-gray-200 text-gray-400">
+              Không có ảnh
             </div>
-          </template>
-        </div>
-      </div>
+            <!-- Nav arrows -->
+            <template v-if="allImages.length > 1">
+              <button
+                class="absolute left-3 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center bg-white/80 shadow hover:bg-white rounded-full"
+                @click="prevImage">
+                <IconChevronLeft class="h-5 w-5 text-gray-700" />
+              </button>
+              <button
+                class="absolute right-3 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center bg-white/80 shadow hover:bg-white rounded-full"
+                @click="nextImage">
+                <IconChevronRight class="h-5 w-5 text-gray-700" />
+              </button>
+            </template>
+            <!-- Counter -->
+            <span v-if="allImages.length > 0"
+              class="absolute bottom-3 right-3 bg-black/50 px-2 py-0.5 text-xs text-white rounded">
+              {{ activeImageIndex + 1 }} / {{ allImages.length }}
+            </span>
+          </div>
 
-      <!-- Liên hệ -->
-      <div class=" border border-gray-200 bg-white p-5">
-        <h2 class="mb-3 border-b border-gray-200 pb-2 text-base font-bold text-gray-800">Liên hệ</h2>
-        <div class="flex items-center gap-3">
-          <div
-            class="flex h-12 w-12 flex-shrink-0 items-center justify-center bg-emerald-500 text-lg font-bold text-white">
-            {{ agentInitial }}
+          <!-- Thumbnails -->
+          <div v-if="allImages.length > 1" class="flex gap-2 bg-gray-800 p-2">
+            <button v-for="(img, i) in allImages" :key="i"
+              class="h-16 w-24 shrink-0 overflow-hidden border-2 transition rounded"
+              :class="activeImageIndex === i ? 'border-red-500' : 'border-transparent opacity-70 hover:opacity-100'"
+              @click="activeImageIndex = i">
+              <img :src="img" :alt="`Ảnh ${i + 1}`" class="h-full w-full object-cover" />
+            </button>
+          </div>
+        </div>
+
+        <!-- Breadcrumb -->
+        <nav class="text-xs text-emerald-600 px-1">
+          <span>Bán</span>
+          <span class="mx-1 text-gray-400">/</span>
+          <span>{{ listing.city }}</span>
+          <span v-if="listing.district">
+            <span class="mx-1 text-gray-400">/</span>
+            <span>{{ listing.district }}</span>
+          </span>
+        </nav>
+
+        <!-- Tiêu đề + Giá -->
+        <div class="border border-gray-200 bg-white rounded-lg p-4 shadow-sm">
+          <h1 class="text-xl font-bold leading-snug text-gray-800">{{ listing.title }}</h1>
+
+          <!-- Địa chỉ -->
+          <p class="mt-2 flex items-start gap-1 text-sm">
+            <IconLocationOutline class="mt-0.5 h-4 w-4 shrink-0 text-gray-500" />
+            <span class="text-gray-600">{{ listing.address }}</span>
+          </p>
+
+          <!-- Giá / Diện tích / Phòng ngủ -->
+          <div class="mt-4 flex flex-wrap items-end gap-6">
+            <div>
+              <p class="text-xs text-gray-500">Khoảng giá</p>
+              <p class="text-2xl font-bold text-gray-800">{{ formatPrice(listing.price_vnd) }}</p>
+              <p class="text-xs text-gray-500">{{ formatPricePerM2(listing.price_per_m2) }}</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500">Diện tích</p>
+              <p class="text-lg font-bold text-gray-800">{{ listing.acreage.toFixed(0) }} m²</p>
+            </div>
+            <div v-if="listing.bedrooms">
+              <p class="text-xs text-gray-500">Phòng ngủ</p>
+              <p class="text-lg font-bold text-gray-800">{{ listing.bedrooms }} PN</p>
+            </div>
+            <!-- Action icons -->
+            <div class="ml-auto flex items-center gap-3 text-gray-400">
+              <button class="hover:text-emerald-500" @click="handleShare">
+                <IconShare />
+              </button>
+              <button class="hover:text-emerald-500">
+                <IconHeart />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Thông tin mô tả -->
+        <div v-if="listing.description" class="border border-gray-200 bg-white rounded-lg p-4 shadow-sm">
+          <h2 class="mb-3 border-b border-gray-200 pb-2 text-base font-bold text-gray-800">
+            Thông tin mô tả
+          </h2>
+          <p class="whitespace-pre-line text-sm leading-relaxed text-gray-700">{{ listing.description }}</p>
+
+          <!-- Agent contact fallback for mobile -->
+          <div v-if="listing.agent_phone" class="mt-4 flex flex-wrap items-center gap-2 text-sm text-gray-600 sm:hidden">
+            <span>Liên hệ:</span>
+            <span class="font-medium text-gray-800">{{ maskedPhone }}</span>
+            <n-button size="small" type="primary" @click="showPhone = true">Hiện số</n-button>
+          </div>
+        </div>
+
+        <!-- Đặc điểm bất động sản (Dùng toàn bộ hệ thống icon mới cực đẹp) -->
+        <div class="border border-gray-200 bg-white rounded-lg p-4 shadow-sm">
+          <h2 class="mb-4 border-b border-gray-200 pb-2 text-base font-bold text-gray-800">
+            Đặc điểm bất động sản
+          </h2>
+
+          <div class="grid grid-cols-1 gap-x-8 sm:grid-cols-2">
+            <template v-for="attr in attrs" :key="attr.label">
+              <div v-if="attr.value" class="flex items-center justify-between border-b border-gray-100 py-2">
+                <span class="flex items-center gap-2 text-sm text-gray-500">
+                  <component :is="attr.icon" class="h-4 w-4 shrink-0" />
+                  {{ attr.label }}
+                </span>
+                <span class="text-sm font-medium text-gray-800">{{ attr.value }}</span>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Footer meta -->
+        <div class="grid grid-cols-2 gap-3 border border-gray-200 bg-white rounded-lg p-4 shadow-sm sm:grid-cols-3">
+          <div>
+            <p class="text-xs text-gray-500">Ngày đăng</p>
+            <p class="text-sm font-medium text-gray-800">{{ formatDate(listing.created_at) }}</p>
+          </div>
+          <div v-if="listing.badge">
+            <p class="text-xs text-gray-500">Loại tin</p>
+            <p class="text-sm font-medium text-gray-800">{{ listing.badge }}</p>
           </div>
           <div>
-            <p class="font-semibold text-gray-800">{{ listing.agent_name || 'Người đăng' }}</p>
-            <p v-if="listing.agent_phone" class="text-sm text-gray-500">{{ listing.agent_phone }}</p>
+            <p class="text-xs text-gray-500">Mã tin</p>
+            <p class="text-sm font-medium text-gray-800">{{ listing.id }}</p>
           </div>
-          <n-button v-if="listing.agent_phone" type="primary" class="ml-auto" @click="handleCall">
-            Gọi {{ listing.agent_phone }}
-          </n-button>
+          <div v-if="listing.source">
+            <p class="text-xs text-gray-500">Nguồn</p>
+            <a v-if="listing.source_url" :href="listing.source_url" target="_blank"
+              class="text-sm font-medium text-emerald-600 hover:underline">
+              {{ listing.source }}
+            </a>
+            <p v-else class="text-sm font-medium text-gray-800">{{ listing.source }}</p>
+          </div>
         </div>
       </div>
 
-      <!-- Footer meta -->
-      <div class="grid grid-cols-2 gap-3  border border-gray-200 bg-white p-5 sm:grid-cols-3">
-        <div>
-          <p class="text-xs text-gray-500">Ngày đăng</p>
-          <p class="text-sm font-medium text-gray-800">{{ formatDate(listing.created_at) }}</p>
-        </div>
-        <div v-if="listing.badge">
-          <p class="text-xs text-gray-500">Loại tin</p>
-          <p class="text-sm font-medium text-gray-800">{{ listing.badge }}</p>
-        </div>
-        <div>
-          <p class="text-xs text-gray-500">Mã tin</p>
-          <p class="text-sm font-medium text-gray-800">{{ listing.id }}</p>
-        </div>
-        <div v-if="listing.source">
-          <p class="text-xs text-gray-500">Nguồn</p>
-          <a v-if="listing.source_url" :href="listing.source_url" target="_blank"
-            class="text-sm font-medium text-emerald-600 hover:underline">
-            {{ listing.source }}
-          </a>
-          <p v-else class="text-sm font-medium text-gray-800">{{ listing.source }}</p>
+      <!-- Cột phải: Form liên hệ ghim cố định khi scroll (sticky - md:col-span-1 - chiếm 25% độ rộng) -->
+      <div class="md:col-span-1">
+        <div class="border border-gray-200 bg-white rounded-lg p-4 shadow-sm sticky top-6 space-y-4">
+          <h3 class="text-base font-bold text-gray-800 border-b border-gray-100 pb-2">Thông tin liên hệ</h3>
+
+          <!-- Người bán -->
+          <div class="flex items-center gap-2.5">
+            <div
+              class="flex h-11 w-11 shrink-0 items-center justify-center bg-emerald-50 rounded-full text-lg font-bold text-emerald-600 border border-emerald-100 shadow-sm">
+              {{ agentInitial }}
+            </div>
+            <div>
+              <p class="font-bold text-gray-900 text-sm leading-tight">{{ listing.agent_name || 'Người đăng' }}</p>
+              <p class="text-[11px] text-gray-400 mt-0.5">Thành viên môi giới uy tín</p>
+            </div>
+          </div>
+
+          <!-- SĐT và Hiện số -->
+          <div v-if="listing.agent_phone" class="space-y-2.5 pt-1">
+            <div class="bg-gray-50 border border-gray-100 p-2.5 rounded-lg flex items-center justify-between text-xs">
+              <span class="text-gray-400">Số điện thoại:</span>
+              <span class="font-bold text-gray-800 tracking-wide text-sm">{{ maskedPhone }}</span>
+            </div>
+
+            <n-button v-if="!showPhone" type="warning" ghost class="w-full h-10 text-xs font-medium rounded-md" @click="showPhone = true">
+              Hiện số điện thoại
+            </n-button>
+          </div>
+
+          <!-- Nút Gọi điện / Yêu cầu tư vấn -->
+          <div class="flex flex-col gap-2 pt-1">
+            <n-button v-slot:default v-if="listing.agent_phone" type="primary" class="w-full bg-emerald-600! hover:bg-emerald-700! font-semibold flex items-center justify-center gap-1.5 h-10 text-xs rounded-md" @click="handleCall">
+              <IconPhone class="h-4 w-4 shrink-0" />
+              Yêu cầu gọi lại tư vấn
+            </n-button>
+            <n-button ghost class="w-full text-gray-700 border-gray-300 font-medium h-10 text-xs rounded-md" @click="handleShare">
+              Chia sẻ tin đăng này
+            </n-button>
+          </div>
         </div>
       </div>
 
@@ -181,10 +207,6 @@
 </template>
 
 <script setup lang="ts">
-import IconArea from '~/icons/IconArea.vue';
-import IconBath from '~/icons/IconBath.vue';
-import IconBed from '~/icons/IconBed.vue';
-import IconPrice from '~/icons/IconPrice.vue';
 import type { RealEstateResponse } from '~/types/real_estate';
 import { formatPrice, formatPricePerM2, formatDate } from '~/utils/format';
 
@@ -234,25 +256,25 @@ const AMENITY_LABELS: Record<string, string> = {
   camera: 'Camera', bao_ve: 'Bảo vệ', pccc: 'PCCC',
 };
 
-// Chỉ dùng các field có trong RealEstateResponse
+// Chi tiết đặc điểm (Tất cả icon tự động Auto Import bởi Nuxt 3/4)
 const attrs = computed(() => {
   const l = listing.value;
   if (!l) return [];
   return [
-    { label: 'Khoảng giá', icon: IconPrice, value: formatPrice(l.price_vnd) },
-    { label: 'Giá/m²', icon: IconPrice, value: formatPricePerM2(l.price_per_m2) },
-    { label: 'Diện tích', icon: IconArea, value: `${l.acreage} m²` },
-    { label: 'Số phòng ngủ', icon: IconBed, value: l.bedrooms ? `${l.bedrooms} phòng` : '' },
-    { label: 'Số phòng tắm, vệ sinh', icon: IconBath, value: l.bathrooms ? `${l.bathrooms} phòng` : '' },
-    { label: 'Số tầng', icon: IconArea, value: l.floors ? `${l.floors} tầng` : '' },
-    { label: 'Hướng nhà', icon: IconArea, value: l.house_direction ? DIRECTION_LABELS[l.house_direction] ?? l.house_direction : '' },
-    { label: 'Hướng ban công', icon: IconArea, value: l.balcony_direction ? DIRECTION_LABELS[l.balcony_direction] ?? l.balcony_direction : '' },
-    { label: 'Pháp lý', icon: IconArea, value: l.legal_docs ? LEGAL_DOC_LABELS[l.legal_docs] ?? l.legal_docs : '' },
-    { label: 'Nội thất', icon: IconArea, value: l.interior ? INTERIOR_LABELS[l.interior] ?? l.interior : '' },
-    { label: 'Giá điện', icon: IconArea, value: l.price_electricity ? `${formatNumber(l.price_electricity)} đ/kWh` : '' },
-    { label: 'Giá nước', icon: IconArea, value: l.price_water ? `${formatNumber(l.price_water)} đ/m³` : '' },
-    { label: 'Giá internet', icon: IconArea, value: l.price_internet ? `${formatNumber(l.price_internet)} đ/tháng` : '' },
-    { label: 'Tiện ích', icon: IconArea, value: l.amenities?.length ? l.amenities.map((a) => AMENITY_LABELS[a] ?? a).join(', ') : '' },
+    { label: 'Khoảng giá', icon: 'IconPrice', value: formatPrice(l.price_vnd) },
+    { label: 'Giá/m²', icon: 'IconPrice', value: formatPricePerM2(l.price_per_m2) },
+    { label: 'Diện tích', icon: 'IconArea', value: `${l.acreage} m²` },
+    { label: 'Số phòng ngủ', icon: 'IconBed', value: l.bedrooms ? `${l.bedrooms} phòng` : '' },
+    { label: 'Số phòng tắm, vệ sinh', icon: 'IconBath', value: l.bathrooms ? `${l.bathrooms} phòng` : '' },
+    { label: 'Số tầng', icon: 'IconBuilding', value: l.floors ? `${l.floors} tầng` : '' },
+    { label: 'Hướng nhà', icon: 'IconCompass', value: l.house_direction ? DIRECTION_LABELS[l.house_direction] ?? l.house_direction : '' },
+    { label: 'Hướng ban công', icon: 'IconBalcony', value: l.balcony_direction ? DIRECTION_LABELS[l.balcony_direction] ?? l.balcony_direction : '' },
+    { label: 'Pháp lý', icon: 'IconShieldCheck', value: l.legal_docs ? LEGAL_DOC_LABELS[l.legal_docs] ?? l.legal_docs : '' },
+    { label: 'Nội thất', icon: 'IconSofa', value: l.interior ? INTERIOR_LABELS[l.interior] ?? l.interior : '' },
+    { label: 'Giá điện', icon: 'IconZap', value: l.price_electricity ? `${formatNumber(l.price_electricity)} đ/kWh` : '' },
+    { label: 'Giá nước', icon: 'IconDroplet', value: l.price_water ? `${formatNumber(l.price_water)} đ/m³` : '' },
+    { label: 'Giá internet', icon: 'IconWifi', value: l.price_internet ? `${formatNumber(l.price_internet)} đ/tháng` : '' },
+    { label: 'Tiện ích', icon: 'IconSparkles', value: l.amenities?.length ? l.amenities.map((a) => AMENITY_LABELS[a] ?? a).join(', ') : '' },
   ];
 });
 

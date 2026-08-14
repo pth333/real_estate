@@ -8,5 +8,6 @@ export interface Category {
   ID: number;
   Name: string;
   Slug: string;
+  Type?: string;
   children?: Category[];
 }

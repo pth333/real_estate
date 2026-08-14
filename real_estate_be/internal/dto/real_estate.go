@@ -70,6 +70,25 @@ type ProvinceResponse struct {
 	Code string `json:"code"`
 }
 
+type ProjectResponse struct {
+	ID          uint64   `json:"id"`
+	Name        string   `json:"name"`
+	Slug        string   `json:"slug,omitempty"`
+	Status      string   `json:"status,omitempty"`
+	FullAddress string   `json:"full_address,omitempty"`
+	TotalAreaHA *float64 `json:"total_area_ha,omitempty"`
+	TotalUnits  *uint32  `json:"total_units,omitempty"`
+	PriceMin    *float64 `json:"price_min,omitempty"`
+	PriceMax    *float64 `json:"price_max,omitempty"`
+	ViewCount   uint32   `json:"view_count"`
+	Thumbnail   string   `json:"thumbnail,omitempty"`
+}
+
+type ListProjectRequest struct {
+	Province string `json:"province"`
+	Ward     string `json:"ward"`
+}
+
 // TopCityResponse — 1 thành phố trong danh sách "Bất động sản theo khu vực"
 // CategorySlug: category đầu tiên trong menu; CitySlug: tên thành phố đã slug hóa.
 // FE ghép → /{CategorySlug}/{CitySlug} để server-driven.
@@ -87,6 +106,7 @@ type CreateRealEstateRequest struct {
 	Province         string   `json:"province"`
 	Ward             string   `json:"ward"`
 	DetailAddress    string   `json:"detail_address"`
+	ProjectID        *uint64  `json:"project_id"`
 	RealEstateType   string   `json:"real_estate_type"`
 	Area             float64  `json:"area"`
 	Price            float64  `json:"price"`

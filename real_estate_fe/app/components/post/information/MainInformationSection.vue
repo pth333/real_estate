@@ -30,7 +30,7 @@
                 </n-input-number>
                 <span v-if="postStore.errorsMainInfo.area" class="text-xs text-red-500 mt-1 block">{{
                     postStore.errorsMainInfo.area
-                }}</span>
+                    }}</span>
             </div>
             <div class="flex gap-2 items-start">
                 <!-- Mức giá -->
@@ -43,7 +43,7 @@
                         @update:modelValue="clearError('price')" />
                     <span v-if="postStore.errorsMainInfo.price" class="text-xs text-red-500 mt-1 block">{{
                         postStore.errorsMainInfo.price
-                    }}</span>
+                        }}</span>
                     <span v-if="postStore.form.price && postStore.form.area" class="text-xs mt-1">
                         {{ formatTotalValue(postStore.form.price, postStore.form.area, postStore.form.unit) }}
                     </span>
@@ -59,7 +59,7 @@
                         @update:value="clearError('unit')" />
                     <span v-if="postStore.errorsMainInfo.unit" class="text-xs text-red-500 mt-1 block">{{
                         postStore.errorsMainInfo.unit
-                    }}</span>
+                        }}</span>
                 </div>
 
             </div>
@@ -74,7 +74,39 @@ import type { OptionTypeRealestate } from '~/types/real_estate'
 const postStore = useCreatePost()
 const { $api } = useNuxtApp()
 const collapsed = ref(false)
-const realEstateTypes = ref<SelectOption[]>([])
+const rawRealEstateTypes = ref<OptionTypeRealestate[]>([])
+
+const realEstateTypes = computed<SelectOption[]>(() => {
+
+    if (postStore.form.listingType === 'sell') {
+        return rawRealEstateTypes.value
+            .filter(item => item.name.toLowerCase().includes('bán'))
+            .map(item => {
+
+                const normalizedName = item.name.replace(/^(Bán)\s+/i, '').trim()
+                const capitalizedName = normalizedName.charAt(0).toUpperCase() + normalizedName.slice(1)
+                return {
+                    label: capitalizedName,
+                    //sử dụng cho phần ai
+                    value: `${item.id}-${item.name}`
+                }
+            })
+    }
+    if (postStore.form.listingType === 'rent') {
+        return rawRealEstateTypes.value
+            .filter(item => item.name.toLowerCase().includes('cho thuê'))
+            .map(item => {
+                // Chỉ cắt chữ "Cho thuê" nếu nó nằm ở ĐẦU TÊN loại
+                const normalizedName = item.name.replace(/^(Cho thuê)\s+/i, '').trim()
+                const capitalizedName = normalizedName.charAt(0).toUpperCase() + normalizedName.slice(1)
+                return {
+                    label: capitalizedName,
+                    value: `${item.id}-${item.name}`
+                }
+            })
+    }
+    return []
+})
 
 // Ô nhập giá dùng NumberFormatInput (auto-import từ common/):
 // gõ là format dấu chấm ngay, emit số thực về store qua v-model.
@@ -106,22 +138,17 @@ const clearError = (field: keyof typeof postStore.errorsMainInfo) => {
 
 const fetchRealEstateTypes = async () => {
     try {
-
         const response = await $api.get<{ data: OptionTypeRealestate[] }>('/real-estate/list/types')
-        realEstateTypes.value = response.data.map((item) => {
-            const normalizedName = item.name.replace('Bán', '').trim()
-            const capitalizedName = normalizedName.charAt(0).toUpperCase() + normalizedName.slice(1)
-            return {
-                label: capitalizedName,
-                value: `${item.id}-${item.name}`,
-            }
-        })
+        rawRealEstateTypes.value = response.data
+
     } catch (error) {
         console.error('Error fetching real estate types:', error)
     }
 }
 
-
+watch(() => postStore.form.listingType, () => {
+    postStore.form.real_estate_type = null
+})
 onMounted(() => {
     fetchRealEstateTypes()
 })

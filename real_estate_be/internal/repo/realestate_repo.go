@@ -3,6 +3,7 @@ package repo
 import (
 	"encoding/json"
 	"errors"
+	"strconv"
 	"strings"
 
 	"real_estate_be/internal/dto"
@@ -37,6 +38,8 @@ type RealEstateRepository interface {
 	GetList(req dto.RealEstateSearchRequest, offset, limit int) ([]dto.RealEstateResponse, int64, error)
 	GetListByCategory(offset int, req dto.RealEstateSearchRequest, limit int) ([]dto.RealEstateResponse, int64, error)
 	GetListCity() ([]model.Province, error)
+	GetListProject(provinceCode, wardCode string) ([]model.RealEstateProject, error)
+	GetProjectsByCategoryID(categoryID int64) ([]model.RealEstateProject, error)
 	GetListWard(provinceCode string) ([]model.Ward, error)
 	GetListRealEstateTypes() ([]model.Category, error)
 	// Lấy tên tỉnh/thành từ code (VD "79" → "Hồ Chí Minh")
@@ -53,6 +56,9 @@ type RealEstateRepository interface {
 	GetByID(id uint64) (*dto.RealEstateResponse, error)
 	GetCategory() ([]model.Category, error)
 	GetProvinceBySlug(city string) (string, error)
+	IncrementProjectView(id uint64) error
+	GetFeaturedProjects(limit int) ([]model.RealEstateProject, error)
+	GetProjectByID(id uint64) (*model.RealEstateProject, error)
 }
 
 func NewRealEstateRepository(db *gorm.DB) RealEstateRepository {
@@ -274,6 +280,36 @@ func (r *realEstateRepo) GetListCity() ([]model.Province, error) {
 	return provinces, nil
 }
 
+func (r *realEstateRepo) GetListProject(provinceCode, wardCode string) ([]model.RealEstateProject, error) {
+	var projects []model.RealEstateProject
+	query := r.db.Select("id, name").Model(&model.RealEstateProject{})
+
+	// Lọc theo mã tỉnh/thành (VD "79" → province_id = 79)
+	if provinceID, err := strconv.ParseUint(provinceCode, 10, 64); err == nil && provinceCode != "" {
+		query = query.Where("province_id = ?", provinceID)
+	}
+
+	// Lọc theo mã phường/xã (VD "27184" → ward_id = 27184)
+	if wardID, err := strconv.ParseUint(wardCode, 10, 64); err == nil && wardCode != "" {
+		query = query.Where("ward_id = ?", wardID)
+	}
+
+	if err := query.Find(&projects).Error; err != nil {
+		return nil, err
+	}
+	return projects, nil
+}
+
+func (r *realEstateRepo) GetProjectsByCategoryID(categoryID int64) ([]model.RealEstateProject, error) {
+	var projects []model.RealEstateProject
+	// Lấy trực tiếp dự án có category_id khớp với danh mục dự án được chọn trên menu
+	err := r.db.Where("category_id = ?", categoryID).Find(&projects).Error
+	if err != nil {
+		return nil, err
+	}
+	return projects, nil
+}
+
 func (r *realEstateRepo) GetListWard(provinceCode string) ([]model.Ward, error) {
 	var wards []model.Ward
 	result := r.db.Where("province_code = ?", provinceCode).
@@ -405,4 +441,29 @@ func (r *realEstateRepo) GetFilterRangeBySlug(slug string) (*model.FilterRange, 
 		return nil, err
 	}
 	return &f, nil
+}
+
+func (r *realEstateRepo) IncrementProjectView(id uint64) error {
+	return r.db.Model(&model.RealEstateProject{}).
+		Where("id = ?", id).
+		UpdateColumn("view_count", gorm.Expr("view_count + 1")).Error
+}
+
+func (r *realEstateRepo) GetFeaturedProjects(limit int) ([]model.RealEstateProject, error) {
+	var projects []model.RealEstateProject
+	err := r.db.Model(&model.RealEstateProject{}).
+		Order("view_count DESC, id DESC").
+		Limit(limit).
+		Find(&projects).Error
+	return projects, err
+}
+
+
+func (r *realEstateRepo) GetProjectByID(id uint64) (*model.RealEstateProject, error) {
+	var project model.RealEstateProject
+	err := r.db.Model(&model.RealEstateProject{}).Where("id = ?", id).First(&project).Error
+	if err != nil {
+		return nil, err
+	}
+	return &project, nil
 }

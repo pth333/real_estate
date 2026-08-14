@@ -271,6 +271,30 @@ func (h *RealEstateHandler) ListCity(c *fiber.Ctx) error {
 	})
 }
 
+func (h *RealEstateHandler) ListProject(c *fiber.Ctx) error {
+	provinceCode := c.Query("province")
+	wardCode := c.Query("ward")
+
+	projects, err := h.service.GetListProject(provinceCode, wardCode)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	options := make([]dto.ProjectResponse, len(projects))
+	for i, project := range projects {
+		options[i] = dto.ProjectResponse{
+			ID:   project.ID,
+			Name: project.Name,
+		}
+	}
+
+	return c.JSON(fiber.Map{
+		"data": options,
+	})
+}
+
 func (h *RealEstateHandler) ListWard(c *fiber.Ctx) error {
 	provinceCode := c.Query("code")
 	if provinceCode == "" {
@@ -344,5 +368,139 @@ func (h *RealEstateHandler) CreatePost(c *fiber.Ctx) error {
 
 	return response.Created(c, "Tạo tin đăng thành công", fiber.Map{
 		"id": id,
+	})
+}
+
+func (h *RealEstateHandler) ListProjectsByProjectCategory(c *fiber.Ctx) error {
+	categorySlug := c.Params("category_slug")
+	if categorySlug == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Missing category slug",
+		})
+	}
+
+	category, err := h.service.GetCategoryBySlug(categorySlug)
+	if err != nil || category == nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Không tìm thấy danh mục",
+		})
+	}
+
+	projects, err := h.service.GetProjectsByCategoryID(category.ID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	options := make([]dto.ProjectResponse, len(projects))
+	for i, project := range projects {
+		options[i] = dto.ProjectResponse{
+				ID:          project.ID,
+				Name:        project.Name,
+				Slug:        project.Slug,
+				Status:      project.Status,
+				FullAddress: project.FullAddress,
+				TotalAreaHA: project.TotalAreaHA,
+				TotalUnits:  project.TotalUnits,
+				PriceMin:    project.PriceMin,
+				PriceMax:    project.PriceMax,
+				ViewCount:   uint32(project.ViewCount),
+			}
+	}
+
+	return c.JSON(fiber.Map{
+		"data": options,
+	})
+}
+
+func (h *RealEstateHandler) IncrementProjectView(c *fiber.Ctx) error {
+	raw := c.Params("id")
+	id, err := strconv.ParseUint(raw, 10, 64)
+	if err != nil || id == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid project id",
+		})
+	}
+
+	err = h.service.IncrementProjectView(id)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "Incremented project view count successfully",
+	})
+}
+
+func (h *RealEstateHandler) ListFeaturedProjects(c *fiber.Ctx) error {
+	limitStr := c.Query("limit", "10")
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit <= 0 {
+		limit = 10
+	}
+
+	projects, err := h.service.GetFeaturedProjects(limit)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	options := make([]dto.ProjectResponse, len(projects))
+	for i, project := range projects {
+		options[i] = dto.ProjectResponse{
+				ID:          project.ID,
+				Name:        project.Name,
+				Slug:        project.Slug,
+				Status:      project.Status,
+				FullAddress: project.FullAddress,
+				TotalAreaHA: project.TotalAreaHA,
+				TotalUnits:  project.TotalUnits,
+				PriceMin:    project.PriceMin,
+				PriceMax:    project.PriceMax,
+				ViewCount:   uint32(project.ViewCount),
+			}
+	}
+
+	return c.JSON(fiber.Map{
+		"data": options,
+	})
+}
+
+
+func (h *RealEstateHandler) GetProjectDetail(c *fiber.Ctx) error {
+	raw := c.Params("id")
+	id, err := strconv.ParseUint(raw, 10, 64)
+	if err != nil || id == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid project id",
+		})
+	}
+
+	project, err := h.service.GetProjectByID(id)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"message": "Project not found",
+		})
+	}
+
+	res := dto.ProjectResponse{
+		ID:          project.ID,
+		Name:        project.Name,
+		Slug:        project.Slug,
+		Status:      project.Status,
+		FullAddress: project.FullAddress,
+		TotalAreaHA: project.TotalAreaHA,
+		TotalUnits:  project.TotalUnits,
+		PriceMin:    project.PriceMin,
+		PriceMax:    project.PriceMax,
+		ViewCount:   uint32(project.ViewCount),
+	}
+
+	return c.JSON(fiber.Map{
+		"data": res,
 	})
 }

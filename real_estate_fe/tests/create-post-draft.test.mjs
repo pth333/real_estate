@@ -23,6 +23,7 @@ const sampleForm = {
   province: "79",
   ward: "76049",
   detail_address: "123 Lê Lợi",
+  project_id: 45,
   real_estate_type: "12-CanHo",
   area: 80,
   price: 100_000_000,
@@ -69,6 +70,7 @@ test("saveDraft lưu form vào localStorage dưới đúng key", () => {
   const parsed = JSON.parse(raw);
   assert.equal(parsed.form.title, sampleForm.title);
   assert.equal(parsed.form.province, "79");
+  assert.equal(parsed.form.project_id, 45);
   assert.deepEqual(parsed.form.images, sampleForm.images);
   assert.ok(parsed.savedAt, "phải lưu kèm mốc thời gian savedAt");
 });
@@ -79,6 +81,7 @@ test("loadDraft trả về form đúng dữ liệu đã lưu (gồm images với
   const loaded = loadDraft();
   assert.ok(loaded, "loadDraft phải trả về form");
   assert.equal(loaded.title, sampleForm.title);
+  assert.equal(loaded.project_id, 45);
   assert.deepEqual(loaded.amenities, ["Hồ bơi", "Thang máy"]);
   assert.equal(loaded.images.length, 2);
   assert.equal(loaded.images[1].fileType, "video");

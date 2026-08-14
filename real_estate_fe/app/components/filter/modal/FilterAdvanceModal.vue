@@ -21,7 +21,7 @@
       <!-- Khu vực / Khoảng giá / Diện tích (dạng ô input) -->
       <div v-for="field in inputFields" :key="field.label">
         <div class="text-sm font-semibold mb-2">{{ field.label }}</div>
-        <div class="flex items-center justify-between w-full px-3 py-2.5 border border-gray-300 bg-white cursor-pointer hover:border-emerald-400 transition-colors"
+        <div class="flex items-center justify-between w-full px-3 py-2.5 border border-gray-300 rounded-md bg-white cursor-pointer hover:border-emerald-400 transition-colors"
           @click="filterStore.screen = field.screen">
           <span class="text-sm" :class="field.isDefault ? 'text-gray-400' : 'text-gray-800'">{{ field.value }}</span>
           <IconChevronRight class="h-4 w-4 text-gray-400 shrink-0" />
@@ -34,7 +34,7 @@
         <div class="text-sm font-semibold mb-3">Số phòng ngủ</div>
         <div class="flex gap-2 flex-wrap">
           <button v-for="opt in roomOptions" :key="opt.value"
-            class="px-4 py-1.5 border text-sm transition-colors" :class="filterStore.filters.bedrooms === opt.value
+            class="px-4 py-1.5 border rounded-md text-sm transition-colors" :class="filterStore.filters.bedrooms === opt.value
               ? 'bg-red-500 text-white border-red-500'
               : 'bg-white text-gray-700 border-gray-300 hover:border-emerald-400'"
             @click="toggleSingle('bedrooms', opt.value)">
@@ -49,7 +49,7 @@
         <div class="text-sm font-semibold mb-3">Số phòng tắm, vệ sinh</div>
         <div class="flex gap-2 flex-wrap">
           <button v-for="opt in roomOptions" :key="opt.value"
-            class="px-4 py-1.5 border text-sm transition-colors" :class="filterStore.filters.bathrooms === opt.value
+            class="px-4 py-1.5 border rounded-md text-sm transition-colors" :class="filterStore.filters.bathrooms === opt.value
               ? 'bg-red-500 text-white border-red-500'
               : 'bg-white text-gray-700 border-gray-300 hover:border-emerald-400'"
             @click="toggleSingle('bathrooms', opt.value)">
@@ -64,7 +64,7 @@
         <div class="text-sm font-semibold mb-3">Hướng nhà</div>
         <div class="flex gap-2 flex-wrap">
           <button v-for="opt in directionOptions" :key="opt.value"
-            class="px-3 py-1.5 border text-sm transition-colors" :class="filterStore.filters.house_direction === opt.value
+            class="px-3 py-1.5 border rounded-md text-sm transition-colors" :class="filterStore.filters.house_direction === opt.value
               ? 'bg-red-500 text-white border-red-500'
               : 'bg-white text-gray-700 border-gray-300 hover:border-emerald-400'"
             @click="toggleSingle('house_direction', opt.value)">
@@ -79,7 +79,7 @@
         <div class="text-sm font-semibold mb-3">Hướng ban công</div>
         <div class="flex gap-2 flex-wrap">
           <button v-for="opt in directionOptions" :key="opt.value"
-            class="px-3 py-1.5 border text-sm transition-colors" :class="filterStore.filters.balcony_direction === opt.value
+            class="px-3 py-1.5 border rounded-md text-sm transition-colors" :class="filterStore.filters.balcony_direction === opt.value
               ? 'bg-red-500 text-white border-red-500'
               : 'bg-white text-gray-700 border-gray-300 hover:border-emerald-400'"
             @click="toggleSingle('balcony_direction', opt.value)">
@@ -94,7 +94,7 @@
         <div class="text-sm font-semibold mb-3">Pháp lý</div>
         <div class="flex gap-2 flex-wrap">
           <button v-for="opt in legalOptions" :key="opt.value"
-            class="px-3 py-1.5 border text-sm transition-colors" :class="filterStore.filters.legal_docs === opt.value
+            class="px-3 py-1.5 border rounded-md text-sm transition-colors" :class="filterStore.filters.legal_docs === opt.value
               ? 'bg-red-500 text-white border-red-500'
               : 'bg-white text-gray-700 border-gray-300 hover:border-emerald-400'"
             @click="toggleSingle('legal_docs', opt.value)">
@@ -109,7 +109,7 @@
         <div class="text-sm font-semibold mb-3">Nội thất</div>
         <div class="flex gap-2 flex-wrap">
           <button v-for="opt in interiorOptions" :key="opt.value"
-            class="px-3 py-1.5 border text-sm transition-colors" :class="filterStore.filters.interior === opt.value
+            class="px-3 py-1.5 border rounded-md text-sm transition-colors" :class="filterStore.filters.interior === opt.value
               ? 'bg-red-500 text-white border-red-500'
               : 'bg-white text-gray-700 border-gray-300 hover:border-emerald-400'"
             @click="toggleSingle('interior', opt.value)">
@@ -281,7 +281,7 @@ const handleApply = () => {
 
   realEstateStore.currentPage = 0;
   const catSlug: string = realEstateStore.categorySlug || (Array.isArray(route.params.category) ? route.params.category[0] ?? "" : route.params.category ?? "");
-
+  console.log(filterStore.filters.city)
   const url = buildListUrl(
     catSlug,
     filterStore.filters,

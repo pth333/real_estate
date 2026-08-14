@@ -13,6 +13,7 @@ type CategoryRepository struct {
 type ICategoryRepository interface {
 	GetAll() ([]model.Category, error)
 	GetCategoryIdBySlug(slug string) (int64, error)
+	GetCategoryBySlug(slug string) (*model.Category, error)
 }
 
 func NewCategoryRepository(db *gorm.DB) ICategoryRepository {
@@ -38,4 +39,12 @@ func (r *CategoryRepository) GetCategoryIdBySlug(slug string) (int64, error) {
 		return 0, err
 	}
 	return id, nil
+}
+
+func (r *CategoryRepository) GetCategoryBySlug(slug string) (*model.Category, error) {
+	var category model.Category
+	if err := r.db.Where("slug = ?", slug).First(&category).Error; err != nil {
+		return nil, err
+	}
+	return &category, nil
 }

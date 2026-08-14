@@ -21,6 +21,7 @@ type RealEstate struct {
 	PricePerM2 float64 `gorm:"column:price_per_m2"`
 
 	CategoryID *int64 `gorm:"column:category_id"`
+	ProjectID  *uint64 `gorm:"column:project_id;index" json:"project_id"`
 
 	Description string `gorm:"column:description;type:text"`
 	Bedrooms    *int   `gorm:"column:bedrooms"`

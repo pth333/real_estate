@@ -1,6 +1,5 @@
 <template>
   <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M4 5a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5z" />
-    <path d="M9 4v16M15 4v16M4 9h16M4 15h16" />
+    <path d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0z" />
   </svg>
 </template>

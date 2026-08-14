@@ -16,6 +16,7 @@ type RealEstateProject struct {
 	Name           string `gorm:"column:name;index"`
 	Slug           string `gorm:"column:slug;uniqueIndex"`
 	AlternativeName string `gorm:"column:alternative_name"`
+	CategoryID     *int64 `gorm:"column:category_id;index" json:"category_id"` // Liên kết với danh mục dự án trên Menu
 
 	// Trạng thái dự án
 	Status string `gorm:"column:status;index"`

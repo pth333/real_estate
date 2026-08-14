@@ -4,7 +4,7 @@
         <h1 class="text-lg font-bold text-gray-600 mb-4">Bất động sản theo địa điểm</h1>
 
         <div class="flex gap-3" style="height: 360px;">
-            <div class="relative overflow-hidden cursor-pointer group shrink-0" style="flex: 0 0 45%;"
+            <div class="relative overflow-hidden rounded-lg cursor-pointer group shrink-0" style="flex: 0 0 45%;"
                 @click="goToCity(featured)">
                 <img :src="featured?.image" :alt="featured?.name"
                     class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
@@ -17,7 +17,7 @@
 
             <div class="flex-1 grid grid-cols-2 grid-rows-2 gap-3">
                 <div v-for="location in restLocations" :key="location.id"
-                    class="relative  overflow-hidden cursor-pointer group">
+                    class="relative overflow-hidden rounded-lg cursor-pointer group">
                     <div @click="goToCity(location)" class="w-full h-full">
                         <img :src="location.image" :alt="location.name"
                             class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />

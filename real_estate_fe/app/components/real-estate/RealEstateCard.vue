@@ -1,13 +1,13 @@
 <template>
-  <div class="group relative bg-white shadow-sm transition-shadow duration-300 hover:shadow-md">
+  <div class="group relative bg-white rounded-lg border border-gray-100 shadow-sm transition-shadow duration-300 hover:shadow-md overflow-hidden">
     <!-- Badge VIP -->
     <div v-if="estate.badge"
-      class="absolute left-3 top-3 z-10 bg-red-600 px-3 py-1 text-xs font-bold uppercase text-white">
+      class="absolute left-3 top-3 z-10 bg-red-600 px-3 py-1 text-xs font-bold uppercase text-white rounded">
       {{ estate.badge }}
     </div>
 
     <!-- Grid ảnh: cột trái ảnh chính lớn, cột phải grid 2x2 -->
-    <div class="grid h-80 grid-cols-[2fr_1fr] gap-0.5 bg-gray-100 overflow-hidden">
+    <div class="grid h-80 grid-cols-[2fr_1fr] gap-0.5 bg-gray-100 overflow-hidden rounded-t-lg">
       <div class="overflow-hidden">
         <img :src="mainImage" :alt="estate.title" class="h-full w-full object-cover" @error="handleImageError" />
       </div>
@@ -67,7 +67,7 @@
       <!-- Footer -->
       <div class="flex items-center justify-between border-t border-gray-200 pt-3">
         <div class="flex items-center gap-2">
-          <div class="flex h-10 w-10 items-center justify-center bg-emerald-500 text-lg font-bold text-white">
+          <div class="flex h-10 w-10 items-center justify-center bg-emerald-500 rounded-full text-lg font-bold text-white">
             {{ agentInitial }}
           </div>
           <div>
@@ -78,12 +78,12 @@
 
         <div class="flex gap-2">
           <button v-if="estate.agent_phone"
-            class="flex cursor-pointer items-center gap-1.5 bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600"
+            class="flex cursor-pointer items-center gap-1.5 bg-emerald-500 px-4 py-2 rounded-md text-sm font-semibold text-white transition hover:bg-emerald-600"
             @click="handleCall">
             <IconPhone /> {{ formattedPhone }}
           </button>
           <button
-            class="flex h-10 w-10 cursor-pointer items-center justify-center border-2 border-gray-300 bg-transparent transition hover:border-emerald-500"
+            class="flex h-10 w-10 cursor-pointer items-center justify-center border-2 border-gray-300 rounded-md bg-transparent transition hover:border-emerald-500"
             :class="{ 'border-red-500 bg-red-500 text-white': isFavorite }" @click="handleToggleFavorite">
             <IconHeart />
           </button>

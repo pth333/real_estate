@@ -142,6 +142,7 @@ const prevPage = () => {
 const isSubmitting = ref(false)
 
 const submitCreatePost = async () => {
+    if (!uploadComponent.value.validateImageCount()) return
     isSubmitting.value = true
     try {
         const res = await $api.post<{ success: boolean; message?: string; data?: { id: number } }>(

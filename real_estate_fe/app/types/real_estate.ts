@@ -105,6 +105,7 @@ export class InformationRealestate {
   province: string | null = null;
   ward: string | null = null;
   detail_address: string | null = null;
+  project_id: number | null = null;
 
   // Thông tin chính
   real_estate_type: string | null = null;
@@ -177,3 +178,9 @@ export interface UploadedMediaItem {
   name: string;
   type: string;
 }
+
+export interface ProjectOption {
+  id: number;
+  name: string;
+}
+
