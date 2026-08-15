@@ -31,7 +31,9 @@ func InitRealEstateRoutes(Router fiber.Router) {
 		realEstateRouter.Get("/list/types", realEstateHandler.ListRealEstateTypes)
 
 		realEstateRouter.Get("/project-category/:category_slug", realEstateHandler.ListProjectsByProjectCategory)
+
 		realEstateRouter.Post("/project/view/:id", realEstateHandler.IncrementProjectView)
+
 		realEstateRouter.Get("/project/detail/:id", realEstateHandler.GetProjectDetail)
 
 		realEstateRouter.Get("/detail/:id", realEstateHandler.Detail)

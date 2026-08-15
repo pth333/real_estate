@@ -407,7 +407,7 @@ func (r *realEstateRepo) GetTopCityByCount(limit int) ([]model.CityStat, error) 
 func (r *realEstateRepo) GetCategory() ([]model.Category, error) {
 	var categories []model.Category
 
-	if err := r.db.Find(&categories).Error; err != nil {
+	if err := r.db.Select("slug").Find(&categories).Error; err != nil {
 		return nil, err
 	}
 
@@ -457,7 +457,6 @@ func (r *realEstateRepo) GetFeaturedProjects(limit int) ([]model.RealEstateProje
 		Find(&projects).Error
 	return projects, err
 }
-
 
 func (r *realEstateRepo) GetProjectByID(id uint64) (*model.RealEstateProject, error) {
 	var project model.RealEstateProject

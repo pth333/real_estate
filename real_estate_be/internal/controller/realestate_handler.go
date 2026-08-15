@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"encoding/json"
+	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -136,6 +138,9 @@ func (h *RealEstateHandler) ListBySEOURL(c *fiber.Ctx) error {
 	}
 	req.Page = page
 	req.Size = size
+
+	jsonData, err := json.Marshal(req)
+	fmt.Println("Data: ", string(jsonData))
 
 	data, total, err := h.service.ListRealEstateByCategory(req)
 	if err != nil {
@@ -396,17 +401,17 @@ func (h *RealEstateHandler) ListProjectsByProjectCategory(c *fiber.Ctx) error {
 	options := make([]dto.ProjectResponse, len(projects))
 	for i, project := range projects {
 		options[i] = dto.ProjectResponse{
-				ID:          project.ID,
-				Name:        project.Name,
-				Slug:        project.Slug,
-				Status:      project.Status,
-				FullAddress: project.FullAddress,
-				TotalAreaHA: project.TotalAreaHA,
-				TotalUnits:  project.TotalUnits,
-				PriceMin:    project.PriceMin,
-				PriceMax:    project.PriceMax,
-				ViewCount:   uint32(project.ViewCount),
-			}
+			ID:          project.ID,
+			Name:        project.Name,
+			Slug:        project.Slug,
+			Status:      project.Status,
+			FullAddress: project.FullAddress,
+			TotalAreaHA: project.TotalAreaHA,
+			TotalUnits:  project.TotalUnits,
+			PriceMin:    project.PriceMin,
+			PriceMax:    project.PriceMax,
+			ViewCount:   uint32(project.ViewCount),
+		}
 	}
 
 	return c.JSON(fiber.Map{
@@ -452,24 +457,23 @@ func (h *RealEstateHandler) ListFeaturedProjects(c *fiber.Ctx) error {
 	options := make([]dto.ProjectResponse, len(projects))
 	for i, project := range projects {
 		options[i] = dto.ProjectResponse{
-				ID:          project.ID,
-				Name:        project.Name,
-				Slug:        project.Slug,
-				Status:      project.Status,
-				FullAddress: project.FullAddress,
-				TotalAreaHA: project.TotalAreaHA,
-				TotalUnits:  project.TotalUnits,
-				PriceMin:    project.PriceMin,
-				PriceMax:    project.PriceMax,
-				ViewCount:   uint32(project.ViewCount),
-			}
+			ID:          project.ID,
+			Name:        project.Name,
+			Slug:        project.Slug,
+			Status:      project.Status,
+			FullAddress: project.FullAddress,
+			TotalAreaHA: project.TotalAreaHA,
+			TotalUnits:  project.TotalUnits,
+			PriceMin:    project.PriceMin,
+			PriceMax:    project.PriceMax,
+			ViewCount:   uint32(project.ViewCount),
+		}
 	}
 
 	return c.JSON(fiber.Map{
 		"data": options,
 	})
 }
-
 
 func (h *RealEstateHandler) GetProjectDetail(c *fiber.Ctx) error {
 	raw := c.Params("id")

@@ -32,7 +32,8 @@
                 <!-- Cards -->
                 <div class="grid grid-cols-4 gap-4 overflow-hidden">
                     <div v-for="item in visibleItems" :key="item.id"
-                        class="bg-white border border-gray-100 rounded-lg shadow-sm hover:shadow-md overflow-hidden cursor-pointer group flex flex-col" @click="goToProject(item)">
+                        class="bg-white border border-gray-100 rounded-lg shadow-sm hover:shadow-md overflow-hidden cursor-pointer group flex flex-col"
+                        @click="goToProject(item)">
                         <!-- Ảnh -->
                         <div class="relative aspect-[4/3] overflow-hidden bg-gray-100 rounded-t-lg">
                             <img :src="item.thumbnail" :alt="item.name"
@@ -49,7 +50,8 @@
                         <div class="p-4 flex flex-col gap-1.5 flex-grow">
                             <!-- Badge trạng thái -->
                             <div class="flex items-center gap-2 flex-wrap">
-                                <span class="text-[10px] font-semibold px-2 py-0.5 border rounded" :class="statusClass(item.status)">
+                                <span class="text-[10px] font-semibold px-2 py-0.5 border rounded"
+                                    :class="statusClass(item.status)">
                                     {{ formatStatus(item.status) }}
                                 </span>
                             </div>
@@ -67,7 +69,7 @@
 
                             <!-- Địa chỉ -->
                             <div class="text-xs text-gray-400 truncate">{{ item.full_address || 'Địa chỉ đang cập nhật'
-                                }}</div>
+                            }}</div>
                         </div>
                     </div>
                 </div>
@@ -106,10 +108,10 @@ interface Project {
 const formatStatus = (status?: string | boolean): string => {
     if (!status) return 'Chưa cập nhật'
     const s = String(status).toLowerCase().trim()
-    if (s === 'active' || s === 'true' || s === '1' || s === 'đang mở bán' || s === 'dang mo ban') {
+    if (s === 'active') {
         return 'Đang mở bán'
     }
-    if (s === 'inactive' || s === 'false' || s === '0' || s === 'sắp mở bán' || s === 'sap mo ban') {
+    if (s === 'inactive') {
         return 'Sắp mở bán'
     }
     return status as string
@@ -133,7 +135,11 @@ const loading = ref(false)
 const fetchFeaturedProjects = async () => {
     loading.value = true
     try {
-        const res = await $api.get<{ data: Project[] }>("/real-estate/project/featured?limit=12")
+        const res = await $api.get<{ data: Project[] }>("/real-estate/project/featured", {
+            params: {
+                limit: 12
+            }
+        })
         projects.value = (res.data || []).map((p, index) => ({
             ...p,
             thumbnail: `https://placehold.co/400x300/e2e8f0/94a3b8?text=Project+${index + 1}`

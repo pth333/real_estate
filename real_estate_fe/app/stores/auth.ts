@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import type { LoginRequest, RegisterRequest, AuthResponse } from "~/types/auth";
+import type { LoginRequest, RegisterRequest, AuthResponse, UserInfo } from "~/types/auth";
 
 export const useAuthStore = defineStore("auth", () => {
   const tokenCookie = useCookie<string | null>("auth_token", {
@@ -7,22 +7,38 @@ export const useAuthStore = defineStore("auth", () => {
     sameSite: "lax",
     path: "/",
   });
+
+  const userCookie = useCookie<UserInfo | null>("auth_user", {
+    maxAge: 60 * 60 * 24 * 7,
+    sameSite: "lax",
+    path: "/",
+  });
+
   const { $api } = useNuxtApp();
 
   const token = ref<string | null>(tokenCookie.value ?? null);
+  const user = ref<UserInfo | null>(userCookie.value ?? null);
 
   watch(token, (val) => {
     tokenCookie.value = val;
   });
 
+  watch(user, (val) => {
+    userCookie.value = val;
+  }, { deep: true });
+
   const isAuthenticated = computed(() => !!token.value);
 
-  function setSession(tok: string) {
+  function setSession(tok: string, usr?: UserInfo) {
     token.value = tok;
+    if (usr) {
+      user.value = usr;
+    }
   }
 
   function clearSession() {
     token.value = null;
+    user.value = null;
   }
 
   async function login(payload: LoginRequest) {
@@ -32,7 +48,7 @@ export const useAuthStore = defineStore("auth", () => {
       throw new Error(res.message || "Đăng nhập thất bại");
     }
 
-    setSession(res.data.token);
+    setSession(res.data.token, res.data.user);
 
     return res;
   }

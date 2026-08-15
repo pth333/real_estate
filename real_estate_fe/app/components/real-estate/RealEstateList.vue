@@ -41,10 +41,10 @@ const loading = ref(false);
 const pageSize = ref(12);
 const totalRecords = ref(0);
 
-const categorySlug = computed<string>(() => {
-  const v = route.params.category;
-  return Array.isArray(v) ? v[0] ?? "" : v ?? "";
-});
+const props = defineProps<{
+  categorySlug: string
+}>()
+
 
 const filterSegments = computed<string[]>(() => {
   const v = route.params.filters;
@@ -53,11 +53,10 @@ const filterSegments = computed<string[]>(() => {
 });
 
 const apiPath = computed<string>(() => {
-  const parts: string[] = [categorySlug.value];
+  const parts: string[] = [props.categorySlug];
   if (filterSegments.value.length > 0) parts.push(filterSegments.value.join("/"));
   return parts.join("/");
 });
-
 
 const totalPages = computed(() =>
   Math.ceil(totalRecords.value / pageSize.value),
@@ -89,7 +88,7 @@ const fetchDataRealEstate = async () => {
 
 function goToPage(page: number) {
   if (page < 1 || page > totalPages.value) return;
-  const parts: string[] = [categorySlug.value];
+  const parts: string[] = [props.categorySlug];
   if (filterSegments.value.length > 0) parts.push(filterSegments.value.join("/"));
   // page > 1 → query string (cấu trúc [...filters] không có segment page)
   let url = `/${parts.join("/")}`;
@@ -109,7 +108,7 @@ watch(
 
     fetchDataRealEstate();
     // console.log(realEstateStore.currentPage);
-    
+
   },
   { immediate: true },
 );
@@ -128,7 +127,7 @@ function handleToggleFavorite(id: number) {
 const handleSearch = async () => {
   // Server-driven: đưa keyword vào query để server chạy FULLTEXT
   const q = filterStore.searchKeyword || "";
-  const parts: string[] = [categorySlug.value];
+  const parts: string[] = [props.categorySlug];
   if (filterSegments.value.length > 0) parts.push(filterSegments.value.join("/"));
   let url = `/${parts.join("/")}`;
   const params: string[] = [];

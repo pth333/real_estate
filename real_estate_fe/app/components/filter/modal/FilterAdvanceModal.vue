@@ -281,12 +281,13 @@ const handleApply = () => {
 
   realEstateStore.currentPage = 0;
   const catSlug: string = realEstateStore.categorySlug || (Array.isArray(route.params.category) ? route.params.category[0] ?? "" : route.params.category ?? "");
-  console.log(filterStore.filters.city)
   const url = buildListUrl(
     catSlug,
     filterStore.filters,
     filterStore.cityOptions,
   );
+
+  console.log(catSlug)
 
   navigateTo(url);
 };

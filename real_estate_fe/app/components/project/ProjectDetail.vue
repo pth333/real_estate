@@ -206,7 +206,6 @@ const loading = ref(true)
 const fetchProjectDetail = async () => {
   loading.value = true
   try {
-    // Gọi API lấy chi tiết dự án chính xác theo ID
     const res = await $api.get<{ data: any }>("/real-estate/project/detail/" + props.id)
     if (res.data) {
       project.value = {

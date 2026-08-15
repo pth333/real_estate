@@ -8,10 +8,7 @@
       <nav class="flex items-center gap-6 text-gray-700 whitespace-nowrap">
         <template v-if="auth.isAuthenticated">
           <NotificationBell />
-          <n-button @click="handleLogout">
-            Đăng xuất
-          </n-button>
-
+          <UserProfileMenu />
         </template>
         <template v-else>
           <n-button type="primary" tertiary size="small" class="text-sm text-gray-600 hover:text-emerald-600 transition"
@@ -35,12 +32,7 @@ import { useAuthStore } from "~/stores/auth";
 
 const auth = useAuthStore();
 
-async function handleLogout() {
-  await auth.logout();
-  navigateTo("/login");
-}
-
 const handlePushlishPost = () => {
   navigateTo("/nguoi-ban/dang-tin");
-}
+};
 </script>

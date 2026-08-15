@@ -153,7 +153,7 @@
                   :alt="item.title"
                   class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
-                <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent"></div>
+                <div class="absolute inset-0 from-black/70 via-black/10 to-transparent"></div>
                 <div class="absolute bottom-0 left-0 right-0 p-3">
                   <n-text class="text-white text-xs font-semibold line-clamp-2 leading-snug">
                     {{ item.title }}
@@ -224,10 +224,10 @@ const sidebarReviews = ref([
 const formatStatus = (status?: string | boolean): string => {
   if (!status) return 'Đang cập nhật'
   const s = String(status).toLowerCase().trim()
-  if (s === 'active' || s === 'true' || s === '1' || s === 'đang mở bán' || s === 'dang mo ban') {
+  if (s === 'active') {
     return 'Đang mở bán'
   }
-  if (s === 'inactive' || s === 'false' || s === '0' || s === 'sắp mở bán' || s === 'sap mo ban') {
+  if (s === 'inactive') {
     return 'Sắp mở bán'
   }
   return status as string

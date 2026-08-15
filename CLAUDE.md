@@ -13,4 +13,5 @@
 - Sử dụng tên biến tường minh, chuẩn quy tắc
 - Frontend luôn viết dưới dạng class object
 - Hạn chế tối đa sử dụng các thẻ HTML thông thường, dự án đang sử dụng naive UI
+- Sử dụng icon trong folder icons nếu không có thì tạo mới
 

@@ -4,7 +4,7 @@
     <ProjectDetail v-if="projectId > 0" :key="projectId" :id="projectId" />
 
 
-    <RealEstateList v-if="pageType === 'real_estate'" />
+    <RealEstateList v-if="pageType === 'real_estate'" :category-slug="categorySlug" />
     <ProjectList v-if="pageType === 'project'" :category-slug="categorySlug" />
   </div>
 </template>
