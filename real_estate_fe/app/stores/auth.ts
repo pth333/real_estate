@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
 import type { LoginRequest, RegisterRequest, AuthResponse, UserInfo } from "~/types/auth";
+import { useSession } from "~/composables/useSession";
 
 export const useAuthStore = defineStore("auth", () => {
   const tokenCookie = useCookie<string | null>("auth_token", {
@@ -49,6 +50,17 @@ export const useAuthStore = defineStore("auth", () => {
     }
 
     setSession(res.data.token, res.data.user);
+
+    // Tích hợp Session Merging sau khi đăng nhập thành công
+    try {
+      const { getSessionId } = useSession();
+      const sessionId = getSessionId();
+      if (sessionId) {
+        await $api.post("/tracking/merge", { session_id: sessionId });
+      }
+    } catch (err) {
+      console.error("Failed to merge session on login", err);
+    }
 
     return res;
   }

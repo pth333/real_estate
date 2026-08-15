@@ -39,10 +39,17 @@
 </template>
 
 <script setup lang="ts">
+import { useTracking } from '~/composables/useTracking'
+
 const searchQuery = ref('')
+const { trackSearch } = useTracking()
 
 const handleSearch = async () => {
   if (!searchQuery.value.trim()) return
+
+  // Lưu lịch sử tìm kiếm lên DB qua Go Backend API
+  trackSearch(searchQuery.value)
+
   navigateTo(`?search=${encodeURIComponent(searchQuery.value)}`)
 }
 </script>

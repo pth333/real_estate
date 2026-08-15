@@ -11,6 +11,7 @@ import (
 	"real_estate_be/internal/repo"
 	"real_estate_be/internal/response"
 	"real_estate_be/internal/usecase"
+	"real_estate_be/pkg/jwt"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -506,5 +507,49 @@ func (h *RealEstateHandler) GetProjectDetail(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"data": res,
+	})
+}
+
+// helper trích xuất UserID từ Authorization Header nếu có cho API recommend
+func (h *RealEstateHandler) getUserIDFromHeader(c *fiber.Ctx) uint64 {
+	authHeader := c.Get("Authorization")
+	if authHeader == "" {
+		return 0
+	}
+
+	tokenStr := authHeader
+	if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
+		tokenStr = authHeader[7:]
+	}
+
+	claims, err := jwt.ParseAccessToken(tokenStr)
+	if err != nil {
+		return 0
+	}
+
+	return claims.UserID
+}
+
+// GetRecommendations lấy danh sách gợi ý BĐS (Public)
+func (h *RealEstateHandler) GetRecommendations(c *fiber.Ctx) error {
+	sessionID := c.Query("session_id")
+	limitStr := c.Query("limit", "10")
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit <= 0 {
+		limit = 10
+	}
+
+	// Tự động nhận diện user_id từ Token nếu có đăng nhập
+	userID := h.getUserIDFromHeader(c)
+
+	props, err := h.service.GetRecommendations(userID, sessionID, limit)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Failed to fetch recommendations: " + err.Error(),
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"data": props,
 	})
 }

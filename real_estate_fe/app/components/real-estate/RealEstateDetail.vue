@@ -209,6 +209,7 @@
 <script setup lang="ts">
 import type { RealEstateResponse } from '~/types/real_estate';
 import { formatPrice, formatPricePerM2, formatDate } from '~/utils/format';
+import { useTracking } from '~/composables/useTracking';
 
 const listing = ref<RealEstateResponse | null>(null);
 const loading = ref(false);
@@ -297,10 +298,14 @@ function handleCall() {
 
 async function fetchDetail(id: number) {
   const { $api } = useNuxtApp();
+  const { trackView } = useTracking();
   loading.value = true;
   try {
     const res = await $api.get<{ data: RealEstateResponse }>(`/real-estate/detail/${id}`);
     listing.value = res?.data ?? null;
+    if (listing.value) {
+      trackView(listing.value.id);
+    }
   } catch {
     listing.value = null;
   } finally {

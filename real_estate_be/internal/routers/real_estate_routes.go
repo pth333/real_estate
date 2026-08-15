@@ -38,6 +38,9 @@ func InitRealEstateRoutes(Router fiber.Router) {
 
 		realEstateRouter.Get("/detail/:id", realEstateHandler.Detail)
 
+		// Gợi ý BĐS (Public)
+		realEstateRouter.Get("/recommend", realEstateHandler.GetRecommendations)
+
 		realEstateRouter.Get("/:category", realEstateHandler.ListBySEOURL)
 		realEstateRouter.Get("/:category/*", realEstateHandler.ListBySEOURL)
 

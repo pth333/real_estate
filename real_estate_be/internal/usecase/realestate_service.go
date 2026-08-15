@@ -7,6 +7,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"time"
 
 	"real_estate_be/internal/dto"
 	"real_estate_be/internal/global"
@@ -47,7 +48,8 @@ type IRealEstateService interface {
 	GenerateListingSlug(title string, id uint64) string
 	IncrementProjectView(id uint64) error
 	GetFeaturedProjects(limit int) ([]model.RealEstateProject, error)
-		GetProjectByID(id uint64) (*model.RealEstateProject, error)
+	GetProjectByID(id uint64) (*model.RealEstateProject, error)
+	GetRecommendations(userID uint64, sessionID string, limit int) ([]dto.RealEstateResponse, error)
 }
 
 func NewRealEstateService(repo repo.RealEstateRepository, categoryRepo repo.ICategoryRepository, imageRepo repo.ImageRepository, userRepo repo.IUserRepository, producer *kafka.Producer) IRealEstateService {
@@ -269,4 +271,61 @@ func (s *RealEstateService) GetFeaturedProjects(limit int) ([]model.RealEstatePr
 
 func (s *RealEstateService) GetProjectByID(id uint64) (*model.RealEstateProject, error) {
 	return s.repo.GetProjectByID(id)
+}
+
+// GetRecommendations lấy danh sách gợi ý BĐS hỗ trợ phân tầng Cache Redis và fallback Trending
+func (s *RealEstateService) GetRecommendations(userID uint64, sessionID string, limit int) ([]dto.RealEstateResponse, error) {
+	if limit <= 0 {
+		limit = 10
+	}
+
+	ctx := context.Background()
+	var cacheKey string
+
+	// 1. Định nghĩa Cache Key dựa trên User/Session
+	if userID > 0 {
+		cacheKey = fmt.Sprintf("rec:user:%d", userID)
+	} else if sessionID != "" {
+		cacheKey = fmt.Sprintf("rec:session:%s", sessionID)
+	}
+
+	// 2. Thử lấy danh sách ID từ Redis Cache
+	if cacheKey != "" && global.RedisClient != nil {
+		cachedData, err := global.RedisClient.Get(ctx, cacheKey).Result()
+		if err == nil && cachedData != "" {
+			var cachedIDs []uint64
+			if err := json.Unmarshal([]byte(cachedData), &cachedIDs); err == nil && len(cachedIDs) > 0 {
+				// Query DB lấy chi tiết tin từ danh sách ID đã cache (đảm bảo tính chất ranking)
+				props, err := s.repo.GetByIDs(cachedIDs)
+				if err == nil && len(props) > 0 {
+					return props, nil
+				}
+			}
+		}
+	}
+
+	// 3. Cache Miss hoặc lỗi Redis -> Gọi repo tính toán gợi ý cơ bản / fallback Trending
+	props, err := s.repo.GetRecommendationsBasic(userID, sessionID, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	// 4. Nếu lấy được kết quả và có cacheKey -> Cache danh sách ID vào Redis
+	if len(props) > 0 && cacheKey != "" && global.RedisClient != nil {
+		ids := make([]uint64, len(props))
+		for i, prop := range props {
+			ids[i] = prop.ID
+		}
+
+		encoded, err := json.Marshal(ids)
+		if err == nil {
+			ttl := 30 * time.Minute
+			if userID > 0 {
+				ttl = time.Hour // User đã đăng nhập giữ lâu hơn
+			}
+			global.RedisClient.Set(ctx, cacheKey, string(encoded), ttl)
+		}
+	}
+
+	return props, nil
 }

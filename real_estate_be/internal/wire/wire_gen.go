@@ -76,3 +76,14 @@ func InitializeRealEstateHandler() (*controller.RealEstateHandler, error) {
 	realEstateHandler := controller.NewRealEstateHandler(iRealEstateService, realEstateRepository)
 	return realEstateHandler, nil
 }
+
+// Injectors from tracking.wire.go:
+
+func InitializeTrackingHandler() (*controller.TrackingHandler, error) {
+	db := providerDB()
+	iSearchHistoryRepository := repo.NewSearchHistoryRepository(db)
+	iViewHistoryRepository := repo.NewViewHistoryRepository(db)
+	iTrackingService := usecase.NewTrackingService(iSearchHistoryRepository, iViewHistoryRepository)
+	trackingHandler := controller.NewTrackingHandler(iTrackingService)
+	return trackingHandler, nil
+}

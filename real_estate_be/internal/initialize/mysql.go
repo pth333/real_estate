@@ -29,6 +29,7 @@ func InitMysql() {
 	db.AutoMigrate(&model.RealEstate{})
 	db.AutoMigrate(&model.Province{})
 	db.AutoMigrate(&model.SearchHistory{})
+	db.AutoMigrate(&model.ViewHistory{})
 	db.AutoMigrate(&model.RealEstateProject{})
 	db.AutoMigrate(&model.FilterRange{})
 

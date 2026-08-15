@@ -59,6 +59,10 @@ type RealEstateRepository interface {
 	IncrementProjectView(id uint64) error
 	GetFeaturedProjects(limit int) ([]model.RealEstateProject, error)
 	GetProjectByID(id uint64) (*model.RealEstateProject, error)
+	// Gợi ý
+	GetTrending(limit int) ([]dto.RealEstateResponse, error)
+	GetByIDs(ids []uint64) ([]dto.RealEstateResponse, error)
+	GetRecommendationsBasic(userID uint64, sessionID string, limit int) ([]dto.RealEstateResponse, error)
 }
 
 func NewRealEstateRepository(db *gorm.DB) RealEstateRepository {
@@ -465,4 +469,175 @@ func (r *realEstateRepo) GetProjectByID(id uint64) (*model.RealEstateProject, er
 		return nil, err
 	}
 	return &project, nil
+}
+
+// GetTrending lấy danh sách BĐS nổi bật (nhiều lượt xem nhất hoặc mới nhất)
+func (r *realEstateRepo) GetTrending(limit int) ([]dto.RealEstateResponse, error) {
+	var items []dto.RealEstateResponse
+
+	// Query lấy top real_estate_id được xem nhiều nhất từ view_history
+	var trendingIDs []uint64
+	r.db.Model(&model.ViewHistory{}).
+		Select("real_estate_id, SUM(duration_seconds) as total_duration").
+		Group("real_estate_id").
+		Order("total_duration DESC, real_estate_id DESC").
+		Limit(limit).
+		Pluck("real_estate_id", &trendingIDs)
+
+	if len(trendingIDs) > 0 {
+		items, err := r.GetByIDs(trendingIDs)
+		if err == nil && len(items) > 0 {
+			return items, nil
+		}
+	}
+
+	// Fallback nếu chưa có lượt xem nào: Lấy danh sách tin mới đăng nhất
+	err := r.db.Raw(
+		"SELECT re.id, re.title, re.slug, re.price_vnd, re.address, re.district, re.city, "+
+			"re.acreage, re.price_per_m2, re.bedrooms, re.bathrooms, re.description, re.created_at, "+
+			"re.house_direction, re.balcony_direction, re.floors, re.legal_docs, re.interior, "+
+			"re.price_electricity, re.price_water, re.price_internet, re.amenities, "+
+			"COALESCE(GROUP_CONCAT(DISTINCT img.url ORDER BY img.id SEPARATOR '|'), '') AS image_urls, "+
+			"COALESCE(u.name, '') AS agent_name, "+
+			"COALESCE(u.phone, '') AS agent_phone "+
+			"FROM real_estates re "+
+			"LEFT JOIN images img ON img.real_estate_id = re.id "+
+			"LEFT JOIN users u ON u.id = re.user_id "+
+			"GROUP BY re.id "+
+			"ORDER BY re.created_at DESC, re.id DESC "+
+			"LIMIT ?",
+		limit,
+	).Scan(&items).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range items {
+		toResponse(&items[i])
+	}
+	return items, nil
+}
+
+// GetByIDs lấy thông tin chi tiết của danh sách ID BĐS (dành cho Cache Hit)
+func (r *realEstateRepo) GetByIDs(ids []uint64) ([]dto.RealEstateResponse, error) {
+	if len(ids) == 0 {
+		return []dto.RealEstateResponse{}, nil
+	}
+
+	var items []dto.RealEstateResponse
+	err := r.db.Raw(
+		"SELECT re.id, re.title, re.slug, re.price_vnd, re.address, re.district, re.city, "+
+			"re.acreage, re.price_per_m2, re.bedrooms, re.bathrooms, re.description, re.created_at, "+
+			"re.house_direction, re.balcony_direction, re.floors, re.legal_docs, re.interior, "+
+			"re.price_electricity, re.price_water, re.price_internet, re.amenities, "+
+			"COALESCE(GROUP_CONCAT(DISTINCT img.url ORDER BY img.id SEPARATOR '|'), '') AS image_urls, "+
+			"COALESCE(u.name, '') AS agent_name, "+
+			"COALESCE(u.phone, '') AS agent_phone "+
+			"FROM real_estates re "+
+			"LEFT JOIN images img ON img.real_estate_id = re.id "+
+			"LEFT JOIN users u ON u.id = re.user_id "+
+			"WHERE re.id IN (?) "+
+			"GROUP BY re.id",
+		ids,
+	).Scan(&items).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Sắp xếp lại theo đúng thứ tự của mảng ids truyền vào (giữ tính chất ranking)
+	idMap := make(map[uint64]dto.RealEstateResponse)
+	for _, item := range items {
+		toResponse(&item)
+		idMap[item.ID] = item
+	}
+
+	sortedItems := make([]dto.RealEstateResponse, 0, len(items))
+	for _, id := range ids {
+		if item, exists := idMap[id]; exists {
+			sortedItems = append(sortedItems, item)
+		}
+	}
+
+	return sortedItems, nil
+}
+
+// GetRecommendationsBasic gợi ý cơ bản dựa trên lịch sử xem gần nhất (khi chưa có Python ML)
+func (r *realEstateRepo) GetRecommendationsBasic(userID uint64, sessionID string, limit int) ([]dto.RealEstateResponse, error) {
+	var items []dto.RealEstateResponse
+
+	// Lấy tối đa 3 tin đã xem gần nhất từ view_history để làm gợi ý đầu vào
+	var watchedIDs []uint64
+	query := r.db.Model(&model.ViewHistory{}).
+		Order("viewed_at DESC, id DESC").
+		Limit(3)
+
+	if userID > 0 {
+		query = query.Where("user_id = ?", userID)
+	} else if sessionID != "" {
+		query = query.Where("session_id = ?", sessionID)
+	} else {
+		// Trả về Trending nếu không có bất kỳ thông tin nào
+		return r.GetTrending(limit)
+	}
+
+	query.Pluck("real_estate_id", &watchedIDs)
+
+	if len(watchedIDs) == 0 {
+		// Chưa xem tin nào -> Cold Start -> Trả về Trending
+		return r.GetTrending(limit)
+	}
+
+	// Lấy chi tiết các tin đã xem để phân tích
+	var watchedProps []model.RealEstate
+	if err := r.db.Where("id IN (?)", watchedIDs).Find(&watchedProps).Error; err != nil || len(watchedProps) == 0 {
+		return r.GetTrending(limit)
+	}
+
+	// Phân tích các tiêu chí: Lấy danh sách các quận (district) và khoảng giá trung bình
+	var districts []string
+	var totalPrice float64
+	for _, prop := range watchedProps {
+		if prop.District != "" {
+			districts = append(districts, prop.District)
+		}
+		totalPrice += prop.PriceVND
+	}
+
+	avgPrice := totalPrice / float64(len(watchedProps))
+	minPrice := avgPrice * 0.7
+	maxPrice := avgPrice * 1.3
+
+	// Query tìm các tin BĐS phù hợp (cùng quận hoặc tầm giá tương đương), loại trừ các tin đã xem
+	err := r.db.Raw(
+		"SELECT re.id, re.title, re.slug, re.price_vnd, re.address, re.district, re.city, "+
+			"re.acreage, re.price_per_m2, re.bedrooms, re.bathrooms, re.description, re.created_at, "+
+			"re.house_direction, re.balcony_direction, re.floors, re.legal_docs, re.interior, "+
+			"re.price_electricity, re.price_water, re.price_internet, re.amenities, "+
+			"COALESCE(GROUP_CONCAT(DISTINCT img.url ORDER BY img.id SEPARATOR '|'), '') AS image_urls, "+
+			"COALESCE(u.name, '') AS agent_name, "+
+			"COALESCE(u.phone, '') AS agent_phone "+
+			"FROM real_estates re "+
+			"LEFT JOIN images img ON img.real_estate_id = re.id "+
+			"LEFT JOIN users u ON u.id = re.user_id "+
+			"WHERE re.id NOT IN (?) AND (re.district IN (?) OR (re.price_vnd BETWEEN ? AND ?)) "+
+			"GROUP BY re.id "+
+			"ORDER BY re.created_at DESC, re.id DESC "+
+			"LIMIT ?",
+		watchedIDs,
+		districts,
+		minPrice,
+		maxPrice,
+		limit,
+	).Scan(&items).Error
+
+	if err != nil || len(items) == 0 {
+		return r.GetTrending(limit)
+	}
+
+	for i := range items {
+		toResponse(&items[i])
+	}
+	return items, nil
 }
