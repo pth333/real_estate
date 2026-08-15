@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"encoding/json"
 	"fmt"
 	"sort"
 	"strconv"
@@ -25,7 +24,10 @@ func NewRealEstateHandler(
 	service usecase.IRealEstateService,
 	repo repo.RealEstateRepository,
 ) *RealEstateHandler {
-	return &RealEstateHandler{service: service, repo: repo}
+	return &RealEstateHandler{
+		service: service,
+		repo:    repo,
+	}
 }
 
 func (h *RealEstateHandler) List(c *fiber.Ctx) error {
@@ -37,7 +39,13 @@ func (h *RealEstateHandler) List(c *fiber.Ctx) error {
 		})
 	}
 
-	data, total, err := h.service.ListRealEstate(req)
+	userID := h.getUserIDFromHeader(c)
+	sessionID := c.Query("session_id")
+	if sessionID == "" {
+		sessionID = c.Get("X-Session-ID")
+	}
+
+	data, total, err := h.service.ListRealEstate(req, userID, sessionID)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"message": err.Error(),
@@ -140,10 +148,13 @@ func (h *RealEstateHandler) ListBySEOURL(c *fiber.Ctx) error {
 	req.Page = page
 	req.Size = size
 
-	jsonData, err := json.Marshal(req)
-	fmt.Println("Data: ", string(jsonData))
+	userID := h.getUserIDFromHeader(c)
+	sessionID := c.Query("session_id")
+	if sessionID == "" {
+		sessionID = c.Get("X-Session-ID")
+	}
 
-	data, total, err := h.service.ListRealEstateByCategory(req)
+	data, total, err := h.service.ListRealEstateByCategory(req, userID, sessionID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
@@ -180,47 +191,25 @@ func applyAdvancedFilter(c *fiber.Ctx, req *dto.RealEstateSearchRequest) {
 	req.Filter.Interior = c.Query("interior")
 }
 
-// parseFloatQuery đọc 1 query string → float64 (0/NaN/thiếu → 0 để bỏ qua điều kiện)
-func parseFloatQuery(c *fiber.Ctx, name string) float64 {
-	v := c.Query(name)
-	if v == "" {
-		return 0
-	}
-	f, err := strconv.ParseFloat(v, 64)
-	if err != nil || f < 0 {
-		return 0
-	}
-	return f
-}
-
-// Detail trả về 1 API: GET /real-estate/detail/:id — query theo id cua real estate.
+// Detail trả về chi tiết 1 tin đăng theo ID.
 func (h *RealEstateHandler) Detail(c *fiber.Ctx) error {
 	raw := c.Params("id")
 	id, err := strconv.ParseUint(raw, 10, 64)
-	if err != nil || id == 0 {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "Invalid listing id",
-		})
-	}
-	return h.getDetail(c, id)
-}
+	fmt.Println("ID: ", id)
 
-// getDetail trả về 1 tin đăng theo ID.
-func (h *RealEstateHandler) getDetail(c *fiber.Ctx, id uint64) error {
+	if err != nil || id == 0 {
+		return response.BadRequest(c, "Mã tin đăng không hợp lệ", nil)
+	}
+
 	item, err := h.service.GetByID(id)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": err.Error(),
-		})
+		return response.InternalServerError(c, "Lấy thông tin chi tiết thất bại", err.Error())
 	}
 	if item == nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"message": "Không tìm thấy tin đăng",
-		})
+		return response.Error(c, fiber.StatusNotFound, "Không tìm thấy tin đăng", nil)
 	}
-	return c.JSON(fiber.Map{
-		"data": item,
-	})
+
+	return response.OK(c, item)
 }
 
 func (h *RealEstateHandler) ListTopCity(c *fiber.Ctx) error {
@@ -512,22 +501,7 @@ func (h *RealEstateHandler) GetProjectDetail(c *fiber.Ctx) error {
 
 // helper trích xuất UserID từ Authorization Header nếu có cho API recommend
 func (h *RealEstateHandler) getUserIDFromHeader(c *fiber.Ctx) uint64 {
-	authHeader := c.Get("Authorization")
-	if authHeader == "" {
-		return 0
-	}
-
-	tokenStr := authHeader
-	if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
-		tokenStr = authHeader[7:]
-	}
-
-	claims, err := jwt.ParseAccessToken(tokenStr)
-	if err != nil {
-		return 0
-	}
-
-	return claims.UserID
+	return jwt.ExtractUserIDFromHeader(c.Get("Authorization"))
 }
 
 // GetRecommendations lấy danh sách gợi ý BĐS (Public)

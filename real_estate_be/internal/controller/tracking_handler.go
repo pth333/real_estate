@@ -19,41 +19,7 @@ func NewTrackingHandler(trackingService usecase.ITrackingService) *TrackingHandl
 
 // helper trích xuất UserID từ Authorization Header nếu có (Public tracking)
 func (h *TrackingHandler) getUserIDFromHeader(c *fiber.Ctx) uint64 {
-	authHeader := c.Get("Authorization")
-	if authHeader == "" {
-		return 0
-	}
-
-	tokenStr := authHeader
-	if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
-		tokenStr = authHeader[7:]
-	}
-
-	claims, err := jwt.ParseAccessToken(tokenStr)
-	if err != nil {
-		return 0
-	}
-
-	return claims.UserID
-}
-
-// RecordSearch lưu lịch sử tìm kiếm
-func (h *TrackingHandler) RecordSearch(c *fiber.Ctx) error {
-	var req dto.TrackingSearchRequest
-	if err := c.BodyParser(&req); err != nil {
-		return response.BadRequest(c, "Invalid request body", err.Error())
-	}
-
-	// Tự động gán UserID từ token nếu có đăng nhập
-	if userID := h.getUserIDFromHeader(c); userID > 0 {
-		req.UserID = string(rune(userID)) // Hoặc convert phù hợp với kiểu dữ liệu của SearchHistory (string char(10))
-	}
-
-	if err := h.trackingService.RecordSearch(req); err != nil {
-		return response.InternalServerError(c, "Failed to record search", err.Error())
-	}
-
-	return c.SendStatus(fiber.StatusNoContent)
+	return jwt.ExtractUserIDFromHeader(c.Get("Authorization"))
 }
 
 // RecordView lưu lịch sử xem chi tiết BĐS

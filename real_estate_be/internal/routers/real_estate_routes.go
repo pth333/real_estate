@@ -20,29 +20,35 @@ func InitRealEstateRoutes(Router fiber.Router) {
 		{
 			authGroup.Post("/list", realEstateHandler.List)
 			authGroup.Post("/create-post", realEstateHandler.CreatePost)
+
 		}
 
 		// Route khong can auth
 		realEstateRouter.Get("/list/top-city", realEstateHandler.ListTopCity)
+
 		realEstateRouter.Get("/list/city", realEstateHandler.ListCity)
+
 		realEstateRouter.Get("/list/ward", realEstateHandler.ListWard)
+
 		realEstateRouter.Get("/list/project", realEstateHandler.ListProject)
+
 		realEstateRouter.Get("/project/featured", realEstateHandler.ListFeaturedProjects)
+
 		realEstateRouter.Get("/list/types", realEstateHandler.ListRealEstateTypes)
 
+		//dự án
 		realEstateRouter.Get("/project-category/:category_slug", realEstateHandler.ListProjectsByProjectCategory)
-
 		realEstateRouter.Post("/project/view/:id", realEstateHandler.IncrementProjectView)
-
 		realEstateRouter.Get("/project/detail/:id", realEstateHandler.GetProjectDetail)
-
-		realEstateRouter.Get("/detail/:id", realEstateHandler.Detail)
 
 		// Gợi ý BĐS (Public)
 		realEstateRouter.Get("/recommend", realEstateHandler.GetRecommendations)
 
+		// Detail đặt trước wildcard SEO URL
+		realEstateRouter.Get("/detail/:id", realEstateHandler.Detail)
+
+		//real estate SEO URL
 		realEstateRouter.Get("/:category", realEstateHandler.ListBySEOURL)
 		realEstateRouter.Get("/:category/*", realEstateHandler.ListBySEOURL)
-
 	}
 }

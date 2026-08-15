@@ -133,18 +133,7 @@ func (h *UserHandler) VerifyOTP(c *fiber.Ctx) error {
 	}
 
 	// Trích xuất email từ access token (nếu người dùng đang đăng nhập)
-	currentUserEmail := ""
-	authHeader := c.Get("Authorization")
-	if authHeader != "" {
-		tokenStr := authHeader
-		if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
-			tokenStr = authHeader[7:]
-		}
-		claims, err := jwt.ParseAccessToken(tokenStr)
-		if err == nil {
-			currentUserEmail = claims.Email
-		}
-	}
+	currentUserEmail := jwt.ExtractEmailFromHeader(c.Get("Authorization"))
 
 	if err := h.service.VerifyOTP(req, currentUserEmail); err != nil {
 		return response.Unauthorized(c, "Xác thực OTP thất bại", err.Error())

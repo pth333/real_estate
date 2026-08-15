@@ -28,16 +28,7 @@ func (h *CategoryHandler) GetAllCategories(c *fiber.Ctx) error {
 	categoriesResponse := h.service.BuildCategoriesResponse(categories)
 
 	// Decode user_id từ access token nếu có (route này public, không bắt buộc đăng nhập)
-	var userID uint64
-	if authHeader := c.Get("Authorization"); authHeader != "" {
-		tokenStr := authHeader
-		if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
-			tokenStr = authHeader[7:]
-		}
-		if claims, err := jwt.ParseAccessToken(tokenStr); err == nil {
-			userID = claims.UserID
-		}
-	}
+	userID := jwt.ExtractUserIDFromHeader(c.Get("Authorization"))
 
 	return response.OK(c, fiber.Map{
 		"user_id":    userID,

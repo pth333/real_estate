@@ -19,6 +19,7 @@ func InitializeRealEstateHandler() (*controller.RealEstateHandler, error) {
 		repo.NewCategoryRepository,
 		repo.NewImageRepository,
 		repo.NewUserRepository,
+		repo.NewSearchHistoryRepository,
 		kafka.NewProducer,
 		usecase.NewRealEstateService,
 		controller.NewRealEstateHandler,

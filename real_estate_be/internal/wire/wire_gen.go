@@ -71,8 +71,9 @@ func InitializeRealEstateHandler() (*controller.RealEstateHandler, error) {
 	iCategoryRepository := repo.NewCategoryRepository(db)
 	imageRepository := repo.NewImageRepository(db)
 	iUserRepository := repo.NewUserRepository(db)
+	iSearchHistoryRepository := repo.NewSearchHistoryRepository(db)
 	producer := kafka.NewProducer()
-	iRealEstateService := usecase.NewRealEstateService(realEstateRepository, iCategoryRepository, imageRepository, iUserRepository, producer)
+	iRealEstateService := usecase.NewRealEstateService(realEstateRepository, iCategoryRepository, imageRepository, iUserRepository, iSearchHistoryRepository, producer)
 	realEstateHandler := controller.NewRealEstateHandler(iRealEstateService, realEstateRepository)
 	return realEstateHandler, nil
 }

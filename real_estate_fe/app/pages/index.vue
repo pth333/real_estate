@@ -20,7 +20,7 @@
           <n-input-group>
             <n-input v-model:value="searchQuery" placeholder="Tìm kiếm theo khu vực hoặc dự án" size="large"
               style="text-align: left;" />
-            <n-button type="primary" size="large" @click="handleSearch">
+            <n-button type="primary" size="large" @click="handleSearchRealEstate">
               <template #icon>
                 <n-icon>
                   <IconSearch />
@@ -39,17 +39,23 @@
 </template>
 
 <script setup lang="ts">
-import { useTracking } from '~/composables/useTracking'
+import { useMenuStore } from "~/stores/menu"
 
+const menuStore = useMenuStore()
 const searchQuery = ref('')
-const { trackSearch } = useTracking()
 
-const handleSearch = async () => {
-  if (!searchQuery.value.trim()) return
+/**
+ * Xử lý tìm kiếm bất động sản từ trang chủ
+ * Điều hướng người dùng sang trang danh mục mặc định kèm từ khóa tìm kiếm
+ */
+const handleSearchRealEstate = async () => {
+  const keyword = searchQuery.value.trim()
+  if (!keyword) return
 
-  // Lưu lịch sử tìm kiếm lên DB qua Go Backend API
-  trackSearch(searchQuery.value)
+  // Lấy slug danh mục đầu tiên từ menu để điều hướng
+  const firstCategorySlug = menuStore.menu?.categories?.[0]?.Slug || "nha-dat-ban"
 
-  navigateTo(`?search=${encodeURIComponent(searchQuery.value)}`)
+  // Chuyển hướng người dùng sang trang danh sách BĐS kèm từ khóa tìm kiếm
+  navigateTo(`/${firstCategorySlug}?search=${encodeURIComponent(keyword)}`)
 }
 </script>

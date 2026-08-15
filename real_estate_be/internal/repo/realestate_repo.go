@@ -54,6 +54,7 @@ type RealEstateRepository interface {
 	GetFilterRanges() ([]model.FilterRange, error)
 	// Lấy 1 tin đăng theo ID (trang chi tiết -rs), kèm gom ảnh.
 	GetByID(id uint64) (*dto.RealEstateResponse, error)
+
 	GetCategory() ([]model.Category, error)
 	GetProvinceBySlug(city string) (string, error)
 	IncrementProjectView(id uint64) error
@@ -114,6 +115,13 @@ func (r *realEstateRepo) GetList(req dto.RealEstateSearchRequest, offset, limit 
 	if req.Filter.MaxAcreage != 0 {
 		where += " AND re.acreage <= ?"
 		args = append(args, req.Filter.MaxAcreage)
+	}
+
+	// Lọc tìm kiếm theo từ khóa
+	if req.Search != "" {
+		searchTerm := "%" + req.Search + "%"
+		where += " AND (re.title LIKE ? OR re.city LIKE ? OR re.district LIKE ? OR re.address LIKE ?)"
+		args = append(args, searchTerm, searchTerm, searchTerm, searchTerm)
 	}
 
 	// ── Bộ lọc nâng cao ──
@@ -207,8 +215,9 @@ func (r *realEstateRepo) GetListByCategory(offset int, req dto.RealEstateSearchR
 		args = append(args, req.Filter.MaxPrice)
 	}
 	if req.Search != "" {
-		where += " AND MATCH(re.title, re.address) AGAINST(? IN BOOLEAN MODE)"
-		args = append(args, req.Search)
+		searchTerm := "%" + req.Search + "%"
+		where += " AND (re.title LIKE ? OR re.city LIKE ? OR re.district LIKE ? OR re.address LIKE ?)"
+		args = append(args, searchTerm, searchTerm, searchTerm, searchTerm)
 	}
 
 	// ── Bộ lọc nâng cao ──

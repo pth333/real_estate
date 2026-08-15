@@ -1,6 +1,7 @@
 package jwt
 
 import (
+	"errors"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -83,3 +84,34 @@ func ParseRefreshToken(tokenStr string) (*RefreshClaims, error) {
 	return token.Claims.(*RefreshClaims), nil
 }
 
+// ExtractClaimsFromHeader trích xuất và giải mã AccessClaims từ chuỗi "Authorization" header
+func ExtractClaimsFromHeader(authHeader string) (*AccessClaims, error) {
+	if authHeader == "" {
+		return nil, errors.New("missing authorization header")
+	}
+
+	tokenStr := authHeader
+	if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
+		tokenStr = authHeader[7:]
+	}
+
+	return ParseAccessToken(tokenStr)
+}
+
+// ExtractUserIDFromHeader trích xuất thẳng UserID từ chuỗi "Authorization" header (trả về 0 nếu lỗi/khách)
+func ExtractUserIDFromHeader(authHeader string) uint64 {
+	claims, err := ExtractClaimsFromHeader(authHeader)
+	if err != nil {
+		return 0
+	}
+	return claims.UserID
+}
+
+// ExtractEmailFromHeader trích xuất thẳng Email từ chuỗi "Authorization" header (trả về rỗng nếu lỗi/khách)
+func ExtractEmailFromHeader(authHeader string) string {
+	claims, err := ExtractClaimsFromHeader(authHeader)
+	if err != nil {
+		return ""
+	}
+	return claims.Email
+}

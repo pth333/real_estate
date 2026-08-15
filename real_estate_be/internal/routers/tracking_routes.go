@@ -18,9 +18,6 @@ func InitTrackingRoutes(Router fiber.Router) {
 		// 1. Lưu thời gian xem BĐS (Public - Khách & Thành viên đều có thể gọi)
 		trackingRouter.Post("/view", trackingHandler.RecordView)
 
-		// 2. Lưu lịch sử tìm kiếm (Public)
-		trackingRouter.Post("/search", trackingHandler.RecordSearch)
-
 		// 3. Sáp nhập session (Yêu cầu đăng nhập để lấy UserID thật)
 		trackingRouter.Post("/merge", middleware.AuthMiddleware, trackingHandler.MergeSession)
 	}

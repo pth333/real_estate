@@ -30,6 +30,8 @@ const detailId = computed<number>(() => {
   return match ? Number(match[1]) : 0
 })
 
+console.log(detailId.value)
+
 const projectId = computed<number>(() => {
   const slug = categorySlug.value
   if (!slug) return 0

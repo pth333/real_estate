@@ -31,13 +31,11 @@
 import type { RealEstateResponse, PaginatedResponse } from "~/types/real_estate";
 import { useFilterStore } from "~/stores/filter";
 import { useRealEstateStore } from "~/stores/real_estate";
-import { useTracking } from "~/composables/useTracking";
 
 const route = useRoute();
 const { $api } = useNuxtApp();
 const filterStore = useFilterStore();
 const realEstateStore = useRealEstateStore()
-const { trackSearch } = useTracking()
 const realEstates = ref<RealEstateResponse[]>([]);
 const loading = ref(false);
 const pageSize = ref(12);
@@ -47,6 +45,10 @@ const props = defineProps<{
   categorySlug: string
 }>()
 
+const query = computed<string>(() => {
+  const v = route.query.search as string
+  return v ? v : ''
+})
 
 const filterSegments = computed<string[]>(() => {
   const v = route.params.filters;
@@ -73,6 +75,7 @@ const fetchDataRealEstate = async () => {
         params: {
           page: realEstateStore.currentPage,
           size: pageSize.value,
+          search: query.value,
           ...buildListParams(filterStore.filters)
         },
       },
@@ -129,11 +132,6 @@ function handleToggleFavorite(id: number) {
 const handleSearch = async () => {
   // Server-driven: đưa keyword vào query để server chạy FULLTEXT
   const q = filterStore.searchKeyword || "";
-
-  if (q.trim()) {
-    // Lưu lịch sử tìm kiếm kèm bộ lọc chi tiết lên DB
-    trackSearch(q, filterStore.filters)
-  }
 
   const parts: string[] = [props.categorySlug];
   if (filterSegments.value.length > 0) parts.push(filterSegments.value.join("/"));

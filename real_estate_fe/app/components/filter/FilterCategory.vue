@@ -38,7 +38,6 @@ const treeData = computed<CategoryTreeOption[]>(() =>
   (window.menu?.settings?.categories ?? []).map(toTreeOption),
 );
 
-console.log(window.menu?.settings?.categories)
 
 function toTreeOption(cat: Category): CategoryTreeOption {
   return {

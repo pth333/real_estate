@@ -23,16 +23,17 @@ const (
 )
 
 type RealEstateService struct {
-	repo         repo.RealEstateRepository
-	categoryRepo repo.ICategoryRepository
-	imageRepo    repo.ImageRepository
-	userRepo     repo.IUserRepository
-	producer     *kafka.Producer
+	repo              repo.RealEstateRepository
+	categoryRepo      repo.ICategoryRepository
+	imageRepo         repo.ImageRepository
+	userRepo          repo.IUserRepository
+	searchHistoryRepo repo.ISearchHistoryRepository
+	producer          *kafka.Producer
 }
 
 type IRealEstateService interface {
-	ListRealEstate(req dto.RealEstateSearchRequest) ([]dto.RealEstateResponse, int64, error)
-	ListRealEstateByCategory(req dto.RealEstateSearchRequest) ([]dto.RealEstateResponse, int64, error)
+	ListRealEstate(req dto.RealEstateSearchRequest, userID uint64, sessionID string) ([]dto.RealEstateResponse, int64, error)
+	ListRealEstateByCategory(req dto.RealEstateSearchRequest, userID uint64, sessionID string) ([]dto.RealEstateResponse, int64, error)
 	GetByID(id uint64) (*dto.RealEstateResponse, error)
 	GetListCity() ([]model.Province, error)
 	GetListProject(provinceCode, wardCode string) ([]model.RealEstateProject, error)
@@ -52,35 +53,76 @@ type IRealEstateService interface {
 	GetRecommendations(userID uint64, sessionID string, limit int) ([]dto.RealEstateResponse, error)
 }
 
-func NewRealEstateService(repo repo.RealEstateRepository, categoryRepo repo.ICategoryRepository, imageRepo repo.ImageRepository, userRepo repo.IUserRepository, producer *kafka.Producer) IRealEstateService {
-	return &RealEstateService{repo: repo, categoryRepo: categoryRepo, imageRepo: imageRepo, userRepo: userRepo, producer: producer}
+func NewRealEstateService(
+	repo repo.RealEstateRepository,
+	categoryRepo repo.ICategoryRepository,
+	imageRepo repo.ImageRepository,
+	userRepo repo.IUserRepository,
+	searchHistoryRepo repo.ISearchHistoryRepository,
+	producer *kafka.Producer,
+) IRealEstateService {
+	return &RealEstateService{
+		repo:              repo,
+		categoryRepo:      categoryRepo,
+		imageRepo:         imageRepo,
+		userRepo:          userRepo,
+		searchHistoryRepo: searchHistoryRepo,
+		producer:          producer,
+	}
 }
 
-func (s *RealEstateService) ListRealEstate(req dto.RealEstateSearchRequest) ([]dto.RealEstateResponse, int64, error) {
+func (s *RealEstateService) ListRealEstate(req dto.RealEstateSearchRequest, userID uint64, sessionID string) ([]dto.RealEstateResponse, int64, error) {
 	limit := req.Size
 	if limit < 1 {
 		limit = 10
 	}
 	offset := (req.Page - 1) * limit
-	return s.repo.GetList(req, offset, limit)
+	data, total, err := s.repo.GetList(req, offset, limit)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Tự động lưu lịch sử tìm kiếm tối giản nếu tìm thấy kết quả
+	if req.Search != "" && len(data) > 0 {
+		s.autoRecordSearch(userID, sessionID, req.Search, data)
+	}
+
+	return data, total, nil
 }
 
 func (s *RealEstateService) GetByID(id uint64) (*dto.RealEstateResponse, error) {
 	return s.repo.GetByID(id)
 }
 
-func (s *RealEstateService) ListRealEstateByCategory(req dto.RealEstateSearchRequest) ([]dto.RealEstateResponse, int64, error) {
+func (s *RealEstateService) ListRealEstateByCategory(req dto.RealEstateSearchRequest, userID uint64, sessionID string) ([]dto.RealEstateResponse, int64, error) {
 	limit := req.Size
 	if limit < 1 {
 		limit = 10
 	}
 	offset := (req.Page - 1) * limit
+
+	var data []dto.RealEstateResponse
+	var total int64
+	var err error
+
 	if req.Slug != "" {
-		if id, err := s.categoryRepo.GetCategoryIdBySlug(req.Slug); err == nil && id > 0 {
-			return s.repo.GetListByCategory(offset, req, limit)
+		if id, errCat := s.categoryRepo.GetCategoryIdBySlug(req.Slug); errCat == nil && id > 0 {
+			data, total, err = s.repo.GetListByCategory(offset, req, limit)
 		}
+	} else {
+		data, total, err = s.repo.GetList(req, offset, limit)
 	}
-	return s.repo.GetList(req, offset, limit)
+
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Tự động lưu lịch sử tìm kiếm tối giản nếu tìm thấy kết quả
+	if req.Search != "" && len(data) > 0 {
+		s.autoRecordSearch(userID, sessionID, req.Search, data)
+	}
+
+	return data, total, nil
 }
 
 func (s *RealEstateService) GetListCity() ([]model.Province, error) {
@@ -328,4 +370,31 @@ func (s *RealEstateService) GetRecommendations(userID uint64, sessionID string, 
 	}
 
 	return props, nil
+}
+
+// autoRecordSearch tự động lưu lịch sử tìm kiếm tối giản kèm danh sách BĐS kết quả
+func (s *RealEstateService) autoRecordSearch(userID uint64, sessionID string, query string, results []dto.RealEstateResponse) {
+	if query == "" || len(results) == 0 {
+		return
+	}
+
+	var uID *uint64
+	if userID > 0 {
+		uID = &userID
+	}
+
+	var sID *string
+	if sessionID != "" {
+		sID = &sessionID
+	}
+
+	for _, item := range results {
+		estateID := item.ID
+		_ = s.searchHistoryRepo.Create(&model.SearchHistory{
+			UserID:       uID,
+			SessionID:    sID,
+			Query:        query,
+			RealEstateID: &estateID,
+		})
+	}
 }

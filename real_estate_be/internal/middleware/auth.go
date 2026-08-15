@@ -12,19 +12,15 @@ import (
 // AuthMiddleware check access token từ Authorization header
 func AuthMiddleware(c *fiber.Ctx) error {
 	authHeader := c.Get("Authorization")
-	if authHeader == "" {
-		return response.Unauthorized(c, "Missing authorization header", nil)
+	claims, err := jwt.ExtractClaimsFromHeader(authHeader)
+	if err != nil {
+		return response.Unauthorized(c, "Invalid or expired token", err.Error())
 	}
 
 	// Parse "Bearer <token>"
 	tokenStr := authHeader
 	if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
 		tokenStr = authHeader[7:]
-	}
-
-	claims, err := jwt.ParseAccessToken(tokenStr)
-	if err != nil {
-		return response.Unauthorized(c, "Invalid or expired token", err.Error())
 	}
 
 	// Check expiration

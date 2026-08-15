@@ -1,6 +1,8 @@
 package usecase
 
 import (
+	"strconv"
+
 	"real_estate_be/internal/dto"
 	model "real_estate_be/internal/models"
 	"real_estate_be/internal/repo"
@@ -27,33 +29,28 @@ func NewTrackingService(
 	}
 }
 
-// RecordSearch lưu lịch sử tìm kiếm vào bảng search_history
+// RecordSearch lưu lịch sử tìm kiếm tối giản vào bảng search_history
 func (s *TrackingService) RecordSearch(req dto.TrackingSearchRequest) error {
-	var priceMin, priceMax *float64
-
-	if req.Filters.PriceRange != nil {
-		priceMin = req.Filters.PriceRange.MinPrice
-		priceMax = req.Filters.PriceRange.MaxPrice
+	if req.Query == "" {
+		return nil
 	}
 
-	var query, province, ward *string
-	if req.Query != "" {
-		query = &req.Query
+	var uID *uint64
+	if req.UserID != "" {
+		if val, err := strconv.ParseUint(req.UserID, 10, 64); err == nil && val > 0 {
+			uID = &val
+		}
 	}
-	if req.Filters.Location != nil && req.Filters.Location.City != nil {
-		province = req.Filters.Location.City
-	}
-	if req.Filters.Location != nil && req.Filters.Location.Ward != nil {
-		ward = req.Filters.Location.Ward
+
+	var sID *string
+	if req.SessionID != "" {
+		sID = &req.SessionID
 	}
 
 	history := &model.SearchHistory{
-		UserID:   req.UserID,
-		Query:    query,
-		Province: province,
-		Ward:     ward,
-		PriceMin: priceMin,
-		PriceMax: priceMax,
+		UserID:    uID,
+		SessionID: sID,
+		Query:     req.Query,
 	}
 
 	return s.searchHistoryRepo.Create(history)
@@ -99,5 +96,10 @@ func (s *TrackingService) MergeSession(sessionID string, userID uint64) error {
 	if sessionID == "" || userID == 0 {
 		return nil
 	}
-	return s.viewHistoryRepo.MergeSession(sessionID, userID)
+	// Sáp nhập lịch sử xem tin
+	if err := s.viewHistoryRepo.MergeSession(sessionID, userID); err != nil {
+		return err
+	}
+	// Sáp nhập lịch sử tìm kiếm
+	return s.searchHistoryRepo.MergeSession(sessionID, userID)
 }

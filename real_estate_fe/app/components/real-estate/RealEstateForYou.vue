@@ -1,89 +1,103 @@
 <template>
   <section class="py-8">
     <div class="container mx-auto px-24">
-    <!-- Header -->
-    <div class="flex items-center justify-between mb-5">
-      <h2 class="text-xl font-bold text-gray-900">Bất động sản dành cho bạn</h2>
-      <div class="flex items-center gap-3 text-sm">
-        <a href="#" class="text-gray-600 hover:text-red-500 transition-colors">Tin nhà đất bán mới nhất</a>
-        <span class="text-gray-300">|</span>
-        <a href="#" class="text-gray-600 hover:text-red-500 transition-colors">Tin nhà đất cho thuê mới nhất</a>
-      </div>
-    </div>
-
-    <!-- Grid -->
-    <div class="grid grid-cols-4 gap-4">
-      <div
-        v-for="item in visibleItems"
-        :key="item.id"
-        class="bg-white rounded-lg overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-      >
-        <!-- Ảnh -->
-        <div class="relative aspect-[4/3] overflow-hidden bg-gray-100 rounded-t-lg">
-          <img
-            :src="item.thumbnail"
-            :alt="item.title"
-            class="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-          />
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-5">
+        <h2 class="text-xl font-bold text-gray-900">Bất động sản dành cho bạn</h2>
+        <div class="flex items-center gap-3 text-sm">
+          <a href="#" class="text-gray-600 hover:text-red-500 transition-colors">Tin nhà đất bán mới nhất</a>
+          <span class="text-gray-300">|</span>
+          <a href="#" class="text-gray-600 hover:text-red-500 transition-colors">Tin nhà đất cho thuê mới nhất</a>
         </div>
+      </div>
 
-        <!-- Nội dung -->
-        <div class="p-3 flex flex-col gap-1.5">
-          <!-- Badge xác thực + tiêu đề -->
-          <div class="text-sm font-medium text-gray-800 leading-snug line-clamp-2">
-            <span v-if="item.verified" class="inline-flex items-center gap-1 text-green-600 font-semibold mr-1">
-              <IconShieldCheck class="h-3.5 w-3.5" />
-              XÁC THỰC
-            </span>
-            {{ item.title }}
-          </div>
-
-          <!-- Giá + diện tích -->
-          <div class="flex items-center gap-2 text-sm">
-            <span class="text-red-500 font-semibold">{{ item.price }}</span>
-            <span class="text-gray-300">·</span>
-            <span class="text-gray-600">{{ item.area }}</span>
-          </div>
-
-          <!-- Địa chỉ -->
-          <div class="flex items-center gap-1 text-xs text-gray-500">
-            <IconMapPin class="h-3 w-3 shrink-0" />
-            <span class="truncate">{{ item.location }}</span>
-          </div>
-
-          <!-- Footer: ngày đăng + yêu thích -->
-          <div class="flex items-center justify-between mt-1">
-            <span class="text-xs text-gray-400">{{ item.postedAt }}</span>
-            <button
-              class="p-1.5 border border-gray-200 rounded-md hover:border-red-300 hover:text-red-500 transition-colors"
-              @click.stop="toggleFavorite(item.id)"
-            >
-              <IconHeart
-                class="h-4 w-4"
-                :class="item.isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'"
+      <!-- Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <n-card
+          v-for="item in visibleItems"
+          :key="item.id"
+          hoverable
+          size="small"
+          content-style="padding: 12px;"
+          class="cursor-pointer overflow-hidden rounded-lg shadow-sm"
+        >
+          <template #cover>
+            <div class="relative aspect-4/3 overflow-hidden bg-gray-100">
+              <img
+                :src="item.thumbnail"
+                :alt="item.title"
+                class="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
               />
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+            </div>
+          </template>
 
-    <!-- Mở rộng -->
-    <div class="flex justify-center mt-6">
-      <button
-        class="flex items-center gap-2 px-6 py-2.5 border border-gray-300 rounded-md text-sm text-gray-700 hover:border-gray-400 transition-colors"
-        @click="expanded = !expanded"
-      >
-        {{ expanded ? 'Thu gọn' : 'Mở rộng' }}
-        <IconChevronDown class="h-4 w-4 transition-transform" :class="{ 'rotate-180': expanded }" />
-      </button>
-    </div>
+          <!-- Nội dung -->
+          <div class="flex flex-col gap-1.5">
+            <!-- Badge xác thực + tiêu đề -->
+            <div class="text-sm font-medium text-gray-800 leading-snug line-clamp-2">
+              <span v-if="item.verified" class="inline-flex items-center gap-1 text-green-600 font-semibold mr-1">
+                <IconShieldCheck class="h-3.5 w-3.5" />
+                XÁC THỰC
+              </span>
+              {{ item.title }}
+            </div>
+
+            <!-- Giá + diện tích -->
+            <div class="flex items-center gap-2 text-sm">
+              <span class="text-red-500 font-semibold">{{ item.price }}</span>
+              <span class="text-gray-300">·</span>
+              <span class="text-gray-600">{{ item.area }}</span>
+            </div>
+
+            <!-- Địa chỉ -->
+            <div class="flex items-center gap-1 text-xs text-gray-500">
+              <IconMapPin class="h-3 w-3 shrink-0" />
+              <span class="truncate">{{ item.location }}</span>
+            </div>
+
+            <!-- Footer: ngày đăng + yêu thích -->
+            <div class="flex items-center justify-between mt-1">
+              <span class="text-xs text-gray-400">{{ item.postedAt }}</span>
+              <n-button
+                circle
+                quaternary
+                size="small"
+                class="hover:text-red-500 transition-colors"
+                @click.stop="toggleFavorite(item.id)"
+              >
+                <template #icon>
+                  <IconHeart
+                    class="h-4 w-4"
+                    :class="item.isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'"
+                  />
+                </template>
+              </n-button>
+            </div>
+          </div>
+        </n-card>
+      </div>
+
+      <!-- Mở rộng -->
+      <div class="flex justify-center mt-6">
+        <n-button
+          secondary
+          class="px-6 h-10 text-gray-700 font-medium"
+          @click="expanded = !expanded"
+        >
+          {{ expanded ? 'Thu gọn' : 'Mở rộng' }}
+          <template #icon>
+            <IconChevronDown class="transition-transform duration-300" :class="{ 'rotate-180': expanded }" />
+          </template>
+        </n-button>
+      </div>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-const expanded = ref(false)
+import { ref, computed } from "vue";
+
+const expanded = ref(false);
 
 // Mock data — thay bằng API sau
 const items = ref([
@@ -220,13 +234,13 @@ const items = ref([
     isFavorite: false,
     thumbnail: 'https://placehold.co/400x300/e2e8f0/94a3b8?text=BDS',
   },
-])
+]);
 
 // Hiển thị 8 khi thu gọn, tất cả khi mở rộng
-const visibleItems = computed(() => expanded.value ? items.value : items.value.slice(0, 8))
+const visibleItems = computed(() => expanded.value ? items.value : items.value.slice(0, 8));
 
 function toggleFavorite(id: number) {
-  const item = items.value.find(i => i.id === id)
-  if (item) item.isFavorite = !item.isFavorite
+  const item = items.value.find(i => i.id === id);
+  if (item) item.isFavorite = !item.isFavorite;
 }
 </script>
