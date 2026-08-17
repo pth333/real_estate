@@ -95,146 +95,32 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import type { RealEstateResponse } from '~/types/real_estate';
+
 
 const expanded = ref(false);
+const loading = ref(false);
+const items = ref<any[]>([]);
+const { $api } = useNuxtApp();
 
-// Mock data — thay bằng API sau
-const items = ref([
-  {
-    id: 1,
-    title: 'Sun Festo khoảng nóng Ocean - 2PN 68m2 giá full 3,9tỷ chiết kh...',
-    price: '3,9 tỷ',
-    area: '68 m²',
-    location: 'Hạ Long, Quảng Ninh',
-    postedAt: 'Đăng hôm nay',
-    verified: false,
-    isFavorite: false,
-    thumbnail: 'https://placehold.co/400x300/e2e8f0/94a3b8?text=BDS',
-  },
-  {
-    id: 2,
-    title: 'Cho thuê căn hộ 2 phòng ngủ Estella Heights - Giá...',
-    price: '35 triệu/tháng',
-    area: '103 m²',
-    location: 'Quận 2, Hồ Chí Minh',
-    postedAt: 'Đăng hôm nay',
-    verified: true,
-    isFavorite: false,
-    thumbnail: 'https://placehold.co/400x300/e2e8f0/94a3b8?text=BDS',
-  },
-  {
-    id: 3,
-    title: 'Nhà hẻm Chu Văn An | 40m2 (4.6 x 6.5m) | 2 tầng, 2PN/2WC | 5.5 t...',
-    price: '5,5 tỷ',
-    area: '40 m²',
-    location: 'Bình Thạnh, Hồ Chí Minh',
-    postedAt: 'Đăng hôm nay',
-    verified: false,
-    isFavorite: false,
-    thumbnail: 'https://placehold.co/400x300/e2e8f0/94a3b8?text=BDS',
-  },
-  {
-    id: 4,
-    title: 'Cho thuê căn hộ 3 phòng ngủ Estella Heights - thá...',
-    price: '78 triệu/tháng',
-    area: '142 m²',
-    location: 'Quận 2, Hồ Chí Minh',
-    postedAt: 'Đăng hôm nay',
-    verified: true,
-    isFavorite: false,
-    thumbnail: 'https://placehold.co/400x300/e2e8f0/94a3b8?text=BDS',
-  },
-  {
-    id: 5,
-    title: 'Cho thuê căn hộ 1 phòng ngủ Estella Heights - Giá...',
-    price: '25 triệu/tháng',
-    area: '60 m²',
-    location: 'Quận 2, Hồ Chí Minh',
-    postedAt: 'Đăng hôm nay',
-    verified: true,
-    isFavorite: false,
-    thumbnail: 'https://placehold.co/400x300/e2e8f0/94a3b8?text=BDS',
-  },
-  {
-    id: 6,
-    title: 'Căn hộ cho thuê 52m2 Quận 9, gần đại học FPT, ĐH HUTECH,...',
-    price: '4,4 triệu/tháng',
-    area: '52 m²',
-    location: 'Quận 9, Hồ Chí Minh',
-    postedAt: 'Đăng hôm nay',
-    verified: false,
-    isFavorite: false,
-    thumbnail: 'https://placehold.co/400x300/e2e8f0/94a3b8?text=BDS',
-  },
-  {
-    id: 7,
-    title: 'Bán Nhà KDC Bình Hưng, Bình Chánh, ngay bến xe Quận 8 vào...',
-    price: '9,8 tỷ',
-    area: '96 m²',
-    location: 'Bình Chánh, Hồ Chí Minh',
-    postedAt: 'Đăng hôm nay',
-    verified: false,
-    isFavorite: false,
-    thumbnail: 'https://placehold.co/400x300/e2e8f0/94a3b8?text=BDS',
-  },
-  {
-    id: 8,
-    title: 'Căn hộ 1 phòng ngủ mini xịn sò - đủ nội thất - thang...',
-    price: '4,8 triệu/tháng',
-    area: '30 m²',
-    location: 'Bình Tân, Hồ Chí Minh',
-    postedAt: 'Đăng hôm nay',
-    verified: true,
-    isFavorite: false,
-    thumbnail: 'https://placehold.co/400x300/e2e8f0/94a3b8?text=BDS',
-  },
-  // Row 3 — ẩn khi chưa mở rộng
-  {
-    id: 9,
-    title: 'Bán căn hộ cao cấp view sông thoáng mát, full nội thất...',
-    price: '6,2 tỷ',
-    area: '88 m²',
-    location: 'Quận 7, Hồ Chí Minh',
-    postedAt: 'Đăng hôm nay',
-    verified: true,
-    isFavorite: false,
-    thumbnail: 'https://placehold.co/400x300/e2e8f0/94a3b8?text=BDS',
-  },
-  {
-    id: 10,
-    title: 'Cho thuê nhà nguyên căn hẻm xe hơi, 4PN, sân thượng...',
-    price: '18 triệu/tháng',
-    area: '72 m²',
-    location: 'Gò Vấp, Hồ Chí Minh',
-    postedAt: 'Đăng hôm nay',
-    verified: false,
-    isFavorite: false,
-    thumbnail: 'https://placehold.co/400x300/e2e8f0/94a3b8?text=BDS',
-  },
-  {
-    id: 11,
-    title: 'Đất nền dự án KDC Nam Sài Gòn, sổ hồng riêng...',
-    price: '2,1 tỷ',
-    area: '120 m²',
-    location: 'Nhà Bè, Hồ Chí Minh',
-    postedAt: 'Đăng hôm nay',
-    verified: false,
-    isFavorite: false,
-    thumbnail: 'https://placehold.co/400x300/e2e8f0/94a3b8?text=BDS',
-  },
-  {
-    id: 12,
-    title: 'Căn hộ Studio full nội thất cao cấp, ban công thoáng...',
-    price: '3,2 triệu/tháng',
-    area: '28 m²',
-    location: 'Thủ Đức, Hồ Chí Minh',
-    postedAt: 'Đăng hôm nay',
-    verified: true,
-    isFavorite: false,
-    thumbnail: 'https://placehold.co/400x300/e2e8f0/94a3b8?text=BDS',
-  },
-]);
+// Fetch dữ liệu gợi ý từ API
+const fetchRecommendations = async () => {
+  loading.value = true;
+  try {
+    const res = await $api.get<{ data: RealEstateResponse[] }>('/real-estate/recommend', {
+      params: { limit: 12 }
+    });
+    items.value = res.data || [];
+  } catch (err) {
+    console.error("Lỗi khi tải gợi ý BĐS:", err);
+  } finally {
+    loading.value = false;
+  }
+};
+
+onMounted(() => {
+  fetchRecommendations();
+});
 
 // Hiển thị 8 khi thu gọn, tất cả khi mở rộng
 const visibleItems = computed(() => expanded.value ? items.value : items.value.slice(0, 8));

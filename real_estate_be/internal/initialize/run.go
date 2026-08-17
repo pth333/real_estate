@@ -9,6 +9,7 @@ func Run() {
 	LoadConfig()
 	InitMysql()
 	InitRedis()
+	InitRecommendation()
 	InitS3()
 
 	// Migrate DB

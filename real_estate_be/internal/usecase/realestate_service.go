@@ -346,11 +346,41 @@ func (s *RealEstateService) GetRecommendations(userID uint64, sessionID string, 
 		}
 	}
 
-	// 3. Cache Miss hoặc lỗi Redis -> Gọi repo tính toán gợi ý cơ bản / fallback Trending
-	props, err := s.repo.GetRecommendationsBasic(userID, sessionID, limit)
-	if err != nil {
-		return nil, err
+	// 3. Cache Miss hoặc lỗi Redis -> Gọi gRPC Recommendation Service (nếu có)
+	var props []dto.RealEstateResponse
+	var err error
+	var strategyUsed = "db_fallback"
+
+	if global.RecommendationClient != nil {
+		var ids []uint64
+		ids, strategyUsed, err = global.RecommendationClient.GetRecommendations(
+			ctx,
+			userID,
+			sessionID,
+			0,   // realEstateID = 0 (không có trong ngữ cảnh GetRecommendations hiện tại)
+			0.0, // lat = 0.0
+			0.0, // lon = 0.0
+			int32(limit),
+		)
+		if err == nil && len(ids) > 0 {
+			// Query DB lấy chi tiết các BĐS theo thứ tự xếp hạng từ gRPC
+			props, err = s.repo.GetByIDs(ids)
+			if err != nil {
+				log.Printf("[Recommendation] Lỗi khi lấy chi tiết BĐS từ database: %v", err)
+			}
+		} else if err != nil {
+			log.Printf("[Recommendation] Lỗi gọi gRPC Recommendation Service: %v (đang chuyển sang fallback DB)", err)
+		}
 	}
+
+	// Fallback về cơ chế DB thuần nếu không lấy được kết quả từ gRPC
+	// if len(props) == 0 {
+	// 	props, err = s.repo.GetRecommendationsBasic(userID, sessionID, limit)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	strategyUsed = "db_fallback"
+	// }
 
 	// 4. Nếu lấy được kết quả và có cacheKey -> Cache danh sách ID vào Redis
 	if len(props) > 0 && cacheKey != "" && global.RedisClient != nil {
@@ -369,6 +399,7 @@ func (s *RealEstateService) GetRecommendations(userID uint64, sessionID string, 
 		}
 	}
 
+	_ = strategyUsed // Có thể dùng để log hoặc xử lý thêm nếu cần
 	return props, nil
 }
 

@@ -2,6 +2,7 @@ package global
 
 import (
 	"real_estate_be/internal/sse"
+	"real_estate_be/pkg/recommendation"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/redis/go-redis/v9"
@@ -10,20 +11,26 @@ import (
 )
 
 var (
-	Config      ConfigSettings
-	DB          *gorm.DB
-	SSEHub      *sse.Hub
-	S3Client    *s3.Client
-	RedisClient *redis.Client
+	Config               ConfigSettings
+	DB                   *gorm.DB
+	SSEHub               *sse.Hub
+	S3Client             *s3.Client
+	RedisClient          *redis.Client
+	RecommendationClient *recommendation.Client
 )
 
 type ConfigSettings struct {
-	Server ServerConfig `mapstructure:"server"`
-	Mysql  MysqlConfig  `mapstructure:"mysql"`
-	Kafka  KafkaConfig  `mapstructure:"kafka"`
-	Redis  RedisConfig  `mapstructure:"redis"`
-	R2     R2Config     `mapstructure:"r2"`
-	AI     AIConfig     `mapstructure:"ai"`
+	Server         ServerConfig         `mapstructure:"server"`
+	Mysql          MysqlConfig          `mapstructure:"mysql"`
+	Kafka          KafkaConfig          `mapstructure:"kafka"`
+	Redis          RedisConfig          `mapstructure:"redis"`
+	R2             R2Config             `mapstructure:"r2"`
+	AI             AIConfig             `mapstructure:"ai"`
+	Recommendation RecommendationConfig `mapstructure:"recommendation"`
+}
+
+type RecommendationConfig struct {
+	Addr string `mapstructure:"addr"`
 }
 
 type AIConfig struct {

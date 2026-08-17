@@ -23,3 +23,5 @@ r2:
   bucket: real-estate-files
 ai:
   model: gemini-2.0-flash
+recommendation:
+  addr: localhost:50051
