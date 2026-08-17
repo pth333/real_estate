@@ -1,11 +1,13 @@
-import { useRuntimeConfig } from "#app";
+import { onBeforeUnmount, ref } from "vue";
+import { useRuntimeConfig, useCookie, useNuxtApp } from "#app";
 import { useSession } from "~/composables/useSession";
-import { useAuthStore } from "~/stores/auth";
+import type { UserInfo } from "~/types/auth";
 
 export const useTracking = () => {
   const config = useRuntimeConfig();
-  const { getSessionId } = useSession();
-  const authStore = useAuthStore();
+  const { $api } = useNuxtApp();
+  const { sessionId } = useSession();
+  const authUser = useCookie<UserInfo | null>("auth_user");
 
   const apiBaseUrl =
     config.public.apiBaseUrl || "http://localhost:8000/api/2026";
@@ -18,6 +20,7 @@ export const useTracking = () => {
 
   // Hàm gửi dữ liệu lên Backend
   const sendTrackingData = () => {
+    if (!import.meta.client) return;
     if (!isTracking.value || !activeRealEstateId.value) return;
     isTracking.value = false; // Đảm bảo chỉ gửi 1 lần khi rời trang
 
@@ -29,39 +32,30 @@ export const useTracking = () => {
 
     const durationSeconds = Math.round(durationMs / 1000);
 
-    const sessionId = getSessionId();
     const payload = {
       real_estate_id: activeRealEstateId.value,
       duration_seconds: durationSeconds,
-      session_id: sessionId,
-      user_id: window.menu?.settings?.user_id
+      session_id: sessionId.value,
+      user_id: authUser.value?.id,
     };
 
-    const url = `${apiBaseUrl}/tracking/view`;
+    const url = "/tracking/view";
+    const authStore = useAuthStore();
+    const token = authStore.token;
 
-    // 1. Tối ưu: Nếu trình duyệt hỗ trợ sendBeacon (Rất tin cậy khi đóng tab / tắt trình duyệt)
-    if (process.client && navigator.sendBeacon) {
-      const blob = new Blob([JSON.stringify(payload)], {
-        type: "application/json; charset=UTF-8",
-      });
-      navigator.sendBeacon(url, blob);
-    } else {
-      // 2. Fallback sang fetch thông thường
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      if (authStore.token) {
-        headers["Authorization"] = `Bearer ${authStore.token}`;
-      }
-      fetch(url, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(payload),
-        keepalive: true, // Giúp request tiếp tục chạy dù trang bị huỷ
-      }).catch((err) =>
-        console.error("Failed to send fallback tracking", err),
-      );
-    }
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    // Sử dụng fetch với keepalive: true để đảm bảo gửi dữ liệu khi đóng tab
+    // mà vẫn giữ được Authorization header.
+    fetch(`${apiBaseUrl}${url}`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+      keepalive: true,
+    }).catch((err) => console.error("Failed to send tracking via keepalive fetch", err));
   };
 
   /**
@@ -69,7 +63,7 @@ export const useTracking = () => {
    * @param realEstateId ID của tin BĐS đang xem
    */
   const trackView = (realEstateId: number) => {
-    if (!process.client) return;
+    if (!import.meta.client) return;
 
     // Nếu chuyển sang xem một tin đăng khác khi chưa rời trang (ví dụ click BĐS lân cận)
     // thì gửi luôn tracking của tin cũ trước
@@ -104,20 +98,20 @@ export const useTracking = () => {
     sendTrackingData();
   };
 
-  if (process.client) {
+  if (import.meta.client) {
     // Đăng ký sự kiện lắng nghe tab ẩn/hiện và đóng tab
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("pagehide", handlePageHide);
-
-    // Gửi tracking khi Huỷ Component (Rời trang)
-    onBeforeUnmount(() => {
-      sendTrackingData();
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener("pagehide", handlePageHide);
-    });
   }
+
+  const cleanupTracking = () => {
+    sendTrackingData();
+    document.removeEventListener("visibilitychange", handleVisibilityChange);
+    window.removeEventListener("pagehide", handlePageHide);
+  };
 
   return {
     trackView,
+    cleanupTracking,
   };
 };

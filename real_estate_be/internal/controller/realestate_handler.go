@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -195,7 +194,6 @@ func applyAdvancedFilter(c *fiber.Ctx, req *dto.RealEstateSearchRequest) {
 func (h *RealEstateHandler) Detail(c *fiber.Ctx) error {
 	raw := c.Params("id")
 	id, err := strconv.ParseUint(raw, 10, 64)
-	fmt.Println("ID: ", id)
 
 	if err != nil || id == 0 {
 		return response.BadRequest(c, "Mã tin đăng không hợp lệ", nil)

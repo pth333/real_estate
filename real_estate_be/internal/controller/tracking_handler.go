@@ -19,7 +19,9 @@ func NewTrackingHandler(trackingService usecase.ITrackingService) *TrackingHandl
 
 // helper trích xuất UserID từ Authorization Header nếu có (Public tracking)
 func (h *TrackingHandler) getUserIDFromHeader(c *fiber.Ctx) uint64 {
-	return jwt.ExtractUserIDFromHeader(c.Get("Authorization"))
+	authHeader := c.Get("Authorization")
+	userID := jwt.ExtractUserIDFromHeader(authHeader)
+	return userID
 }
 
 // RecordView lưu lịch sử xem chi tiết BĐS

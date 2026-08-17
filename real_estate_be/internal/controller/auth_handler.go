@@ -39,7 +39,7 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 		return response.BadRequest(c, "Invalid request body", err.Error())
 	}
 
-	accessToken, refreshToken, err := h.service.Login(req)
+	accessToken, refreshToken, user, err := h.service.Login(req)
 	if err != nil {
 		return response.Unauthorized(c, "Login failed", err.Error())
 	}
@@ -57,6 +57,7 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 
 	return response.OK(c, fiber.Map{
 		"token": accessToken,
+		"user":  user,
 	})
 }
 

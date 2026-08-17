@@ -20,8 +20,6 @@ func InitRouter() *fiber.App {
 
 	MainGroup := app.Group("/api/2026")
 	{
-		// Dashboard
-		routers.InitDashboardRoutes(MainGroup)
 		// Auth
 		routers.InitAuthRoutes(MainGroup)
 		// Category

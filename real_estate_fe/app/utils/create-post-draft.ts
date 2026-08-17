@@ -10,6 +10,7 @@ export const CREATE_POST_DRAFT_KEY = "create_post_draft";
  * Không lưu File binary.
  */
 export function saveDraft(form: InformationRealestate): void {
+  if (!import.meta.client) return;
   try {
     localStorage.setItem(
       CREATE_POST_DRAFT_KEY,
@@ -24,6 +25,7 @@ export function saveDraft(form: InformationRealestate): void {
  * Đọc bản nháp từ localStorage. Trả null nếu không có hoặc dữ liệu lỗi.
  */
 export function loadDraft(): InformationRealestate | null {
+  if (!import.meta.client) return null;
   try {
     const raw = localStorage.getItem(CREATE_POST_DRAFT_KEY);
     if (!raw) return null;
@@ -39,6 +41,7 @@ export function loadDraft(): InformationRealestate | null {
  * Xoá bản nháp khỏi localStorage.
  */
 export function clearDraft(): void {
+  if (!import.meta.client) return;
   try {
     localStorage.removeItem(CREATE_POST_DRAFT_KEY);
   } catch {

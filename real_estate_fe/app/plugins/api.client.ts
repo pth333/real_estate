@@ -64,6 +64,7 @@ export const api = {
     const authStore = useAuthStore();
     const fullUrl = getFullUrl(url);
     const token = authStore.token ?? undefined;
+    console.log("Debug API Token:", token);
     const headers = buildHeaders(config, token);
     const isRefreshing = useRefreshState();
     const failedQueue = useFailedQueue();

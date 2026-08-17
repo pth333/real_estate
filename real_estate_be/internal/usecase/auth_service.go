@@ -29,7 +29,7 @@ type AuthService struct {
 
 type AuthServiceInterface interface {
 	Register(req dto.CreateUserRequest) error
-	Login(req dto.LoginRequest) (string, string, error)
+	Login(req dto.LoginRequest) (string, string, *dto.UserResponse, error)
 	RefreshToken(refreshToken string) (string, string, error)
 	SendOTP(req dto.SendOTPRequest) error
 	VerifyOTP(req dto.VerifyOTPRequest, currentUserEmail string) error
@@ -52,27 +52,33 @@ func (h *AuthService) Register(req dto.CreateUserRequest) error {
 	return h.repo.Register(user)
 }
 
-func (h *AuthService) Login(req dto.LoginRequest) (string, string, error) {
+func (h *AuthService) Login(req dto.LoginRequest) (string, string, *dto.UserResponse, error) {
 	user, err := h.repo.FindByEmail(req.Email)
 	if err != nil {
-		return "", "", err
+		return "", "", nil, err
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
-		return "", "", err
+		return "", "", nil, err
 	}
 
 	accessToken, err := jwt.GenerateAccessToken(user.Email, user.ID)
 	if err != nil {
-		return "", "", err
+		return "", "", nil, err
 	}
 
 	refreshToken, err := jwt.GenerateRefreshToken(user.Email)
 	if err != nil {
-		return "", "", err
+		return "", "", nil, err
 	}
 
-	return accessToken, refreshToken, nil
+	userRes := &dto.UserResponse{
+		ID:    user.ID,
+		Name:  user.Name,
+		Email: user.Email,
+	}
+
+	return accessToken, refreshToken, userRes, nil
 }
 
 func (h *AuthService) RefreshToken(refreshToken string) (string, string, error) {

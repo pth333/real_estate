@@ -34,9 +34,10 @@ const filterStore = useFilterStore();
 
 type CategoryTreeOption = TreeOption & { slug?: string };
 
-const treeData = computed<CategoryTreeOption[]>(() =>
-  (window.menu?.settings?.categories ?? []).map(toTreeOption),
-);
+const treeData = computed<CategoryTreeOption[]>(() => {
+  if (typeof window === "undefined" || !window.menu) return [];
+  return (window.menu.settings?.categories ?? []).map(toTreeOption);
+});
 
 
 function toTreeOption(cat: Category): CategoryTreeOption {

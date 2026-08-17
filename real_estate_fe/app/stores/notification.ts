@@ -15,16 +15,20 @@ export const useNotificationStore = defineStore("notification", () => {
       const res = await $api.get<{ data: NotificationItem[] }>("/notifications");
       items.value = res.data;
 
-      // Load trạng thái đọc từ localStorage để tính unread
-      const lastRead = localStorage.getItem("last_notif_read_at") || "0";
-      const readIdsStr = localStorage.getItem("read_notification_ids") || "[]";
-      const readIds = JSON.parse(readIdsStr) as number[];
+      if (import.meta.client) {
+        // Load trạng thái đọc từ localStorage để tính unread
+        const lastRead = localStorage.getItem("last_notif_read_at") || "0";
+        const readIdsStr = localStorage.getItem("read_notification_ids") || "[]";
+        const readIds = JSON.parse(readIdsStr) as number[];
 
-      unreadCount.value = items.value.filter(n => {
-        const isReadById = readIds.includes(Number(n.id));
-        const isReadByTime = new Date(n.created_at).getTime() <= parseInt(lastRead);
-        return !isReadById && !isReadByTime;
-      }).length;
+        unreadCount.value = items.value.filter(n => {
+          const isReadById = readIds.includes(Number(n.id));
+          const isReadByTime = new Date(n.created_at).getTime() <= parseInt(lastRead);
+          return !isReadById && !isReadByTime;
+        }).length;
+      } else {
+        unreadCount.value = 0;
+      }
     } catch (e) {
       console.error("Lỗi tải notifications:", e);
     } finally {

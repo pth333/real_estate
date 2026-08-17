@@ -2,7 +2,6 @@ import { defineStore } from "pinia";
 import type { RealEstateResponse } from "~/types/real_estate";
 
 export const useRealEstateDetail = defineStore("real_estate_detail", () => {
-  const { trackView } = useTracking();
   const loading = ref(false);
   const listing = ref<RealEstateResponse | null>(null);
   const showPhone = ref(false);
@@ -15,9 +14,6 @@ export const useRealEstateDetail = defineStore("real_estate_detail", () => {
         `/real-estate/detail/${id}`,
       );
       listing.value = res?.data ?? null;
-      if (listing.value) {
-        trackView(listing.value.id);
-      }
     } catch {
       listing.value = null;
     } finally {

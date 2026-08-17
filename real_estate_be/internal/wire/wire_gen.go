@@ -43,16 +43,6 @@ func InitializeCategoryHandler() (*controller.CategoryHandler, error) {
 	return categoryHandler, nil
 }
 
-// Injectors from dashboard.wire.go:
-
-func InitializeDashboardHandler() (*controller.DashboardHandler, error) {
-	db := providerDB()
-	iDashboardRepository := repo.NewDashboardRepository(db)
-	iDashboardService := usecase.NewDashboardService(iDashboardRepository)
-	dashboardHandler := controller.NewDashboardHandler(iDashboardService)
-	return dashboardHandler, nil
-}
-
 // Injectors from notification.wire.go:
 
 func InitializeNotificationHandler() (*controller.NotificationHandler, error) {

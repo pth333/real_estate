@@ -1,5 +1,10 @@
 import { defineStore } from "pinia";
-import type { LoginRequest, RegisterRequest, AuthResponse, UserInfo } from "~/types/auth";
+import type {
+  LoginRequest,
+  RegisterRequest,
+  AuthResponse,
+  UserInfo,
+} from "~/types/auth";
 import { useSession } from "~/composables/useSession";
 
 export const useAuthStore = defineStore("auth", () => {
@@ -15,7 +20,7 @@ export const useAuthStore = defineStore("auth", () => {
     path: "/",
   });
 
-  const { $api } = useNuxtApp();
+  const { sessionId } = useSession();
 
   const token = ref<string | null>(tokenCookie.value ?? null);
   const user = ref<UserInfo | null>(userCookie.value ?? null);
@@ -26,7 +31,7 @@ export const useAuthStore = defineStore("auth", () => {
 
   watch(user, (val) => {
     userCookie.value = val;
-  }, { deep: true });
+  });
 
   const isAuthenticated = computed(() => !!token.value);
 
@@ -43,8 +48,9 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   async function login(payload: LoginRequest) {
+    const { $api } = useNuxtApp();
     const res = await $api.post<AuthResponse>("/auth/login", payload);
-
+    
     if (!res.success || !res.data?.token) {
       throw new Error(res.message || "Đăng nhập thất bại");
     }
@@ -53,8 +59,6 @@ export const useAuthStore = defineStore("auth", () => {
 
     // Tích hợp Session Merging sau khi đăng nhập thành công
     try {
-      const { getSessionId } = useSession();
-      const sessionId = getSessionId();
       if (sessionId) {
         await $api.post("/tracking/merge", { session_id: sessionId });
       }
@@ -66,6 +70,7 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   async function register(payload: RegisterRequest) {
+    const { $api } = useNuxtApp();
     const res = await $api.post<AuthResponse>("/auth/register", payload);
 
     if (!res.success) {
@@ -76,6 +81,7 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   async function refreshToken() {
+    const { $api } = useNuxtApp();
     try {
       const res = await $api.post<AuthResponse>("/auth/refresh");
       if (!res.success) {
@@ -93,6 +99,7 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   async function logout() {
+    const { $api } = useNuxtApp();
     try {
       await $api.post("/auth/logout");
     } catch {
@@ -103,6 +110,7 @@ export const useAuthStore = defineStore("auth", () => {
 
   return {
     token,
+    user,
     isAuthenticated,
 
     login,

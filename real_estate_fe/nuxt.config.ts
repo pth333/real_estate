@@ -33,7 +33,7 @@ export default defineNuxtConfig({
     autoImport: true,
   },
 
-  ssr: false,
+  ssr: true,
 
   // Components auto-import
   components: [

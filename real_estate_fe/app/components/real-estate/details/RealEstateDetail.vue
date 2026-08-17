@@ -67,7 +67,8 @@
 
                 <!-- Tiêu đề + Giá -->
                 <div class="border border-gray-200 bg-white rounded-lg p-4 shadow-sm">
-                    <h1 class="text-xl font-bold leading-snug text-gray-800">{{ realEstateDetailStore.listing.title }}</h1>
+                    <h1 class="text-xl font-bold leading-snug text-gray-800">{{ realEstateDetailStore.listing.title }}
+                    </h1>
 
                     <!-- Địa chỉ -->
                     <p class="mt-2 flex items-start gap-1 text-sm">
@@ -79,16 +80,20 @@
                     <div class="mt-4 flex flex-wrap items-end gap-6">
                         <div>
                             <p class="text-xs text-gray-500">Khoảng giá</p>
-                            <p class="text-2xl font-bold text-gray-800">{{ formatPrice(realEstateDetailStore.listing.price_vnd) }}</p>
-                            <p class="text-xs text-gray-500">{{ formatPricePerM2(realEstateDetailStore.listing.price_per_m2) }}</p>
+                            <p class="text-2xl font-bold text-gray-800">{{
+                                formatPrice(realEstateDetailStore.listing.price_vnd) }}</p>
+                            <p class="text-xs text-gray-500">{{
+                                formatPricePerM2(realEstateDetailStore.listing.price_per_m2) }}</p>
                         </div>
                         <div>
                             <p class="text-xs text-gray-500">Diện tích</p>
-                            <p class="text-lg font-bold text-gray-800">{{ realEstateDetailStore.listing.acreage.toFixed(0) }} m²</p>
+                            <p class="text-lg font-bold text-gray-800">{{
+                                realEstateDetailStore.listing.acreage.toFixed(0) }} m²</p>
                         </div>
                         <div v-if="realEstateDetailStore.listing.bedrooms">
                             <p class="text-xs text-gray-500">Phòng ngủ</p>
-                            <p class="text-lg font-bold text-gray-800">{{ realEstateDetailStore.listing.bedrooms }} PN</p>
+                            <p class="text-lg font-bold text-gray-800">{{ realEstateDetailStore.listing.bedrooms }} PN
+                            </p>
                         </div>
                         <!-- Action icons -->
                         <div class="ml-auto flex items-center gap-3 text-gray-400">
@@ -103,18 +108,22 @@
                 </div>
 
                 <!-- Thông tin mô tả -->
-                <div v-if="realEstateDetailStore.listing.description" class="border border-gray-200 bg-white rounded-lg p-4 shadow-sm">
+                <div v-if="realEstateDetailStore.listing.description"
+                    class="border border-gray-200 bg-white rounded-lg p-4 shadow-sm">
                     <h2 class="mb-3 border-b border-gray-200 pb-2 text-base font-bold text-gray-800">
                         Thông tin mô tả
                     </h2>
-                    <p class="whitespace-pre-line text-sm leading-relaxed text-gray-700">{{ realEstateDetailStore.listing.description }}</p>
+                    <p class="whitespace-pre-line text-sm leading-relaxed text-gray-700">{{
+                        realEstateDetailStore.listing.description }}
+                    </p>
 
                     <!-- Agent contact fallback for mobile -->
                     <div v-if="realEstateDetailStore.listing.agent_phone"
                         class="mt-4 flex flex-wrap items-center gap-2 text-sm text-gray-600 sm:hidden">
                         <span>Liên hệ:</span>
                         <span class="font-medium text-gray-800">{{ realEstateDetailStore.maskedPhone }}</span>
-                        <n-button size="small" type="primary" @click="realEstateDetailStore.showPhone = true">Hiện số</n-button>
+                        <n-button size="small" type="primary" @click="realEstateDetailStore.showPhone = true">Hiện
+                            số</n-button>
                     </div>
                 </div>
 
@@ -143,7 +152,8 @@
                     class="grid grid-cols-2 gap-3 border border-gray-200 bg-white rounded-lg p-4 shadow-sm sm:grid-cols-3">
                     <div>
                         <p class="text-xs text-gray-500">Ngày đăng</p>
-                        <p class="text-sm font-medium text-gray-800">{{ formatDate(realEstateDetailStore.listing.created_at) }}</p>
+                        <p class="text-sm font-medium text-gray-800">{{
+                            formatDate(realEstateDetailStore.listing.created_at) }}</p>
                     </div>
                     <div v-if="realEstateDetailStore.listing.badge">
                         <p class="text-xs text-gray-500">Loại tin</p>
@@ -155,11 +165,13 @@
                     </div>
                     <div v-if="realEstateDetailStore.listing.source">
                         <p class="text-xs text-gray-500">Nguồn</p>
-                        <a v-if="realEstateDetailStore.listing.source_url" :href="realEstateDetailStore.listing.source_url" target="_blank"
+                        <a v-if="realEstateDetailStore.listing.source_url"
+                            :href="realEstateDetailStore.listing.source_url" target="_blank"
                             class="text-sm font-medium text-emerald-600 hover:underline">
                             {{ realEstateDetailStore.listing.source }}
                         </a>
-                        <p v-else class="text-sm font-medium text-gray-800">{{ realEstateDetailStore.listing.source }}</p>
+                        <p v-else class="text-sm font-medium text-gray-800">{{ realEstateDetailStore.listing.source }}
+                        </p>
                     </div>
                 </div>
             </div>
@@ -173,8 +185,10 @@
 <script setup lang="ts">
 import { formatPrice, formatPricePerM2, formatDate } from '~/utils/format';
 import { useRealEstateDetail } from '~/stores/detail/real_estate_detail';
+import { useTracking } from '~/composables/useTracking';
 
 const realEstateDetailStore = useRealEstateDetail()
+const { trackView, cleanupTracking } = useTracking()
 
 const activeImageIndex = ref(0);
 
@@ -240,5 +254,11 @@ const props = defineProps<{ id: number }>();
 
 onMounted(() => {
     realEstateDetailStore.fetchDetail(props.id);
+    trackView(props.id);
+});
+
+// Gửi tracking khi Huỷ Component (Rời trang)
+onBeforeUnmount(() => {
+    cleanupTracking();
 });
 </script>

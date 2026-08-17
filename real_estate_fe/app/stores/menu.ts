@@ -13,8 +13,10 @@ export const useMenuStore = defineStore("menu", () => {
       const data = (res as any).data;
       if (data) {
         menu.value = data;
-        // Khởi tạo Menu trong store rồi gán vào window — nơi khác đọc qua global
-        window.menu = new Menu(data);
+        // Khởi tạo Menu trong store rồi gán vào window — nơi khác đọc qua global (Chỉ chạy ở Client-side)
+        if (import.meta.client) {
+          window.menu = new Menu(data);
+        }
       }
     } catch (error) {
       console.error("Error fetching menu items:", error);
