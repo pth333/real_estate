@@ -43,6 +43,17 @@ func InitializeCategoryHandler() (*controller.CategoryHandler, error) {
 	return categoryHandler, nil
 }
 
+// Injectors from manager_post.wire.go:
+
+func InitializeManagerPostHandler() (*controller.ManagerPostHandler, error) {
+	db := providerDB()
+	managerPostRepository := repo.NewManagerPostRepository(db)
+	iManagerPostUseCase := usecase.NewManagerPostUseCase(managerPostRepository)
+	iUserRepository := repo.NewUserRepository(db)
+	managerPostHandler := controller.NewManagerPostHandler(iManagerPostUseCase, iUserRepository)
+	return managerPostHandler, nil
+}
+
 // Injectors from notification.wire.go:
 
 func InitializeNotificationHandler() (*controller.NotificationHandler, error) {

@@ -1,4 +1,4 @@
-import type { InformationRealestate } from "~/types/real_estate";
+import type { IInformationRealestate } from "~/types/real_estate";
 
 // Key lưu bản nháp tin đăng trong localStorage
 export const CREATE_POST_DRAFT_KEY = "create_post_draft";
@@ -9,7 +9,7 @@ export const CREATE_POST_DRAFT_KEY = "create_post_draft";
  * đã nằm trong form nên khôi phục được preview ảnh/video từ URL S3.
  * Không lưu File binary.
  */
-export function saveDraft(form: InformationRealestate): void {
+export function saveDraft(form: IInformationRealestate): void {
   if (!import.meta.client) return;
   try {
     localStorage.setItem(
@@ -24,14 +24,14 @@ export function saveDraft(form: InformationRealestate): void {
 /**
  * Đọc bản nháp từ localStorage. Trả null nếu không có hoặc dữ liệu lỗi.
  */
-export function loadDraft(): InformationRealestate | null {
+export function loadDraft(): IInformationRealestate | null {
   if (!import.meta.client) return null;
   try {
     const raw = localStorage.getItem(CREATE_POST_DRAFT_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed?.form) return null;
-    return parsed.form as InformationRealestate;
+    return parsed.form as IInformationRealestate;
   } catch {
     return null;
   }

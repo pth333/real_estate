@@ -50,7 +50,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
 import { useCreatePost } from '~/stores/create-post'
 import { usePhoneVerification } from '~/composables/usePhoneVerification'
 

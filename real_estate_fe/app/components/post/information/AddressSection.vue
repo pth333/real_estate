@@ -20,38 +20,36 @@
             </n-form-item>
         </div>
     </n-card>
-    <n-modal v-model:show="showLocationModal" title="Nhập địa chỉ" style="width: 600px; max-height: 800px;">
-        <n-card title="Nhập địa chỉ">
-            <n-form-item label="Tỉnh / Thành phố" path="province" :feedback="postStore.errorsAddress.province"
-                :validation-status="postStore.errorsAddress.province ? 'error' : undefined">
-                <n-select v-model:value="postStore.form.province" placeholder="Chọn tỉnh/thành phố" clearable filterable
-                    :options="provinceOption" @update:value="onWardChange" />
-            </n-form-item>
+    <n-modal v-model:show="showLocationModal" title="Nhập địa chỉ" style="width: 600px; max-height: 800px;" preset="card" :mask-closable="true">
+        <n-form-item label="Tỉnh / Thành phố" path="province" :feedback="postStore.errorsAddress.province"
+            :validation-status="postStore.errorsAddress.province ? 'error' : undefined">
+            <n-select v-model:value="postStore.form.province" placeholder="Chọn tỉnh/thành phố" clearable filterable
+                :options="provinceOption" @update:value="onWardChange" />
+        </n-form-item>
 
-            <n-form-item label="Phường / Xã" path="ward" :feedback="postStore.errorsAddress.ward"
-                :validation-status="postStore.errorsAddress.ward ? 'error' : undefined">
-                <n-select v-model:value="postStore.form.ward" placeholder="Chọn phường/xã" clearable filterable
-                    :options="wardOptions" :loading="loadingWard" @update:value="clearError('ward')"
-                    :disabled="isDisabledWard" />
-            </n-form-item>
+        <n-form-item label="Phường / Xã" path="ward" :feedback="postStore.errorsAddress.ward"
+            :validation-status="postStore.errorsAddress.ward ? 'error' : undefined">
+            <n-select v-model:value="postStore.form.ward" placeholder="Chọn phường/xã" clearable filterable
+                :options="wardOptions" :loading="loadingWard" @update:value="clearError('ward')"
+                :disabled="isDisabledWard" />
+        </n-form-item>
 
-            <n-form-item label="Địa chỉ chi tiết" path="detail" :feedback="postStore.errorsAddress.detail_address"
-                :validation-status="postStore.errorsAddress.detail_address ? 'error' : undefined">
-                <n-input v-model:value="postStore.form.detail_address" placeholder="Nhập số nhà, khu phố, ngõ hẻm..."
-                    clearable @update:value="clearError('detail_address')" />
-            </n-form-item>
+        <n-form-item label="Địa chỉ chi tiết" path="detail" :feedback="postStore.errorsAddress.detail_address"
+            :validation-status="postStore.errorsAddress.detail_address ? 'error' : undefined">
+            <n-input v-model:value="postStore.form.detail_address" placeholder="Nhập số nhà, khu phố, ngõ hẻm..."
+                clearable @update:value="clearError('detail_address')" />
+        </n-form-item>
 
-            <n-form-item label="Dự án" path="project_id">
-                <n-select v-model:value="postStore.form.project_id" placeholder="Chọn dự án" clearable filterable
-                    :options="projectOptions" :disabled="isDisabledPJ"/>
-            </n-form-item>
-            <template #action>
-                <div class="flex justify-end">
-                    <n-button type="primary" @click="applyAddress">Áp dụng</n-button>
-                </div>
-            </template>
-        </n-card>
+        <n-form-item label="Dự án" path="project_id">
+            <n-select v-model:value="postStore.form.project_id" placeholder="Chọn dự án" clearable filterable
+                :options="projectOptions" :disabled="isDisabledPJ"/>
+        </n-form-item>
 
+        <template #action>
+            <div class="flex justify-end">
+                <n-button type="primary" @click="applyAddress">Áp dụng</n-button>
+            </div>
+        </template>
     </n-modal>
 </template>
 <script setup lang="ts">

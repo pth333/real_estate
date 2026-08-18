@@ -102,6 +102,7 @@ type TopCityResponse struct {
 
 // CreateRealEstateRequest — request tạo tin đăng từ FE
 type CreateRealEstateRequest struct {
+	ID               *uint64  `json:"id,omitempty"`
 	ListingType      string   `json:"listing_type"`
 	Province         string   `json:"province"`
 	Ward             string   `json:"ward"`

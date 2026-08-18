@@ -1,3 +1,8 @@
+export interface ImageResponse {
+  id: number;
+  url: string;
+}
+
 // Mirror từ backend DTO response — field names khớp JSON snake_case
 export interface RealEstateResponse {
   id: number;
@@ -13,6 +18,7 @@ export interface RealEstateResponse {
 
   // Optional fields
   images?: string[];
+  images_detail?: ImageResponse[];
   bedrooms?: number;
   bathrooms?: number;
   description?: string;
@@ -80,7 +86,7 @@ export interface NotificationItem {
   id: number;
   listing_id?: number;
   type: string;
-  payload: any;
+  payload: unknown;
   created_at: string;
 }
 
@@ -97,57 +103,158 @@ export interface OptionTypeRealestate {
   name: string;
 }
 
-export class InformationRealestate {
+export interface IInformationRealestate {
   // Nhu cầu
-  listingType: "sell" | "rent" = "sell";
+  listingType: "sell" | "rent";
 
   // Địa chỉ
-  province: string | null = null;
-  ward: string | null = null;
-  detail_address: string | null = null;
-  project_id: number | null = null;
+  province: string | null;
+  ward: string | null;
+  detail_address: string | null;
+  project_id: number | null;
 
   // Thông tin chính
-  real_estate_type: string | null = null;
-  area: number | null = null;
-  price: number | null = null;
-  unit: string | null = "vnd";
+  real_estate_type: string | null;
+  area: number | null;
+  price: number | null;
+  unit: string | null;
 
   // Thông tin khác
-  legal_docs: string | null = null;
-  interior: string | null = null;
-  bathroom_count: number | null = null;
-  bedroom_count: number | null = null;
-  house_direction: string | null = null;
-  balcony_direction: string | null = null;
-  move_in_time: string | null = null;
-  price_electricity: number | null = null;
-  price_water: number | null = null;
-  price_internet: number | null = null;
-  amenities: string[] = [];
+  legal_docs: string | null;
+  interior: string | null;
+  bathroom_count: number | null;
+  bedroom_count: number | null;
+  floor_count: number | null;
+  house_direction: string | null;
+  balcony_direction: string | null;
+  move_in_time: string | null;
+  price_electricity: number | null;
+  price_water: number | null;
+  price_internet: number | null;
+  amenities: string[];
 
   // Ảnh/video đã upload (id + url + thumbnail) — dùng để khôi phục preview
-  images: UploadedMediaItem[] = [];
+  images: UploadedMediaItem[];
 
   // Thông tin liên hệ
-  contact_name: string = "";
-  contact_email: string = "";
-  contact_phone: string = "";
+  contact_name: string;
+  contact_email: string;
+  contact_phone: string;
 
   // Tiêu đề & mô tả
-  title: string = "";
-  description: string = "";
+  title: string;
+  description: string;
 
-  tab: "information" | "upload" | "review" = "information";
+  tab: "information" | "upload" | "review";
+}
 
-  isTabInformation() {
-    return this.tab === "information";
+export class InformationRealestate {
+  // Hàm tạo object mặc định
+  static createEmpty(): IInformationRealestate {
+    return {
+      listingType: "sell",
+      province: null,
+      ward: null,
+      detail_address: null,
+      project_id: null,
+      real_estate_type: null,
+      area: null,
+      price: null,
+      unit: "vnd",
+      legal_docs: null,
+      interior: null,
+      bathroom_count: null,
+      bedroom_count: null,
+      floor_count: null,
+      house_direction: null,
+      balcony_direction: null,
+      move_in_time: null,
+      price_electricity: null,
+      price_water: null,
+      price_internet: null,
+      amenities: [],
+      images: [],
+      contact_name: "",
+      contact_email: "",
+      contact_phone: "",
+      title: "",
+      description: "",
+      tab: "information",
+    };
   }
-  isTabUpload() {
-    return this.tab === "upload";
+
+  static isTabInformation(form: IInformationRealestate) {
+    return form.tab === "information";
   }
-  isTabReview() {
-    return this.tab === "review";
+
+  static isTabUpload(form: IInformationRealestate) {
+    return form.tab === "upload";
+  }
+
+  static isTabReview(form: IInformationRealestate) {
+    return form.tab === "review";
+  }
+
+  // Khởi tạo đối tượng từ API Response trả về từ Backend (dành cho chế độ Edit)
+  static fromResponse(res: RealEstateResponse): IInformationRealestate {
+    const form = this.createEmpty();
+    if (!res) return form;
+
+    form.title = res.title || "";
+    form.description = res.description || "";
+    form.area = res.acreage || null;
+    form.price = res.price_vnd || null;
+    form.unit = "vnd";
+
+    form.legal_docs = res.legal_docs || null;
+    form.interior = res.interior || null;
+    form.bedroom_count = res.bedrooms || null;
+    form.bathroom_count = res.bathrooms || null;
+    form.floor_count = res.floors || null;
+    form.house_direction = res.house_direction || null;
+    form.balcony_direction = res.balcony_direction || null;
+
+    form.price_electricity = res.price_electricity || null;
+    form.price_water = res.price_water || null;
+    form.price_internet = res.price_internet || null;
+
+    if (res.amenities) {
+      form.amenities = res.amenities;
+    }
+
+    form.contact_name = res.agent_name || "";
+    form.contact_email = ""; // Default empty, can be populated from user profile if needed
+    form.contact_phone = res.agent_phone || "";
+
+    if (res.category_id) {
+      form.real_estate_type = `${res.category_id}-Category`;
+    }
+
+    form.province = res.city || null;
+    form.ward = res.district || null;
+    form.detail_address = res.address || null;
+
+    if (res.images_detail && res.images_detail.length > 0) {
+      form.images = res.images_detail.map((img) => ({
+        imageId: img.id,
+        publicUrl: img.url,
+        thumbnailUrl: img.url,
+        fileType: "image",
+        name: `image_${img.id}`,
+        type: "image/jpeg",
+      }));
+    } else if (res.images && res.images.length > 0) {
+      form.images = res.images.map((url, index) => ({
+        imageId: 0,
+        publicUrl: url,
+        thumbnailUrl: url,
+        fileType: "image",
+        name: `image_${index}`,
+        type: "image/jpeg",
+      }));
+    }
+
+    return form;
   }
 }
 
@@ -182,5 +289,20 @@ export interface UploadedMediaItem {
 export interface ProjectOption {
   id: number;
   name: string;
+}
+
+export interface CreatePostResponse {
+  success: boolean;
+  message?: string;
+  data?: {
+    id: number;
+  };
+  error?: string;
+}
+
+export interface UpdatePostResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
 }
 

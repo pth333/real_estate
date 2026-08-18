@@ -34,6 +34,8 @@ func InitRouter() *fiber.App {
 		routers.InitUploadRoutes(MainGroup, global.S3Client)
 		// AI
 		routers.InitAIRoutes(MainGroup)
+		// Manager Routes (Sử dụng Google Wire chuẩn quy hoạch)
+		routers.InitManagerRoutes(MainGroup)
 	}
 
 	return app

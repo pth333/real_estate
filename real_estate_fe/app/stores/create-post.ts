@@ -1,9 +1,14 @@
-import { InformationRealestate } from "~/types/real_estate";
+import { InformationRealestate, type IInformationRealestate } from "~/types/real_estate";
 import { saveDraft, loadDraft, clearDraft } from "~/utils/create-post-draft";
 
 export const useCreatePost = defineStore("create-post", () => {
-  // Dữ liệu tin đăng tổ chức trong class InformationRealestate
-  const form = ref(new InformationRealestate());
+  // Dữ liệu tin đăng tổ chức dưới dạng POJO sử dụng Interface
+  const form = ref<IInformationRealestate>(InformationRealestate.createEmpty());
+
+  // Helper getters cho trạng thái tab (sử dụng các static method của Class)
+  const isTabInformation = () => InformationRealestate.isTabInformation(form.value);
+  const isTabUpload = () => InformationRealestate.isTabUpload(form.value);
+  const isTabReview = () => InformationRealestate.isTabReview(form.value);
 
   // Lỗi hiển thị dưới từng ô input, tách riêng theo từng section.
   // Mỗi biến là 1 ref object — mutate field bên trong, không gán lại toàn bộ
@@ -143,7 +148,7 @@ export const useCreatePost = defineStore("create-post", () => {
 
   // Reset toàn bộ form về mặc định + xoá lỗi, dùng sau khi đăng tin thành công
   const resetForm = () => {
-    form.value = new InformationRealestate();
+    form.value = InformationRealestate.createEmpty();
     errorsMainInfo.value = { real_estate_type: "", area: "", price: "", unit: "" };
     errorsAddress.value = { province: "", ward: "", detail_address: "" };
     errorsContact.value = { contact_name: "", contact_email: "", contact_phone: "" };
@@ -154,7 +159,7 @@ export const useCreatePost = defineStore("create-post", () => {
     saveDraft(form.value);
   };
 
-  const loadCurrentDraft = (): InformationRealestate | null => {
+  const loadCurrentDraft = (): IInformationRealestate | null => {
     return loadDraft();
   };
 
@@ -164,7 +169,7 @@ export const useCreatePost = defineStore("create-post", () => {
   const applyDraft = () => {
     const draft = loadDraft();
     if (!draft) return;
-    form.value = Object.assign(new InformationRealestate(), draft);
+    form.value = Object.assign(InformationRealestate.createEmpty(), draft);
   };
 
   const clearCurrentDraft = () => {
@@ -181,6 +186,9 @@ export const useCreatePost = defineStore("create-post", () => {
     currentStepLabel,
     currentStepProgress,
     customValueRealEstateType,
+    isTabInformation,
+    isTabUpload,
+    isTabReview,
     validateMainInfo,
     validateAddress,
     validateContact,

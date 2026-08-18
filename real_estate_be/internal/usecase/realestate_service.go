@@ -43,6 +43,7 @@ type IRealEstateService interface {
 	GetListRealEstateTypes() ([]model.Category, error)
 	GetUserByEmail(email string) (*model.User, error)
 	CreateRealEstate(req dto.CreateRealEstateRequest, userID uint64) (uint64, error)
+	UpdateRealEstate(id uint64, req dto.CreateRealEstateRequest, userID uint64) error
 	GetTopCity(limit int) ([]model.CityStat, error)
 	GetFirstCategorySlug() (string, error)
 	ToSlug(city string) string
@@ -270,6 +271,87 @@ func (s *RealEstateService) CreateRealEstate(req dto.CreateRealEstateRequest, us
 	return estate.ID, nil
 }
 
+// UpdateRealEstate cập nhật thông tin bài viết cũ của chính chủ
+func (s *RealEstateService) UpdateRealEstate(id uint64, req dto.CreateRealEstateRequest, userID uint64) error {
+	var rawEstate model.RealEstate
+	if err := global.DB.First(&rawEstate, id).Error; err != nil {
+		return fmt.Errorf("không tìm thấy bài viết cần cập nhật")
+	}
+
+	if rawEstate.UserID == nil || *rawEstate.UserID != userID {
+		return fmt.Errorf("bạn không có quyền cập nhật bài viết này")
+	}
+
+	var categoryID *int64
+	if req.RealEstateType != "" {
+		if catID, err := strconv.ParseInt(req.RealEstateType, 10, 64); err == nil {
+			categoryID = &catID
+		}
+	}
+
+	pricePerM2 := req.Price
+	switch req.Unit {
+	case "usd":
+		pricePerM2 = req.Price * USDToVND
+	case "eur":
+		pricePerM2 = req.Price * EURToVND
+	}
+	priceVND := pricePerM2 * req.Area
+
+	cityName, cityErr := s.repo.GetProvinceNameByCode(req.Province)
+	wardName, wardErr := s.repo.GetWardNameByCode(req.Ward)
+
+	if cityErr != nil {
+		return fmt.Errorf("không tìm thấy tỉnh/thành: %s", req.Province)
+	}
+	if wardErr != nil {
+		return fmt.Errorf("không tìm thấy phường/xã: %s", req.Ward)
+	}
+
+	amenitiesJSON, err := json.Marshal(req.Amenities)
+	if err != nil {
+		return fmt.Errorf("lỗi mã hoá tiện ích: %w", err)
+	}
+
+	address := strings.TrimSpace(strings.Join([]string{
+		req.DetailAddress, wardName, cityName,
+	}, " "))
+
+	rawEstate.ProjectID = req.ProjectID
+	rawEstate.Title = req.Title
+	rawEstate.PriceVND = priceVND
+	rawEstate.Address = address
+	rawEstate.District = wardName
+	rawEstate.City = cityName
+	rawEstate.Acreage = req.Area
+	rawEstate.PricePerM2 = pricePerM2
+	rawEstate.CategoryID = categoryID
+	rawEstate.Description = req.Description
+	rawEstate.Bedrooms = req.BedroomCount
+	rawEstate.Bathrooms = req.BathroomCount
+	rawEstate.Amenities = string(amenitiesJSON)
+	rawEstate.HouseDirection = req.HouseDirection
+	rawEstate.BalconyDirection = req.BalconyDirection
+	rawEstate.Floors = req.FloorCount
+	rawEstate.LegalDocs = req.LegalDocs
+	rawEstate.Interior = req.Interior
+	rawEstate.PriceElectricity = req.PriceElectricity
+	rawEstate.PriceWater = req.PriceWater
+	rawEstate.PriceInternet = req.PriceInternet
+
+	if err := global.DB.Save(&rawEstate).Error; err != nil {
+		return err
+	}
+
+	// Gỡ liên kết toàn bộ ảnh cũ ra trước khi lưu mới
+	global.DB.Model(&model.Image{}).Where("real_estate_id = ?", id).Update("real_estate_id", nil)
+	if err := s.imageRepo.LinkToRealEstate(req.ImageIDs, id); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *RealEstateService) ToSlug(input string) string {
 	var accents = map[rune]string{
 		'à': "a", 'á': "a", 'ả': "a", 'ã': "a", 'ạ': "a", 'ă': "a", 'ắ': "a", 'ằ': "a", 'ẳ': "a", 'ẵ': "a", 'ặ': "a", 'â': "a", 'ấ': "a", 'ầ': "a", 'ẩ': "a", 'ẫ': "a", 'ậ': "a",
@@ -374,13 +456,13 @@ func (s *RealEstateService) GetRecommendations(userID uint64, sessionID string, 
 	}
 
 	// Fallback về cơ chế DB thuần nếu không lấy được kết quả từ gRPC
-	// if len(props) == 0 {
-	// 	props, err = s.repo.GetRecommendationsBasic(userID, sessionID, limit)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	strategyUsed = "db_fallback"
-	// }
+	if len(props) == 0 {
+		props, err = s.repo.GetRecommendationsBasic(userID, sessionID, limit)
+		if err != nil {
+			return nil, err
+		}
+		strategyUsed = "db_fallback"
+	}
 
 	// 4. Nếu lấy được kết quả và có cacheKey -> Cache danh sách ID vào Redis
 	if len(props) > 0 && cacheKey != "" && global.RedisClient != nil {

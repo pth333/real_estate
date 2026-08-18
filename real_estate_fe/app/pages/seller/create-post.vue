@@ -53,10 +53,10 @@
             <n-button size="large" @click="prevPage">
                 Quay lại
             </n-button>
-            <n-button v-if="!postStore.form.isTabUpload()" size="large" type="error" @click="nextPage">
+            <n-button v-if="!postStore.isTabUpload()" size="large" type="error" @click="nextPage">
                 Tiếp tục
             </n-button>
-            <n-button v-if="postStore.form.isTabUpload()" size="large" type="error" @click="submitCreatePost">
+            <n-button v-if="postStore.isTabUpload()" size="large" type="error" @click="submitCreatePost">
                 Đăng tin
             </n-button>
         </div>
@@ -86,6 +86,7 @@
 </template>
 <script setup lang="ts">
 import { useCreatePost } from '~/stores/create-post'
+import { InformationRealestate, type CreatePostResponse, type RealEstateResponse, type UpdatePostResponse, type UploadedMediaItem } from '~/types/real_estate'
 definePageMeta({
     alias: "/nguoi-ban/dang-tin",
 })
@@ -117,13 +118,13 @@ const onDraftModalClose = () => {
     showDraftModal.value = false
 }
 const nextPage = () => {
-    if (postStore.form.isTabInformation()) {
+    if (postStore.isTabInformation()) {
         if (!postStore.validateInformation()) {
             window.message?.warning('Vui lòng nhập đầy đủ thông tin')
             return
         }
         postStore.form.tab = 'upload'
-    } else if (postStore.form.isTabUpload()) {
+    } else if (postStore.isTabUpload()) {
         if (!uploadComponent.value.validateImageCount()) return
         postStore.form.tab = 'review'
     }
@@ -132,9 +133,9 @@ const nextPage = () => {
 }
 
 const prevPage = () => {
-    if (postStore.form.isTabUpload()) {
+    if (postStore.isTabUpload()) {
         postStore.form.tab = 'information'
-    } else if (postStore.form.isTabReview()) {
+    } else if (postStore.isTabReview()) {
         postStore.form.tab = 'upload'
     }
 }
@@ -145,35 +146,52 @@ const submitCreatePost = async () => {
     if (!uploadComponent.value.validateImageCount()) return
     isSubmitting.value = true
     try {
-        const res = await $api.post<{ success: boolean; message?: string; data?: { id: number } }>(
-            '/real-estate/create-post',
-            postStore.payload,
-        )
+        let res;
+        if (isEdit) {
+            res = await $api.put<UpdatePostResponse>(
+                `/real-estate/update-post/${isEdit}`,
+                postStore.payload
+            )
+        } else {
+            res = await $api.post<CreatePostResponse>(
+                '/real-estate/create-post',
+                postStore.payload,
+            )
+        }
+
         if (res.success) {
-            window.message?.success('Đăng tin thành công')
+            window.message?.success(isEdit ? 'Cập nhật tin đăng thành công' : 'Đăng tin thành công')
             postStore.clearCurrentDraft()
             postStore.resetForm()
-            navigateTo('/')
+            navigateTo('/nguoi-ban/quan-ly-tin-dang')
         } else {
-            window.message?.error(res.message || 'Đăng tin thất bại')
+            window.message?.error(res.message || 'Thao tác thất bại')
         }
     } catch (err: unknown) {
         const msg = (err as { data?: { message?: string } })?.data?.message
-        window.message?.error(msg || 'Đăng tin thất bại, vui lòng thử lại')
+        window.message?.error(msg || 'Thao tác thất bại, vui lòng thử lại')
     } finally {
         isSubmitting.value = false
     }
 };
 
+const route = useRoute()
+const isEdit = route.query.id
 
 // Tự động điền số điện thoại khi đã xác thực thành công hoặc khi số xác thực thay đổi
 watch(verifiedPhone, (newPhone) => {
-    if (newPhone && !postStore.form.contact_phone) {
+    if (newPhone && !postStore.form.contact_phone && !isEdit) {
         postStore.form.contact_phone = newPhone
     }
 }, { immediate: true })
 
-onMounted(() => {
+onMounted(async () => {
+    // Nếu là chế độ chỉnh sửa, bỏ qua bước OTP & phục hồi bản nháp cũ
+    if (isEdit) {
+        loadingPostDetail()
+        return
+    }
+
     if (!phoneVerified.value) {
         showOTPModal.value = true
         return
@@ -187,5 +205,32 @@ onMounted(() => {
         showDraftModal.value = true
     }
 })
+
+// Tải thông tin chi tiết bài đăng cũ và đưa vào form store bằng Class Object
+const loadingPostDetail = async () => {
+    try {
+        const res = await $api.get<{data: RealEstateResponse}>(`/real-estate/detail/${isEdit}`)
+        if (res) {
+
+            const editForm = InformationRealestate.fromResponse(res.data)
+            postStore.form = editForm
+
+            // Đẩy danh sách ảnh vào upload component để hiển thị preview
+            if (editForm.images && editForm.images.length > 0) {
+                nextTick(() => {
+                    if (uploadComponent.value) {
+                        uploadComponent.value.setFileList(editForm.images.map((img: any) => ({
+                            id: img.imageId,
+                            url: img.publicUrl,
+                            status: 'finished'
+                        })))
+                    }
+                })
+            }
+        }
+    } catch (error) {
+        window.message?.error("Không thể tải thông tin chi tiết bài viết cần sửa")
+    }
+}
 
 </script>

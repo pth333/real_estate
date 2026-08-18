@@ -1,11 +1,9 @@
-import { onBeforeUnmount, ref } from "vue";
-import { useRuntimeConfig, useCookie, useNuxtApp } from "#app";
+import { useRuntimeConfig, useCookie } from "#app";
 import { useSession } from "~/composables/useSession";
 import type { UserInfo } from "~/types/auth";
 
 export const useTracking = () => {
   const config = useRuntimeConfig();
-  const { $api } = useNuxtApp();
   const { sessionId } = useSession();
   const authUser = useCookie<UserInfo | null>("auth_user");
 

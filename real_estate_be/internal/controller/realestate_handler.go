@@ -364,6 +364,38 @@ func (h *RealEstateHandler) CreatePost(c *fiber.Ctx) error {
 	})
 }
 
+// UpdatePost - Cập nhật tin đăng theo ID và phân quyền sở hữu
+func (h *RealEstateHandler) UpdatePost(c *fiber.Ctx) error {
+	postID, err := strconv.ParseUint(c.Params("id"), 10, 64)
+	if err != nil || postID == 0 {
+		return response.BadRequest(c, "ID bài viết không hợp lệ", err.Error())
+	}
+
+	var req dto.CreateRealEstateRequest
+	if err := c.BodyParser(&req); err != nil {
+		return response.BadRequest(c, "Invalid request body", err.Error())
+	}
+
+	// Lấy email từ token đã lưu trong AuthMiddleware
+	email, ok := c.Locals("email").(string)
+	if !ok || email == "" {
+		return response.Unauthorized(c, "Unauthorized", nil)
+	}
+
+	// Tìm user theo email để lấy user_id
+	user, err := h.service.GetUserByEmail(email)
+	if err != nil {
+		return response.Unauthorized(c, "User not found", err.Error())
+	}
+
+	err = h.service.UpdateRealEstate(postID, req, user.ID)
+	if err != nil {
+		return response.InternalServerError(c, "Cập nhật bài viết thất bại", err.Error())
+	}
+
+	return response.OK(c, "Cập nhật bài viết thành công")
+}
+
 func (h *RealEstateHandler) ListProjectsByProjectCategory(c *fiber.Ctx) error {
 	categorySlug := c.Params("category_slug")
 	if categorySlug == "" {
