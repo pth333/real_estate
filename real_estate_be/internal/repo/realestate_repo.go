@@ -1,10 +1,8 @@
 package repo
 
 import (
-	"encoding/json"
 	"errors"
 	"strconv"
-	"strings"
 
 	"real_estate_be/internal/dto"
 	model "real_estate_be/internal/models"
@@ -14,20 +12,6 @@ import (
 
 type realEstateRepo struct {
 	db *gorm.DB
-}
-
-// toResponse chuyển dto.RealEstateResponse (scan từ deferred join) → Images slice + parse amenities JSON
-func toResponse(m *dto.RealEstateResponse) {
-	if m.ImageURLs != "" {
-		m.Images = strings.Split(m.ImageURLs, "|")
-	}
-	// AmenitiesRaw: JSON string lưu trong DB (`["camera","bao_ve"]`) → mảng string
-	if m.AmenitiesRaw != "" {
-		var amenities []string
-		if err := json.Unmarshal([]byte(m.AmenitiesRaw), &amenities); err == nil {
-			m.Amenities = amenities
-		}
-	}
 }
 
 type RealEstateRepository interface {
@@ -43,9 +27,9 @@ type RealEstateRepository interface {
 	GetListWard(provinceCode string) ([]model.Ward, error)
 	GetListRealEstateTypes() ([]model.Category, error)
 	// Lấy tên tỉnh/thành từ code (VD "79" → "Hồ Chí Minh")
-	GetProvinceNameByCode(code string) (string, error)
+	// GetProvinceNameByCode(name string) (string, error)
 	// Lấy tên phường/xã từ code (VD "76049" → "Phường 12")
-	GetWardNameByCode(code string) (string, error)
+	// GetWardNameByCode(anm string) (string, error)
 	// Lấy N thành phố có nhiều BĐS nhất (theo cột city)
 	GetTopCityByCount(limit int) ([]model.CityStat, error)
 	// Lấy khoảng giá/diện tích theo slug SEO (filter_ranges). Không parse chuỗi.
@@ -182,9 +166,9 @@ func (r *realEstateRepo) GetList(req dto.RealEstateSearchRequest, offset, limit 
 		return nil, 0, err
 	}
 
-	for i := range items {
-		toResponse(&items[i])
-	}
+	// for i := range items {
+	// 	toResponse(&items[i])
+	// }
 	return items, total, nil
 }
 
@@ -278,9 +262,9 @@ func (r *realEstateRepo) GetListByCategory(offset int, req dto.RealEstateSearchR
 		return nil, 0, err
 	}
 
-	for i := range items {
-		toResponse(&items[i])
-	}
+	// for i := range items {
+	// 	toResponse(&items[i])
+	// }
 	return items, total, nil
 }
 
@@ -343,22 +327,6 @@ func (r *realEstateRepo) GetListRealEstateTypes() ([]model.Category, error) {
 	return types, nil
 }
 
-func (r *realEstateRepo) GetProvinceNameByCode(code string) (string, error) {
-	var name string
-	if err := r.db.Model(&model.Province{}).Select("name").Where("code = ?", code).First(&name).Error; err != nil {
-		return "", err
-	}
-	return name, nil
-}
-
-func (r *realEstateRepo) GetWardNameByCode(code string) (string, error) {
-	var name string
-	if err := r.db.Model(&model.Ward{}).Select("name").Where("code = ?", code).First(&name).Error; err != nil {
-		return "", err
-	}
-	return name, nil
-}
-
 // GetFilterRanges trả toàn bộ filter_ranges (type price + area), dùng để FE
 // dựng menu lọc theo đúng slug chuẩn trong DB (không build slug thủ công).
 func (r *realEstateRepo) GetFilterRanges() ([]model.FilterRange, error) {
@@ -373,28 +341,21 @@ func (r *realEstateRepo) GetFilterRanges() ([]model.FilterRange, error) {
 // join tương tự GetListByCategory để kèm agent name + gom ảnh.
 func (r *realEstateRepo) GetByID(id uint64) (*dto.RealEstateResponse, error) {
 	var item dto.RealEstateResponse
-	err := r.db.Raw(
-		"SELECT re.id, re.title, re.slug, re.price_vnd, re.address, re.district, re.city, "+
-			"re.acreage, re.price_per_m2, re.bedrooms, re.bathrooms, re.description, re.created_at, "+
-			"re.house_direction, re.balcony_direction, re.floors, re.legal_docs, re.interior, "+
-			"re.price_electricity, re.price_water, re.price_internet, re.amenities, "+
-			"COALESCE(GROUP_CONCAT(DISTINCT img.url ORDER BY img.id SEPARATOR '|'), '') AS image_urls, "+
-			"COALESCE(u.name, '') AS agent_name, "+
-			"COALESCE(u.phone, '') AS agent_phone "+
-			"FROM real_estates re "+
-			"LEFT JOIN images img ON img.real_estate_id = re.id "+
-			"LEFT JOIN users u ON u.id = re.user_id "+
-			"WHERE re.id = ? "+
-			"GROUP BY re.id",
-		id,
-	).Scan(&item).Error
+	err := r.db.
+		Table("real_estates re").
+		Select(`re.*,
+        CONCAT(COALESCE(c.id, ''), '-', COALESCE(c.name, '')) AS real_estate_type,
+        COALESCE(u.name, '') AS agent_name,
+        COALESCE(u.phone, '') AS agent_phone,
+        COALESCE(u.email, '') AS agent_email`).
+		Joins("LEFT JOIN categories c ON c.id = re.category_id").
+		Joins("LEFT JOIN users u ON u.id = re.user_id").
+		Where("re.id = ?", id).
+		Scan(&item).Error
 	if err != nil {
 		return nil, err
 	}
-	if item.ID == 0 {
-		return nil, nil
-	}
-	toResponse(&item)
+
 	return &item, nil
 }
 
@@ -522,9 +483,9 @@ func (r *realEstateRepo) GetTrending(limit int) ([]dto.RealEstateResponse, error
 		return nil, err
 	}
 
-	for i := range items {
-		toResponse(&items[i])
-	}
+	// for i := range items {
+	// 	toResponse(&items[i])
+	// }
 	return items, nil
 }
 
@@ -557,10 +518,10 @@ func (r *realEstateRepo) GetByIDs(ids []uint64) ([]dto.RealEstateResponse, error
 
 	// Sắp xếp lại theo đúng thứ tự của mảng ids truyền vào (giữ tính chất ranking)
 	idMap := make(map[uint64]dto.RealEstateResponse)
-	for _, item := range items {
-		toResponse(&item)
-		idMap[item.ID] = item
-	}
+	// for _, item := range items {
+	// 	toResponse(&item)
+	// 	idMap[item.ID] = item
+	// }
 
 	sortedItems := make([]dto.RealEstateResponse, 0, len(items))
 	for _, id := range ids {
@@ -645,8 +606,8 @@ func (r *realEstateRepo) GetRecommendationsBasic(userID uint64, sessionID string
 		return r.GetTrending(limit)
 	}
 
-	for i := range items {
-		toResponse(&items[i])
-	}
+	// for i := range items {
+	// 	toResponse(&items[i])
+	// }
 	return items, nil
 }

@@ -166,6 +166,7 @@ const columns: DataTableColumns<IManagerPostItem> = [
     title: "Bất động sản",
     key: "property",
     width: 300,
+    // ellipsis: true,
     render(row) {
       return h("div", { class: "flex items-center gap-3 py-1" }, [
         h(NImage, {
@@ -176,7 +177,7 @@ const columns: DataTableColumns<IManagerPostItem> = [
           class: "rounded object-cover border border-gray-100 flex-shrink-0",
           previewDisabled: false,
         }),
-        h("div", { class: "flex flex-col gap-1 min-w-0" }, [
+        h("div", { class: "flex flex-col gap-1 min-w-0 flex-1" }, [
           // Tooltip hiện full title khi hover
           h(
             NTooltip,
@@ -185,7 +186,7 @@ const columns: DataTableColumns<IManagerPostItem> = [
               trigger: () =>
                 h(
                   "span",
-                  { class: "font-medium text-gray-800 text-sm truncate block max-w-[200px] cursor-default" },
+                  { class: "font-medium text-gray-800 text-sm truncate block w-full cursor-default" },
                   row.title
                 ),
               default: () => row.title,

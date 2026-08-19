@@ -38,14 +38,14 @@
                     <label class="text-sm text-gray-700 mb-1.5">
                         Mức giá <span class="text-red-500">*</span>
                     </label>
-                    <NumberFormatInput v-model="postStore.form.price" placeholder="Nhập mức giá"
-                        :status="postStore.errorsMainInfo.price ? 'error' : 'default'"
-                        @update:modelValue="clearError('price')" />
-                    <span v-if="postStore.errorsMainInfo.price" class="text-xs text-red-500 mt-1 block">{{
-                        postStore.errorsMainInfo.price
+                    <NumberFormatInput v-model="postStore.form.price_per_m2" placeholder="Nhập mức giá"
+                        :status="postStore.errorsMainInfo.price_per_m2 ? 'error' : 'default'"
+                        @update:modelValue="clearError('price_per_m2')" />
+                    <span v-if="postStore.errorsMainInfo.price_per_m2" class="text-xs text-red-500 mt-1 block">{{
+                        postStore.errorsMainInfo.price_per_m2
                         }}</span>
-                    <span v-if="postStore.form.price && postStore.form.area" class="text-xs mt-1">
-                        {{ formatTotalValue(postStore.form.price, postStore.form.area, postStore.form.unit) }}
+                    <span v-if="postStore.form.price_per_m2 && postStore.form.area" class="text-xs mt-1">
+                        {{ formatTotalValue(postStore.form.price_per_m2, postStore.form.area, postStore.form.unit) }}
                     </span>
                 </div>
 

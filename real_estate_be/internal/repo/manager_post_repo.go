@@ -9,7 +9,7 @@ import (
 type ManagerPostRepository interface {
 	GetManagerPostsList(userID uint64, search string, offset, limit int) ([]model.RealEstate, int64, error)
 	GetByID(id uint64) (*model.RealEstate, error)
-	DeleteManagerPost(id uint64, userID uint64) error
+	DeleteManagerPost(id uint64) error
 	UnlinkImages(realEstateID uint64) error
 }
 
@@ -66,9 +66,8 @@ func (r *managerPostRepo) GetByID(id uint64) (*model.RealEstate, error) {
 	return &item, nil
 }
 
-func (r *managerPostRepo) DeleteManagerPost(id uint64, userID uint64) error {
-	// Chỉ cho phép xóa nếu bài viết đó do chính manager (userID) sở hữu
-	return r.db.Where("id = ? AND user_id = ?", id, userID).Delete(&model.RealEstate{}).Error
+func (r *managerPostRepo) DeleteManagerPost(id uint64) error {
+	return r.db.Where("id = ?", id).Delete(&model.RealEstate{}).Error
 }
 
 func (r *managerPostRepo) UnlinkImages(realEstateID uint64) error {

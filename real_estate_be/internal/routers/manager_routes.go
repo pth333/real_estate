@@ -21,7 +21,8 @@ func InitManagerRoutes(Router fiber.Router) {
 		{
 			// Lấy danh sách bài viết phân trang và lọc của manager
 			authGroup.Get("/posts", managerHandler.GetManagerPostsList)
-
+			authGroup.Post("/create-post", managerHandler.CreatePost)
+			authGroup.Put("/update-post/:id", managerHandler.UpdatePost)
 			// Xóa bài viết chính chủ của manager
 			authGroup.Delete("/posts/:id", managerHandler.DeleteManagerPost)
 		}

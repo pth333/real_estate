@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"real_estate_be/internal/dto"
 	model "real_estate_be/internal/models"
 
 	"gorm.io/gorm"
@@ -11,6 +12,7 @@ type ImageRepository interface {
 	FindByKey(key string) (*model.Image, error)
 	// LinkToRealEstate gán real_estate_id cho danh sách ảnh đã upload
 	LinkToRealEstate(imageIDs []uint64, realEstateID uint64) error
+	GetImagesByRealEstateID(id uint64) ([]dto.ImageResponse, error)
 }
 
 type imageRepository struct {
@@ -42,4 +44,16 @@ func (r *imageRepository) FindByKey(key string) (*model.Image, error) {
 		return nil, err
 	}
 	return &image, nil
+}
+
+func (r *imageRepository) GetImagesByRealEstateID(id uint64) ([]dto.ImageResponse, error) {
+	var items []dto.ImageResponse
+	err := r.db.Model(&model.Image{}).
+		Where("real_estate_id = ?", id).
+		Order("id").
+		Scan(&items).Error
+	if err != nil {
+		return nil, err
+	}
+	return items, nil
 }

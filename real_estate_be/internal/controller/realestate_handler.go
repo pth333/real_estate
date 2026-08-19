@@ -17,15 +17,18 @@ import (
 type RealEstateHandler struct {
 	service usecase.IRealEstateService
 	repo    repo.RealEstateRepository
+	imgRepo repo.ImageRepository
 }
 
 func NewRealEstateHandler(
 	service usecase.IRealEstateService,
 	repo repo.RealEstateRepository,
+	imgRepo repo.ImageRepository,
 ) *RealEstateHandler {
 	return &RealEstateHandler{
 		service: service,
 		repo:    repo,
+		imgRepo: imgRepo,
 	}
 }
 
@@ -45,6 +48,14 @@ func (h *RealEstateHandler) List(c *fiber.Ctx) error {
 	}
 
 	data, total, err := h.service.ListRealEstate(req, userID, sessionID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+
+	// Lấy danh sách ảnh tại tầng Controller
+	// data, err = h.populateImagesForItems(data)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"message": err.Error(),
@@ -81,10 +92,7 @@ func (h *RealEstateHandler) ListBySEOURL(c *fiber.Ctx) error {
 				continue
 			}
 
-			// if catParam == category.Slug {
 			req.Slug = category.Slug
-			// break
-			// }
 
 			// Tách location slug (phần sau category.Slug + "-")
 			locationSlug := strings.TrimPrefix(catParam, category.Slug)
@@ -206,6 +214,12 @@ func (h *RealEstateHandler) Detail(c *fiber.Ctx) error {
 	if item == nil {
 		return response.Error(c, fiber.StatusNotFound, "Không tìm thấy tin đăng", nil)
 	}
+
+	images, err := h.imgRepo.GetImagesByRealEstateID(id)
+	if err != nil {
+		return response.InternalServerError(c, "Lấy danh sách ảnh thất bại", err.Error())
+	}
+	item.Images = images
 
 	return response.OK(c, item)
 }
@@ -333,67 +347,6 @@ func (h *RealEstateHandler) ListRealEstateTypes(c *fiber.Ctx) error {
 	}
 
 	return response.OK(c, options)
-}
-
-// CreateRealEstate — tạo tin đăng từ payload FE (đã qua AuthMiddleware → lấy email)
-func (h *RealEstateHandler) CreatePost(c *fiber.Ctx) error {
-	var req dto.CreateRealEstateRequest
-	if err := c.BodyParser(&req); err != nil {
-		return response.BadRequest(c, "Invalid request body", err.Error())
-	}
-
-	// Lấy email từ token đã lưu trong AuthMiddleware
-	email, ok := c.Locals("email").(string)
-	if !ok || email == "" {
-		return response.Unauthorized(c, "Unauthorized", nil)
-	}
-
-	// Tìm user theo email để lấy user_id
-	user, err := h.service.GetUserByEmail(email)
-	if err != nil {
-		return response.Unauthorized(c, "User not found", err.Error())
-	}
-
-	id, err := h.service.CreateRealEstate(req, user.ID)
-	if err != nil {
-		return response.InternalServerError(c, "Create real estate failed", err.Error())
-	}
-
-	return response.Created(c, "Tạo tin đăng thành công", fiber.Map{
-		"id": id,
-	})
-}
-
-// UpdatePost - Cập nhật tin đăng theo ID và phân quyền sở hữu
-func (h *RealEstateHandler) UpdatePost(c *fiber.Ctx) error {
-	postID, err := strconv.ParseUint(c.Params("id"), 10, 64)
-	if err != nil || postID == 0 {
-		return response.BadRequest(c, "ID bài viết không hợp lệ", err.Error())
-	}
-
-	var req dto.CreateRealEstateRequest
-	if err := c.BodyParser(&req); err != nil {
-		return response.BadRequest(c, "Invalid request body", err.Error())
-	}
-
-	// Lấy email từ token đã lưu trong AuthMiddleware
-	email, ok := c.Locals("email").(string)
-	if !ok || email == "" {
-		return response.Unauthorized(c, "Unauthorized", nil)
-	}
-
-	// Tìm user theo email để lấy user_id
-	user, err := h.service.GetUserByEmail(email)
-	if err != nil {
-		return response.Unauthorized(c, "User not found", err.Error())
-	}
-
-	err = h.service.UpdateRealEstate(postID, req, user.ID)
-	if err != nil {
-		return response.InternalServerError(c, "Cập nhật bài viết thất bại", err.Error())
-	}
-
-	return response.OK(c, "Cập nhật bài viết thành công")
 }
 
 func (h *RealEstateHandler) ListProjectsByProjectCategory(c *fiber.Ctx) error {
@@ -553,7 +506,34 @@ func (h *RealEstateHandler) GetRecommendations(c *fiber.Ctx) error {
 		})
 	}
 
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+
 	return c.JSON(fiber.Map{
 		"data": props,
 	})
 }
+
+// populateImagesForItems bổ sung danh sách ảnh cho danh sách DTO RealEstateResponse từ repository.
+// func (h *RealEstateHandler) populateImagesForItems(items []dto.RealEstateResponse) ([]dto.RealEstateResponse, error) {
+// 	if len(items) == 0 {
+// 		return items, nil
+// 	}
+// 	ids := make([]uint64, len(items))
+// 	for i, item := range items {
+// 		ids[i] = item.ID
+// 	}
+// 	imgMap, err := h.repo.GetImagesByRealEstateIDs(ids)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	for i := range items {
+// 		if urls, exists := imgMap[items[i].ID]; exists {
+// 			items[i].Images = urls
+// 		}
+// 	}
+// 	return items, nil
+// }

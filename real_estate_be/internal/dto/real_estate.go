@@ -29,23 +29,25 @@ type Filter struct {
 }
 
 type RealEstateResponse struct {
-	ID          uint64   `json:"id" gorm:"column:id"`
-	Title       string   `json:"title" gorm:"column:title"`
-	Slug        string   `json:"slug,omitempty" gorm:"column:slug"`
-	PriceVND    float64  `json:"price_vnd" gorm:"column:price_vnd"`
-	Address     string   `json:"address" gorm:"column:address"`
-	District    string   `json:"district" gorm:"column:district"`
-	City        string   `json:"city" gorm:"column:city"`
-	Acreage     float64  `json:"acreage" gorm:"column:acreage"`
-	PricePerM2  float64  `json:"price_per_m2" gorm:"column:price_per_m2"`
-	Images      []string `json:"images,omitempty" gorm:"-"`
-	Bedrooms    *int     `json:"bedrooms,omitempty" gorm:"column:bedrooms"`
-	Bathrooms   *int     `json:"bathrooms,omitempty" gorm:"column:bathrooms"`
-	Description string   `json:"description,omitempty" gorm:"column:description"`
-	AgentName   string   `json:"agent_name,omitempty" gorm:"column:agent_name"`
-	AgentPhone  string   `json:"agent_phone,omitempty" gorm:"column:agent_phone"`
-	Badge       string   `json:"badge,omitempty" gorm:"-"`
-	CreatedAt   string   `json:"created_at" gorm:"column:created_at"`
+	ID             uint64          `json:"id" gorm:"column:id"`
+	Title          string          `json:"title" gorm:"column:title"`
+	Slug           string          `json:"slug,omitempty" gorm:"column:slug"`
+	RealEstateType string          `json:"real_estate_type,omitempty" gorm:"column:real_estate_type"`
+	PriceVND       float64         `json:"price_vnd" gorm:"column:price_vnd"`
+	Address        string          `json:"address" gorm:"column:address"`
+	District       string          `json:"district" gorm:"column:district"`
+	City           string          `json:"city" gorm:"column:city"`
+	Acreage        float64         `json:"acreage" gorm:"column:acreage"`
+	PricePerM2     float64         `json:"price_per_m2" gorm:"column:price_per_m2"`
+	Images         []ImageResponse `json:"images,omitempty" gorm:"-"`
+	Bedrooms       *int            `json:"bedrooms,omitempty" gorm:"column:bedrooms"`
+	Bathrooms      *int            `json:"bathrooms,omitempty" gorm:"column:bathrooms"`
+	Description    string          `json:"description,omitempty" gorm:"column:description"`
+	AgentName      string          `json:"agent_name,omitempty" gorm:"column:agent_name"`
+	AgentEmail     string          `json:"agent_email,omitempty" gorm:"column:agent_email"`
+	AgentPhone     string          `json:"agent_phone,omitempty" gorm:"column:agent_phone"`
+	Badge          string          `json:"badge,omitempty" gorm:"-"`
+	CreatedAt      string          `json:"created_at" gorm:"column:created_at"`
 
 	// ── Thông tin bổ sung mục Đặc điểm BĐS ──
 	HouseDirection   string   `json:"house_direction,omitempty" gorm:"column:house_direction"`
@@ -61,8 +63,11 @@ type RealEstateResponse struct {
 	// AmenitiesRaw nhận giá trị raw từ cột amenities (JSON string) khi scan
 	AmenitiesRaw string `json:"-" gorm:"column:amenities"`
 
-	// ImageURLs nội bộ — không export ra JSON, chứa URL ảnh pipe-separated từ GROUP_CONCAT
-	ImageURLs string `json:"-" gorm:"column:image_urls"`
+	// Nhận dữ liệu từ SQL
+	ImageURLsRaw string `json:"-" gorm:"column:image_urls"`
+
+	// Trả FE
+	ImageURLs []string `json:"image_urls,omitempty" gorm:"-"`
 }
 
 type ProvinceResponse struct {
@@ -110,7 +115,7 @@ type CreateRealEstateRequest struct {
 	ProjectID        *uint64  `json:"project_id"`
 	RealEstateType   string   `json:"real_estate_type"`
 	Area             float64  `json:"area"`
-	Price            float64  `json:"price"`
+	PricePerM2       float64  `json:"price_per_m2"`
 	Unit             string   `json:"unit"`
 	LegalDocs        string   `json:"legal_docs"`
 	Interior         string   `json:"interior"`
@@ -130,5 +135,5 @@ type CreateRealEstateRequest struct {
 	Title            string   `json:"title"`
 	Description      string   `json:"description"`
 	// Id ảnh/video đã upload, để liên kết với tin đăng
-	ImageIDs []uint64 `json:"image_ids"`
+	Images []ImageResponse `json:"images"`
 }

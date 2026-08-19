@@ -1,7 +1,7 @@
 export interface FileItem {
     id: string
     file: File
-    fileType: 'image' | 'video'
+    fileType: string;
     previewUrl: string
     thumbnailUrl?: string
     status: 'pending' | 'gettingPresign' | 'uploading' | 'confirming' | 'done' | 'error'

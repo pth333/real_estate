@@ -171,6 +171,7 @@
 import type { FileItem } from '~/types/uploadmedia'
 import { uploadFile } from '~/composables/upload'
 import { useCreatePost } from '~/stores/create-post'
+import type { UploadedMediaItem } from '~/types/real_estate'
 
 const { validateImage, validateVideo } = useValidate()
 
@@ -240,12 +241,12 @@ function syncImageIdsToStore() {
     const doneFiles = files.value.filter((f) => f.status === 'done' && f.imageId)
     // postStore.form.image_ids = doneFiles.map((f) => f.imageId!)?
     postStore.form.images = doneFiles.map((f) => ({
-        imageId: f.imageId!,
-        publicUrl: f.publicUrl ?? '',
-        thumbnailUrl: f.thumbnailUrl,
-        fileType: f.fileType,
-        name: f.file.name,
-        type: f.file.type,
+        id: f.imageId!,
+        url: f.publicUrl ?? '',
+        thumnail_url: f.thumbnailUrl,
+        file_type: f.fileType,
+        file_name: f.file.name,
+        file_size: f.file.size,
     }))
 }
 
@@ -256,16 +257,16 @@ watch(
     (items) => {
         if (!items || !items.length || files.value.length) return
         const restored: FileItem[] = items.map((m) => ({
-            id: `draft_${m.imageId}`,
+            id: `draft_${m.id}`,
             // name + type (MIME thật) lưu trong draft để khôi phục đúng định dạng
-            file: new File([], m.name, { type: m.type }),
-            fileType: m.fileType,
-            previewUrl: m.publicUrl,
-            thumbnailUrl: m.thumbnailUrl,
+            file: new File([], m.file_name, { type: m.file_type }),
+            fileType: m.file_type,
+            previewUrl: m.url,
+            thumbnailUrl: m.thumnail_url,
             status: 'done' as const,
             progress: 100,
-            imageId: m.imageId,
-            publicUrl: m.publicUrl,
+            imageId: m.id,
+            publicUrl: m.url,
         }))
         files.value.push(...restored)
     },
@@ -345,7 +346,32 @@ function validateImageCount(): boolean {
     return true
 }
 
-defineExpose({ validateImageCount })
+// Hàm hỗ trợ component cha nạp danh sách ảnh/video cũ (khi sửa bài viết)
+function setFileList(images: UploadedMediaItem[]) {
+    if (!images || !images.length) {
+        files.value = []
+        return
+    }
+    files.value = images.map((m) => {
+        // Chuẩn hoá fileType thành 'image' hoặc 'video' để khớp với template FE
+        const isVideo = m.file_type.startsWith('video')
+        const normalizedType = isVideo ? 'video' : 'image'
+
+        return {
+            id: String(m.id),
+            file: new File([], m.file_name || 'image.png', { type: m.file_type }),
+            fileType: normalizedType,
+            previewUrl: m.url,
+            thumbnailUrl: m.thumnail_url,
+            status: 'done' as const,
+            progress: 100,
+            imageId: m.id,
+            publicUrl: m.url,
+        }
+    })
+}
+
+defineExpose({ validateImageCount, setFileList })
 
 const videoStandards = [
     { label: 'Thời lượng', value: 'Tối thiểu 10 giây, tối đa 5 phút' },

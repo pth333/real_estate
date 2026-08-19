@@ -98,12 +98,10 @@ const clearError = (field: keyof typeof postStore.errorsAddress) => {
 const locationLabel = computed(() => {
     const city = provinceOption.value.find(item => item.value === postStore.form.province)
     const ward = wardOptions.value.find(item => item.value === postStore.form.ward)
-    const project = projectOptions.value.find(item => item.value === postStore.form.project_id)
 
     const parts: string[] = [];
     if (city) parts.push(city.label as string);
     if (ward) parts.push(ward.label as string);
-    if (project) parts.push(project.label as string);
     if (postStore.form.detail_address) parts.push(postStore.form.detail_address);
     if (parts.length === 0) return 'Chọn khu vực';
     return parts.join(', ');

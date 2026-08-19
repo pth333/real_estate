@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"strconv"
 	"strings"
 	"time"
 
@@ -42,12 +41,9 @@ type IRealEstateService interface {
 	GetListWard(provinceCode string) ([]model.Ward, error)
 	GetListRealEstateTypes() ([]model.Category, error)
 	GetUserByEmail(email string) (*model.User, error)
-	CreateRealEstate(req dto.CreateRealEstateRequest, userID uint64) (uint64, error)
-	UpdateRealEstate(id uint64, req dto.CreateRealEstateRequest, userID uint64) error
 	GetTopCity(limit int) ([]model.CityStat, error)
 	GetFirstCategorySlug() (string, error)
 	ToSlug(city string) string
-	GenerateListingSlug(title string, id uint64) string
 	IncrementProjectView(id uint64) error
 	GetFeaturedProjects(limit int) ([]model.RealEstateProject, error)
 	GetProjectByID(id uint64) (*model.RealEstateProject, error)
@@ -69,6 +65,34 @@ func NewRealEstateService(
 		userRepo:          userRepo,
 		searchHistoryRepo: searchHistoryRepo,
 		producer:          producer,
+	}
+}
+
+func MapRealEstateResponse(data []dto.RealEstateResponse) {
+	for i := range data {
+		m := &data[i]
+
+		if m.ImageURLsRaw != "" {
+			m.ImageURLs = strings.Split(m.ImageURLsRaw, "|")
+		} else {
+			m.ImageURLs = []string{}
+		}
+
+		// AmenitiesRaw → []string
+		if m.AmenitiesRaw != "" {
+			var amenities []string
+
+			if err := json.Unmarshal(
+				[]byte(m.AmenitiesRaw),
+				&amenities,
+			); err == nil {
+				m.Amenities = amenities
+			} else {
+				m.Amenities = []string{}
+			}
+		} else {
+			m.Amenities = []string{}
+		}
 	}
 }
 
@@ -109,10 +133,15 @@ func (s *RealEstateService) ListRealEstateByCategory(req dto.RealEstateSearchReq
 	if req.Slug != "" {
 		if id, errCat := s.categoryRepo.GetCategoryIdBySlug(req.Slug); errCat == nil && id > 0 {
 			data, total, err = s.repo.GetListByCategory(offset, req, limit)
+
+			jsonData, _ := json.MarshalIndent(data, " ", " ")
+			fmt.Println("JSON DATA: ", string(jsonData))
 		}
 	} else {
 		data, total, err = s.repo.GetList(req, offset, limit)
 	}
+
+	MapRealEstateResponse(data)
 
 	if err != nil {
 		return nil, 0, err
@@ -174,184 +203,6 @@ func (s *RealEstateService) GetUserByEmail(email string) (*model.User, error) {
 	return s.userRepo.FindByEmail(email)
 }
 
-func (s *RealEstateService) CreateRealEstate(req dto.CreateRealEstateRequest, userID uint64) (uint64, error) {
-	var categoryID *int64
-	fmt.Println("type", req.RealEstateType)
-	if req.RealEstateType != "" {
-		if id, err := strconv.ParseInt(req.RealEstateType, 10, 64); err == nil {
-			categoryID = &id
-		}
-	}
-
-	pricePerM2 := req.Price
-	switch req.Unit {
-	case "usd":
-		pricePerM2 = req.Price * USDToVND
-	case "eur":
-		pricePerM2 = req.Price * EURToVND
-	}
-	priceVND := pricePerM2 * req.Area
-
-	cityName, cityErr := s.repo.GetProvinceNameByCode(req.Province)
-	wardName, wardErr := s.repo.GetWardNameByCode(req.Ward)
-
-	if cityErr != nil {
-		return 0, fmt.Errorf("không tìm thấy tỉnh/thành: %s", req.Province)
-	}
-	if wardErr != nil {
-		return 0, fmt.Errorf("không tìm thấy phường/xã: %s", req.Ward)
-	}
-
-	amenitiesJSON, err := json.Marshal(req.Amenities)
-	if err != nil {
-		return 0, fmt.Errorf("lỗi mã hoá tiện ích: %w", err)
-	}
-
-	address := strings.TrimSpace(strings.Join([]string{
-		req.DetailAddress, wardName, cityName,
-	}, " "))
-
-	estate := &model.RealEstate{
-		ProjectID:        req.ProjectID,
-		UserID:           &userID,
-		Title:            req.Title,
-		PriceVND:         priceVND,
-		Address:          address,
-		District:         wardName,
-		City:             cityName,
-		Acreage:          req.Area,
-		PricePerM2:       pricePerM2,
-		CategoryID:       categoryID,
-		Description:      req.Description,
-		Bedrooms:         req.BedroomCount,
-		Bathrooms:        req.BathroomCount,
-		Amenities:        string(amenitiesJSON),
-		HouseDirection:   req.HouseDirection,
-		BalconyDirection: req.BalconyDirection,
-		Floors:           req.FloorCount,
-		LegalDocs:        req.LegalDocs,
-		Interior:         req.Interior,
-		PriceElectricity: req.PriceElectricity,
-		PriceWater:       req.PriceWater,
-		PriceInternet:    req.PriceInternet,
-	}
-
-	if err := s.repo.Create(estate); err != nil {
-		return 0, err
-	}
-
-	if estate.Slug == "" {
-		estate.Slug = s.GenerateListingSlug(estate.Title, estate.ID)
-		if err := s.repo.Save(estate); err != nil {
-			return 0, err
-		}
-	}
-
-	if err := s.imageRepo.LinkToRealEstate(req.ImageIDs, estate.ID); err != nil {
-		return 0, err
-	}
-
-	// Gửi Kafka event chuẩn cho Notify
-	if s.producer != nil {
-		topic := global.Config.Kafka.Topics.RealEstateNotified
-		if topic == "" {
-			topic = "real_estate.notified.v1" // Fallback topic name chuẩn
-		}
-
-		event := kafka.NewRealEstateNewListingEvent(*estate)
-		key := strconv.FormatUint(estate.ID, 10) // Key là ID BĐS
-
-		if err := s.producer.Publish(context.Background(), topic, key, event); err != nil {
-			log.Printf("⚠️ [Kafka] publish notify error: %v", err)
-		} else {
-			log.Printf("✅ [Kafka] published new listing notify event for ID: %d to topic: %s", estate.ID, topic)
-		}
-	}
-
-	return estate.ID, nil
-}
-
-// UpdateRealEstate cập nhật thông tin bài viết cũ của chính chủ
-func (s *RealEstateService) UpdateRealEstate(id uint64, req dto.CreateRealEstateRequest, userID uint64) error {
-	var rawEstate model.RealEstate
-	if err := global.DB.First(&rawEstate, id).Error; err != nil {
-		return fmt.Errorf("không tìm thấy bài viết cần cập nhật")
-	}
-
-	if rawEstate.UserID == nil || *rawEstate.UserID != userID {
-		return fmt.Errorf("bạn không có quyền cập nhật bài viết này")
-	}
-
-	var categoryID *int64
-	if req.RealEstateType != "" {
-		if catID, err := strconv.ParseInt(req.RealEstateType, 10, 64); err == nil {
-			categoryID = &catID
-		}
-	}
-
-	pricePerM2 := req.Price
-	switch req.Unit {
-	case "usd":
-		pricePerM2 = req.Price * USDToVND
-	case "eur":
-		pricePerM2 = req.Price * EURToVND
-	}
-	priceVND := pricePerM2 * req.Area
-
-	cityName, cityErr := s.repo.GetProvinceNameByCode(req.Province)
-	wardName, wardErr := s.repo.GetWardNameByCode(req.Ward)
-
-	if cityErr != nil {
-		return fmt.Errorf("không tìm thấy tỉnh/thành: %s", req.Province)
-	}
-	if wardErr != nil {
-		return fmt.Errorf("không tìm thấy phường/xã: %s", req.Ward)
-	}
-
-	amenitiesJSON, err := json.Marshal(req.Amenities)
-	if err != nil {
-		return fmt.Errorf("lỗi mã hoá tiện ích: %w", err)
-	}
-
-	address := strings.TrimSpace(strings.Join([]string{
-		req.DetailAddress, wardName, cityName,
-	}, " "))
-
-	rawEstate.ProjectID = req.ProjectID
-	rawEstate.Title = req.Title
-	rawEstate.PriceVND = priceVND
-	rawEstate.Address = address
-	rawEstate.District = wardName
-	rawEstate.City = cityName
-	rawEstate.Acreage = req.Area
-	rawEstate.PricePerM2 = pricePerM2
-	rawEstate.CategoryID = categoryID
-	rawEstate.Description = req.Description
-	rawEstate.Bedrooms = req.BedroomCount
-	rawEstate.Bathrooms = req.BathroomCount
-	rawEstate.Amenities = string(amenitiesJSON)
-	rawEstate.HouseDirection = req.HouseDirection
-	rawEstate.BalconyDirection = req.BalconyDirection
-	rawEstate.Floors = req.FloorCount
-	rawEstate.LegalDocs = req.LegalDocs
-	rawEstate.Interior = req.Interior
-	rawEstate.PriceElectricity = req.PriceElectricity
-	rawEstate.PriceWater = req.PriceWater
-	rawEstate.PriceInternet = req.PriceInternet
-
-	if err := global.DB.Save(&rawEstate).Error; err != nil {
-		return err
-	}
-
-	// Gỡ liên kết toàn bộ ảnh cũ ra trước khi lưu mới
-	global.DB.Model(&model.Image{}).Where("real_estate_id = ?", id).Update("real_estate_id", nil)
-	if err := s.imageRepo.LinkToRealEstate(req.ImageIDs, id); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (s *RealEstateService) ToSlug(input string) string {
 	var accents = map[rune]string{
 		'à': "a", 'á': "a", 'ả': "a", 'ã': "a", 'ạ': "a", 'ă': "a", 'ắ': "a", 'ằ': "a", 'ẳ': "a", 'ẵ': "a", 'ặ': "a", 'â': "a", 'ấ': "a", 'ầ': "a", 'ẩ': "a", 'ẫ': "a", 'ậ': "a",
@@ -379,10 +230,6 @@ func (s *RealEstateService) ToSlug(input string) string {
 		}
 	}
 	return strings.Trim(b.String(), "-")
-}
-
-func (s *RealEstateService) GenerateListingSlug(title string, id uint64) string {
-	return fmt.Sprintf("%s-rs%d", s.ToSlug(title), id)
 }
 
 func (s *RealEstateService) IncrementProjectView(id uint64) error {

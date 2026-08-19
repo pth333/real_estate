@@ -48,7 +48,10 @@ func InitializeCategoryHandler() (*controller.CategoryHandler, error) {
 func InitializeManagerPostHandler() (*controller.ManagerPostHandler, error) {
 	db := providerDB()
 	managerPostRepository := repo.NewManagerPostRepository(db)
-	iManagerPostUseCase := usecase.NewManagerPostUseCase(managerPostRepository)
+	realEstateRepository := repo.NewRealEstateRepository(db)
+	imageRepository := repo.NewImageRepository(db)
+	producer := kafka.NewProducer()
+	iManagerPostUseCase := usecase.NewManagerPostUseCase(managerPostRepository, realEstateRepository, imageRepository, producer)
 	iUserRepository := repo.NewUserRepository(db)
 	managerPostHandler := controller.NewManagerPostHandler(iManagerPostUseCase, iUserRepository)
 	return managerPostHandler, nil
@@ -75,7 +78,7 @@ func InitializeRealEstateHandler() (*controller.RealEstateHandler, error) {
 	iSearchHistoryRepository := repo.NewSearchHistoryRepository(db)
 	producer := kafka.NewProducer()
 	iRealEstateService := usecase.NewRealEstateService(realEstateRepository, iCategoryRepository, imageRepository, iUserRepository, iSearchHistoryRepository, producer)
-	realEstateHandler := controller.NewRealEstateHandler(iRealEstateService, realEstateRepository)
+	realEstateHandler := controller.NewRealEstateHandler(iRealEstateService, realEstateRepository, imageRepository)
 	return realEstateHandler, nil
 }
 

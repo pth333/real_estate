@@ -1,9 +1,13 @@
 export interface ImageResponse {
   id: number;
   url: string;
+  thumbnail_url: string;
+  file_name: string;
+  file_type: string;
+  file_size: number;
+  status?: string
 }
 
-// Mirror từ backend DTO response — field names khớp JSON snake_case
 export interface RealEstateResponse {
   id: number;
   title: string;
@@ -16,13 +20,16 @@ export interface RealEstateResponse {
   price_per_m2: number;
   created_at: string;
 
+  real_estate_type: string;
+
   // Optional fields
-  images?: string[];
-  images_detail?: ImageResponse[];
+  images?: ImageResponse[];
+  image_urls?: string[];
   bedrooms?: number;
   bathrooms?: number;
   description?: string;
   agent_name?: string;
+  agent_email?: string;
   agent_phone?: string;
   badge?: string;
   is_favorite?: boolean;
@@ -116,7 +123,7 @@ export interface IInformationRealestate {
   // Thông tin chính
   real_estate_type: string | null;
   area: number | null;
-  price: number | null;
+  price_per_m2: number | null;
   unit: string | null;
 
   // Thông tin khác
@@ -159,7 +166,7 @@ export class InformationRealestate {
       project_id: null,
       real_estate_type: null,
       area: null,
-      price: null,
+      price_per_m2: null,
       unit: "vnd",
       legal_docs: null,
       interior: null,
@@ -195,7 +202,6 @@ export class InformationRealestate {
     return form.tab === "review";
   }
 
-  // Khởi tạo đối tượng từ API Response trả về từ Backend (dành cho chế độ Edit)
   static fromResponse(res: RealEstateResponse): IInformationRealestate {
     const form = this.createEmpty();
     if (!res) return form;
@@ -203,8 +209,10 @@ export class InformationRealestate {
     form.title = res.title || "";
     form.description = res.description || "";
     form.area = res.acreage || null;
-    form.price = res.price_vnd || null;
+    form.price_per_m2 = res.price_per_m2 || null;
     form.unit = "vnd";
+
+    form.real_estate_type = res.real_estate_type || null;
 
     form.legal_docs = res.legal_docs || null;
     form.interior = res.interior || null;
@@ -223,34 +231,22 @@ export class InformationRealestate {
     }
 
     form.contact_name = res.agent_name || "";
-    form.contact_email = ""; // Default empty, can be populated from user profile if needed
+    form.contact_email = res.agent_email || "";
     form.contact_phone = res.agent_phone || "";
 
-    if (res.category_id) {
-      form.real_estate_type = `${res.category_id}-Category`;
-    }
+    form.province = res.city;
 
-    form.province = res.city || null;
     form.ward = res.district || null;
     form.detail_address = res.address || null;
 
-    if (res.images_detail && res.images_detail.length > 0) {
-      form.images = res.images_detail.map((img) => ({
-        imageId: img.id,
-        publicUrl: img.url,
-        thumbnailUrl: img.url,
-        fileType: "image",
-        name: `image_${img.id}`,
-        type: "image/jpeg",
-      }));
-    } else if (res.images && res.images.length > 0) {
-      form.images = res.images.map((url, index) => ({
-        imageId: 0,
-        publicUrl: url,
-        thumbnailUrl: url,
-        fileType: "image",
-        name: `image_${index}`,
-        type: "image/jpeg",
+    if (res.images && res.images.length > 0) {
+      form.images = res.images.map((img) => ({
+        id: img.id,
+        url: img.url,
+        thumnail_url: img.thumbnail_url,
+        file_type: img.file_type,
+        file_name: img.file_name,
+        file_size: img.file_size
       }));
     }
 
@@ -278,12 +274,13 @@ export interface WardOption {
 // name + type (MIME thật) lưu kèm để hiển thị alt text và giữ đúng định dạng
 // file khi khôi phục (không hardcode image/jpeg hay video/mp4).
 export interface UploadedMediaItem {
-  imageId: number;
-  publicUrl: string;
-  thumbnailUrl?: string;
-  fileType: "image" | "video";
-  name: string;
-  type: string;
+  id: number;
+  url: string;
+  thumnail_url?: string;
+  file_type: string;
+  file_name: string;
+  file_size: number;
+  status?: string
 }
 
 export interface ProjectOption {
@@ -305,4 +302,3 @@ export interface UpdatePostResponse {
   message?: string;
   error?: string;
 }
-

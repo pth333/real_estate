@@ -114,7 +114,7 @@ const isFavorite = ref(props.estate.is_favorite || false)
 // Grid ảnh: ảnh chính + 2 ảnh phụ thumbnail + ô +N (nhúng trực tiếp, không dùng composable)
 const DEFAULT_IMAGE = ''
 
-const images = computed(() => props.estate.images)
+const images = computed(() => props.estate.image_urls)
 
 const mainImage = computed(() => images.value?.[0] || DEFAULT_IMAGE)
 

@@ -16,7 +16,7 @@ export const useCreatePost = defineStore("create-post", () => {
   const errorsMainInfo = ref({
     real_estate_type: "",
     area: "",
-    price: "",
+    price_per_m2: "",
     unit: "",
   });
 
@@ -77,7 +77,7 @@ export const useCreatePost = defineStore("create-post", () => {
     errorsMainInfo.value.area = form.value.area
       ? ""
       : "Vui lòng nhập diện tích";
-    errorsMainInfo.value.price = form.value.price
+    errorsMainInfo.value.price_per_m2 = form.value.price_per_m2
       ? ""
       : "Vui lòng nhập mức giá";
     errorsMainInfo.value.unit = form.value.unit
@@ -149,7 +149,7 @@ export const useCreatePost = defineStore("create-post", () => {
   // Reset toàn bộ form về mặc định + xoá lỗi, dùng sau khi đăng tin thành công
   const resetForm = () => {
     form.value = InformationRealestate.createEmpty();
-    errorsMainInfo.value = { real_estate_type: "", area: "", price: "", unit: "" };
+    errorsMainInfo.value = { real_estate_type: "", area: "", price_per_m2: "", unit: "" };
     errorsAddress.value = { province: "", ward: "", detail_address: "" };
     errorsContact.value = { contact_name: "", contact_email: "", contact_phone: "" };
     errorsDescription.value = { title: "", description: "" };

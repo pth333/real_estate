@@ -86,7 +86,7 @@
 </template>
 <script setup lang="ts">
 import { useCreatePost } from '~/stores/create-post'
-import { InformationRealestate, type CreatePostResponse, type RealEstateResponse, type UpdatePostResponse, type UploadedMediaItem } from '~/types/real_estate'
+import { InformationRealestate, type CreatePostResponse, type ImageResponse, type RealEstateResponse, type UpdatePostResponse, type UploadedMediaItem } from '~/types/real_estate'
 definePageMeta({
     alias: "/nguoi-ban/dang-tin",
 })
@@ -139,7 +139,7 @@ const prevPage = () => {
         postStore.form.tab = 'upload'
     }
 }
-
+console.log(postStore.payload)
 const isSubmitting = ref(false)
 
 const submitCreatePost = async () => {
@@ -147,14 +147,15 @@ const submitCreatePost = async () => {
     isSubmitting.value = true
     try {
         let res;
+
         if (isEdit) {
             res = await $api.put<UpdatePostResponse>(
-                `/real-estate/update-post/${isEdit}`,
+                `/manager/update-post/${isEdit}`,
                 postStore.payload
             )
         } else {
             res = await $api.post<CreatePostResponse>(
-                '/real-estate/create-post',
+                '/manager/create-post',
                 postStore.payload,
             )
         }
@@ -164,12 +165,8 @@ const submitCreatePost = async () => {
             postStore.clearCurrentDraft()
             postStore.resetForm()
             navigateTo('/nguoi-ban/quan-ly-tin-dang')
-        } else {
-            window.message?.error(res.message || 'Thao tác thất bại')
         }
     } catch (err: unknown) {
-        const msg = (err as { data?: { message?: string } })?.data?.message
-        window.message?.error(msg || 'Thao tác thất bại, vui lòng thử lại')
     } finally {
         isSubmitting.value = false
     }
@@ -209,21 +206,17 @@ onMounted(async () => {
 // Tải thông tin chi tiết bài đăng cũ và đưa vào form store bằng Class Object
 const loadingPostDetail = async () => {
     try {
-        const res = await $api.get<{data: RealEstateResponse}>(`/real-estate/detail/${isEdit}`)
+        const res = await $api.get<{ data: RealEstateResponse }>(`/real-estate/detail/${isEdit}`)
         if (res) {
 
             const editForm = InformationRealestate.fromResponse(res.data)
             postStore.form = editForm
-
+            console.log(res.data)
             // Đẩy danh sách ảnh vào upload component để hiển thị preview
             if (editForm.images && editForm.images.length > 0) {
                 nextTick(() => {
                     if (uploadComponent.value) {
-                        uploadComponent.value.setFileList(editForm.images.map((img: any) => ({
-                            id: img.imageId,
-                            url: img.publicUrl,
-                            status: 'finished'
-                        })))
+                        uploadComponent.value.setFileList(editForm.images)
                     }
                 })
             }

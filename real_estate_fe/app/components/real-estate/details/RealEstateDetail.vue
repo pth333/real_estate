@@ -193,7 +193,7 @@ const { trackView, cleanupTracking } = useTracking()
 const activeImageIndex = ref(0);
 
 
-const allImages = computed(() => realEstateDetailStore.listing?.images ?? []);
+const allImages = computed(() => (realEstateDetailStore.listing?.images ?? []).map(img => img.url));
 const mainImage = computed(() => allImages.value[activeImageIndex.value] || '');
 
 function nextImage() {
