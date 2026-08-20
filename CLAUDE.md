@@ -16,3 +16,4 @@
 - Sử dụng icon trong folder icons nếu không có thì tạo mới
 - Viết code đơn giản hóa vấn đề thôi, giảm thiếu tối đa code có logic không liên quan
 - Backend viết đúng pattern của dự án handler chỉ nhận và trả dữ liệu, service xử lý logic, repo chỉ làm việc với DB
+//
