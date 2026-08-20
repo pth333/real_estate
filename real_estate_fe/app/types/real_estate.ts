@@ -46,6 +46,8 @@ export interface RealEstateResponse {
   price_water?: number;
   price_internet?: number;
   amenities?: string[];
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface DashboardSummary {
@@ -138,6 +140,8 @@ export interface IInformationRealestate {
   price_electricity: number | null;
   price_water: number | null;
   price_internet: number | null;
+  latitude: number | null;
+  longitude: number | null;
   amenities: string[];
 
   // Ảnh/video đã upload (id + url + thumbnail) — dùng để khôi phục preview
@@ -179,6 +183,8 @@ export class InformationRealestate {
       price_electricity: null,
       price_water: null,
       price_internet: null,
+      latitude: null,
+      longitude: null,
       amenities: [],
       images: [],
       contact_name: "",
@@ -225,6 +231,8 @@ export class InformationRealestate {
     form.price_electricity = res.price_electricity || null;
     form.price_water = res.price_water || null;
     form.price_internet = res.price_internet || null;
+    form.latitude = res.latitude || null;
+    form.longitude = res.longitude || null;
 
     if (res.amenities) {
       form.amenities = res.amenities;

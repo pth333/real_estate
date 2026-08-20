@@ -45,6 +45,9 @@ type RealEstate struct {
 	PriceWater       *float64 `gorm:"column:price_water" json:"price_water"`
 	PriceInternet    *float64 `gorm:"column:price_internet" json:"price_internet"`
 
+	Latitude  *float64 `gorm:"column:latitude;type:decimal(9,6)" json:"latitude"`
+	Longitude *float64 `gorm:"column:longitude;type:decimal(10,6)" json:"longitude"`
+
 	CreatedAt time.Time
 	UpdatedAt time.Time
 

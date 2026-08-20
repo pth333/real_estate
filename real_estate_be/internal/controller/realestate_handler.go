@@ -516,24 +516,3 @@ func (h *RealEstateHandler) GetRecommendations(c *fiber.Ctx) error {
 		"data": props,
 	})
 }
-
-// populateImagesForItems bổ sung danh sách ảnh cho danh sách DTO RealEstateResponse từ repository.
-// func (h *RealEstateHandler) populateImagesForItems(items []dto.RealEstateResponse) ([]dto.RealEstateResponse, error) {
-// 	if len(items) == 0 {
-// 		return items, nil
-// 	}
-// 	ids := make([]uint64, len(items))
-// 	for i, item := range items {
-// 		ids[i] = item.ID
-// 	}
-// 	imgMap, err := h.repo.GetImagesByRealEstateIDs(ids)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	for i := range items {
-// 		if urls, exists := imgMap[items[i].ID]; exists {
-// 			items[i].Images = urls
-// 		}
-// 	}
-// 	return items, nil
-// }

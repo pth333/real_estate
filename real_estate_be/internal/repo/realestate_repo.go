@@ -149,7 +149,7 @@ func (r *realEstateRepo) GetList(req dto.RealEstateSearchRequest, offset, limit 
 		"SELECT re.id, re.title, re.slug, re.price_vnd, re.address, re.district, re.city, "+
 			"re.acreage, re.price_per_m2, re.bedrooms, re.bathrooms, re.description, re.created_at, "+
 			"re.house_direction, re.balcony_direction, re.floors, re.legal_docs, re.interior, "+
-			"re.price_electricity, re.price_water, re.price_internet, re.amenities, "+
+			"re.price_electricity, re.price_water, re.price_internet, re.amenities, re.latitude, re.longitude, "+
 			"COALESCE(GROUP_CONCAT(DISTINCT img.url ORDER BY img.id SEPARATOR '|'), '') AS image_urls, "+
 			"COALESCE(u.name, '') AS agent_name, "+
 			"COALESCE(u.phone, '') AS agent_phone "+
@@ -198,6 +198,14 @@ func (r *realEstateRepo) GetListByCategory(offset int, req dto.RealEstateSearchR
 		where += " AND re.price_vnd <= ?"
 		args = append(args, req.Filter.MaxPrice)
 	}
+	if req.Filter.MinAcreage != 0 {
+		where += " AND re.acreage >= ?"
+		args = append(args, req.Filter.MinAcreage)
+	}
+	if req.Filter.MaxAcreage != 0 {
+		where += " AND re.acreage <= ?"
+		args = append(args, req.Filter.MaxAcreage)
+	}
 	if req.Search != "" {
 		searchTerm := "%" + req.Search + "%"
 		where += " AND (re.title LIKE ? OR re.city LIKE ? OR re.district LIKE ? OR re.address LIKE ?)"
@@ -245,7 +253,7 @@ func (r *realEstateRepo) GetListByCategory(offset int, req dto.RealEstateSearchR
 		"SELECT re.id, re.title, re.slug, re.price_vnd, re.address, re.district, re.city, "+
 			"re.acreage, re.price_per_m2, re.bedrooms, re.bathrooms, re.description, re.created_at, "+
 			"re.house_direction, re.balcony_direction, re.floors, re.legal_docs, re.interior, "+
-			"re.price_electricity, re.price_water, re.price_internet, re.amenities, "+
+			"re.price_electricity, re.price_water, re.price_internet, re.amenities, re.latitude, re.longitude, "+
 			"COALESCE(GROUP_CONCAT(DISTINCT img.url ORDER BY img.id SEPARATOR '|'), '') AS image_urls, "+
 			"COALESCE(u.name, '') AS agent_name, "+
 			"COALESCE(u.phone, '') AS agent_phone "+
@@ -257,7 +265,7 @@ func (r *realEstateRepo) GetListByCategory(offset int, req dto.RealEstateSearchR
 			"GROUP BY re.id "+
 			"ORDER BY re.created_at DESC, re.id DESC",
 		listArgs...,
-	).Scan(&items).Error
+	).Debug().Scan(&items).Error
 	if err != nil {
 		return nil, 0, err
 	}
@@ -466,7 +474,7 @@ func (r *realEstateRepo) GetTrending(limit int) ([]dto.RealEstateResponse, error
 		"SELECT re.id, re.title, re.slug, re.price_vnd, re.address, re.district, re.city, "+
 			"re.acreage, re.price_per_m2, re.bedrooms, re.bathrooms, re.description, re.created_at, "+
 			"re.house_direction, re.balcony_direction, re.floors, re.legal_docs, re.interior, "+
-			"re.price_electricity, re.price_water, re.price_internet, re.amenities, "+
+			"re.price_electricity, re.price_water, re.price_internet, re.amenities, re.latitude, re.longitude, "+
 			"COALESCE(GROUP_CONCAT(DISTINCT img.url ORDER BY img.id SEPARATOR '|'), '') AS image_urls, "+
 			"COALESCE(u.name, '') AS agent_name, "+
 			"COALESCE(u.phone, '') AS agent_phone "+
@@ -500,7 +508,7 @@ func (r *realEstateRepo) GetByIDs(ids []uint64) ([]dto.RealEstateResponse, error
 		"SELECT re.id, re.title, re.slug, re.price_vnd, re.address, re.district, re.city, "+
 			"re.acreage, re.price_per_m2, re.bedrooms, re.bathrooms, re.description, re.created_at, "+
 			"re.house_direction, re.balcony_direction, re.floors, re.legal_docs, re.interior, "+
-			"re.price_electricity, re.price_water, re.price_internet, re.amenities, "+
+			"re.price_electricity, re.price_water, re.price_internet, re.amenities, re.latitude, re.longitude, "+
 			"COALESCE(GROUP_CONCAT(DISTINCT img.url ORDER BY img.id SEPARATOR '|'), '') AS image_urls, "+
 			"COALESCE(u.name, '') AS agent_name, "+
 			"COALESCE(u.phone, '') AS agent_phone "+
@@ -584,7 +592,7 @@ func (r *realEstateRepo) GetRecommendationsBasic(userID uint64, sessionID string
 		"SELECT re.id, re.title, re.slug, re.price_vnd, re.address, re.district, re.city, "+
 			"re.acreage, re.price_per_m2, re.bedrooms, re.bathrooms, re.description, re.created_at, "+
 			"re.house_direction, re.balcony_direction, re.floors, re.legal_docs, re.interior, "+
-			"re.price_electricity, re.price_water, re.price_internet, re.amenities, "+
+			"re.price_electricity, re.price_water, re.price_internet, re.amenities, re.latitude, re.longitude, "+
 			"COALESCE(GROUP_CONCAT(DISTINCT img.url ORDER BY img.id SEPARATOR '|'), '') AS image_urls, "+
 			"COALESCE(u.name, '') AS agent_name, "+
 			"COALESCE(u.phone, '') AS agent_phone "+

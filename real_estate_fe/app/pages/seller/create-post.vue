@@ -139,7 +139,6 @@ const prevPage = () => {
         postStore.form.tab = 'upload'
     }
 }
-console.log(postStore.payload)
 const isSubmitting = ref(false)
 
 const submitCreatePost = async () => {

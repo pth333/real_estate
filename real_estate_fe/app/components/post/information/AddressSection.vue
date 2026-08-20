@@ -7,7 +7,7 @@
                 </n-icon>
             </div>
         </template>
-        <div v-show="!collapsed">
+        <div v-show="!collapsed" class="flex flex-col gap-4">
             <n-form-item label="Khu vực"
                 :feedback="postStore.errorsAddress.province || postStore.errorsAddress.detail_address"
                 :validation-status="hasAddressError ? 'error' : undefined">
@@ -18,32 +18,65 @@
                     </template>
                 </n-input>
             </n-form-item>
+
+            <!-- Bản đồ thu nhỏ hiển thị ở ngoài sau khi đã lưu toạ độ -->
+            <div v-if="postStore.form.latitude && postStore.form.longitude" class="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                <div class="bg-gray-100 px-3 py-2 text-xs font-semibold text-gray-700 flex justify-between items-center border-b border-gray-200">
+                    <span>Vị trí trên bản đồ</span>
+                    <span class="text-gray-500 font-mono text-[10px]">
+                        Lat: {{ postStore.form.latitude.toFixed(6) }}, Lng: {{ postStore.form.longitude.toFixed(6) }}
+                    </span>
+                </div>
+                <div id="static-address-map" class="h-48 w-full z-10"></div>
+            </div>
         </div>
     </n-card>
-    <n-modal v-model:show="showLocationModal" title="Nhập địa chỉ" style="width: 600px; max-height: 800px;" preset="card" :mask-closable="true">
-        <n-form-item label="Tỉnh / Thành phố" path="province" :feedback="postStore.errorsAddress.province"
-            :validation-status="postStore.errorsAddress.province ? 'error' : undefined">
-            <n-select v-model:value="postStore.form.province" placeholder="Chọn tỉnh/thành phố" clearable filterable
-                :options="provinceOption" @update:value="onWardChange" />
-        </n-form-item>
 
-        <n-form-item label="Phường / Xã" path="ward" :feedback="postStore.errorsAddress.ward"
-            :validation-status="postStore.errorsAddress.ward ? 'error' : undefined">
-            <n-select v-model:value="postStore.form.ward" placeholder="Chọn phường/xã" clearable filterable
-                :options="wardOptions" :loading="loadingWard" @update:value="clearError('ward')"
-                :disabled="isDisabledWard" />
-        </n-form-item>
+    <n-modal v-model:show="showLocationModal" title="Nhập địa chỉ" style="width: 750px; max-height: 850px;" preset="card" :mask-closable="true" @after-enter="onModalOpen">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Form nhập địa chỉ -->
+            <div class="flex flex-col gap-1">
+                <n-form-item label="Tỉnh / Thành phố" path="province" :feedback="postStore.errorsAddress.province"
+                    :validation-status="postStore.errorsAddress.province ? 'error' : undefined">
+                    <n-select v-model:value="postStore.form.province" placeholder="Chọn tỉnh/thành phố" clearable filterable
+                        :options="provinceOption" @update:value="onProvinceChange" />
+                </n-form-item>
 
-        <n-form-item label="Địa chỉ chi tiết" path="detail" :feedback="postStore.errorsAddress.detail_address"
-            :validation-status="postStore.errorsAddress.detail_address ? 'error' : undefined">
-            <n-input v-model:value="postStore.form.detail_address" placeholder="Nhập số nhà, khu phố, ngõ hẻm..."
-                clearable @update:value="clearError('detail_address')" />
-        </n-form-item>
+                <n-form-item label="Phường / Xã" path="ward" :feedback="postStore.errorsAddress.ward"
+                    :validation-status="postStore.errorsAddress.ward ? 'error' : undefined">
+                    <n-select v-model:value="postStore.form.ward" placeholder="Chọn phường/xã" clearable filterable
+                        :options="wardOptions" :loading="loadingWard" @update:value="onWardSelectChange"
+                        :disabled="isDisabledWard" />
+                </n-form-item>
 
-        <n-form-item label="Dự án" path="project_id">
-            <n-select v-model:value="postStore.form.project_id" placeholder="Chọn dự án" clearable filterable
-                :options="projectOptions" :disabled="isDisabledPJ"/>
-        </n-form-item>
+                <n-form-item label="Địa chỉ chi tiết" path="detail" :feedback="postStore.errorsAddress.detail_address"
+                    :validation-status="postStore.errorsAddress.detail_address ? 'error' : undefined">
+                    <n-input v-model:value="postStore.form.detail_address" placeholder="Nhập số nhà, khu phố, ngõ hẻm..."
+                        clearable @update:value="onDetailAddressInput" />
+                </n-form-item>
+
+                <n-form-item label="Dự án" path="project_id">
+                    <n-select v-model:value="postStore.form.project_id" placeholder="Chọn dự án" clearable filterable
+                        :options="projectOptions" :disabled="isDisabledPJ"/>
+                </n-form-item>
+            </div>
+
+            <!-- Khu vực Bản đồ tương tác -->
+            <div class="flex flex-col border border-gray-200 rounded-lg overflow-hidden h-[380px] md:h-auto bg-gray-50">
+                <div class="bg-gray-100 px-3 py-2 text-xs font-semibold text-gray-700 flex justify-between items-center border-b border-gray-200">
+                    <span>Chọn vị trí chính xác</span>
+                    <n-button size="tiny" secondary type="info" :disabled="!isGeocodeBtnEnabled" @click="triggerGeocoding">
+                        Định vị địa chỉ
+                    </n-button>
+                </div>
+                <div class="relative flex-1">
+                    <div id="interactive-address-map" class="absolute inset-0 z-10"></div>
+                    <div v-if="loadingGeocode" class="absolute inset-0 bg-white/60 z-20 flex items-center justify-center">
+                        <n-spin size="medium" />
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <template #action>
             <div class="flex justify-end">
@@ -64,18 +97,159 @@ const showLocationModal = ref(false)
 const isDisabledWard = computed(() => !postStore.form.province)
 const isDisabledPJ = computed(() => !postStore.form.province || !postStore.form.ward)
 
+// Trạng thái load bản đồ và geocoding
+const loadingGeocode = ref(false)
+let leafletLib: any = null
+let interactiveMapInstance: any = null
+let interactiveMarkerInstance: any = null
+let staticMapInstance: any = null
+let staticMarkerInstance: any = null
+
+// Load Leaflet từ CDN một cách an toàn trên client
+const loadLeaflet = (): Promise<any> => {
+    if (leafletLib) return Promise.resolve(leafletLib);
+    if ((window as any).L) {
+        leafletLib = (window as any).L;
+        return Promise.resolve((window as any).L);
+    }
+
+    return new Promise((resolve, reject) => {
+        // Thêm Leaflet CSS
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        document.head.appendChild(link);
+
+        // Thêm Leaflet JS
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        script.onload = () => {
+            leafletLib = (window as any).L;
+            resolve((window as any).L);
+        };
+        script.onerror = (err) => reject(err);
+        document.body.appendChild(script);
+    });
+};
 
 const openModal = () => {
     showLocationModal.value = true
 }
 
+const onModalOpen = async () => {
+    try {
+        const L = await loadLeaflet();
+        initInteractiveMap(L);
+    } catch (e) {
+        console.error('Không thể tải Leaflet Map:', e);
+    }
+}
+
+// Khởi tạo bản đồ tương tác trong Modal
+const initInteractiveMap = (L: any) => {
+    if (interactiveMapInstance) {
+        interactiveMapInstance.remove();
+        interactiveMapInstance = null;
+        interactiveMarkerInstance = null;
+    }
+
+    // Tọa độ mặc định: tâm Việt Nam (Đà Nẵng) hoặc Hồ Chí Minh nếu chưa có tọa độ
+    const initLat = postStore.form.latitude || 10.7769;
+    const initLng = postStore.form.longitude || 106.7009;
+    const zoom = postStore.form.latitude ? 16 : 10;
+
+    interactiveMapInstance = L.map('interactive-address-map').setView([initLat, initLng], zoom);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(interactiveMapInstance);
+
+    // custom icon marker mặc định tránh bị lỗi đường dẫn ảnh của Leaflet webpack
+    const defaultIcon = L.icon({
+        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+    });
+
+    interactiveMarkerInstance = L.marker([initLat, initLng], {
+        draggable: true,
+        icon: defaultIcon
+    }).addTo(interactiveMapInstance);
+
+    // Lắng nghe sự kiện kéo thả marker
+    interactiveMarkerInstance.on('dragend', () => {
+        const position = interactiveMarkerInstance.getLatLng();
+        postStore.form.latitude = position.lat;
+        postStore.form.longitude = position.lng;
+    });
+
+    // Lắng nghe click lên bản đồ để di chuyển marker
+    interactiveMapInstance.on('click', (e: any) => {
+        const position = e.latlng;
+        interactiveMarkerInstance.setLatLng(position);
+        postStore.form.latitude = position.lat;
+        postStore.form.longitude = position.lng;
+    });
+};
+
+// Khởi tạo bản đồ tĩnh bên ngoài khi có tọa độ và thu nhỏ form
+const initStaticMap = async () => {
+    if (!postStore.form.latitude || !postStore.form.longitude) return;
+
+    try {
+        const L = await loadLeaflet();
+
+        // Đợi DOM render xong thẻ chứa bản đồ tĩnh
+        await nextTick();
+
+        if (staticMapInstance) {
+            staticMapInstance.remove();
+            staticMapInstance = null;
+            staticMarkerInstance = null;
+        }
+
+        const mapEl = document.getElementById('static-address-map');
+        if (!mapEl) return;
+
+        staticMapInstance = L.map('static-address-map', {
+            zoomControl: false,
+            dragging: false,
+            scrollWheelZoom: false,
+            doubleClickZoom: false,
+            boxZoom: false
+        }).setView([postStore.form.latitude, postStore.form.longitude], 16);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap'
+        }).addTo(staticMapInstance);
+
+        const defaultIcon = L.icon({
+            iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+            shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            shadowSize: [41, 41]
+        });
+
+        staticMarkerInstance = L.marker([postStore.form.latitude, postStore.form.longitude], {
+            icon: defaultIcon
+        }).addTo(staticMapInstance);
+
+    } catch (e) {
+        console.error('Lỗi khi vẽ bản đồ tĩnh bên ngoài:', e);
+    }
+};
+
 // Áp dụng địa chỉ: nếu thiếu field bắt buộc thì hiện lỗi ngay trong modal, không tắt
 const applyAddress = () => {
-    // Validate qua store để hiển thị lỗi dưới từng ô
     const valid = postStore.validateAddress()
-    if (!valid) return // Giữ modal mở để người dùng sửa
+    if (!valid) return
 
-    showLocationModal.value = false
+    showLocationModal.value = false;
+    initStaticMap();
 }
 
 const loadingWard = ref(false)
@@ -83,14 +257,10 @@ const provinceOption = ref<SelectOption[]>([])
 const wardOptions = ref<SelectOption[]>([])
 const projectOptions = ref<SelectOption[]>([])
 
-// Có lỗi địa chỉ hay không (để hiện status error dưới ô Khu vực)
 const hasAddressError = computed(() =>
     Object.values(postStore.errorsAddress).some((message) => message !== '')
 )
 
-// Vô hiệu hóa ô Chọn phường/xã khi chưa chọn tỉnh/thành phố
-
-// Xóa lỗi của 1 field địa chỉ khi người dùng sửa
 const clearError = (field: keyof typeof postStore.errorsAddress) => {
     postStore.errorsAddress[field] = ''
 }
@@ -120,6 +290,31 @@ const fetchListProvice = async () => {
     }
 }
 
+const onProvinceChange = (provinceCode: string | null) => {
+    onWardChange(provinceCode);
+    // Tự động geocode lại nếu chọn tỉnh mới
+    triggerGeocoding();
+}
+
+const onWardSelectChange = (wardCode: string | null) => {
+    clearError('ward');
+    // Tự động geocode lại khi chọn phường/xã
+    triggerGeocoding();
+}
+
+const onDetailAddressInput = (val: string) => {
+    clearError('detail_address');
+}
+
+// Hàm debounce/tránh gọi Geocoding API dồn dập
+let geocodeTimeout: any = null;
+const onDetailAddressDebounced = () => {
+    if (geocodeTimeout) clearTimeout(geocodeTimeout);
+    geocodeTimeout = setTimeout(() => {
+        triggerGeocoding();
+    }, 1500);
+}
+
 const onWardChange = async (provinceCode: string | null) => {
     postStore.form.ward = null
     wardOptions.value = []
@@ -144,8 +339,6 @@ const onWardChange = async (provinceCode: string | null) => {
     }
 }
 
-
-
 const fetchListProject = async () => {
     try {
         const params: Record<string, string> = {}
@@ -169,10 +362,70 @@ const fetchListProject = async () => {
     }
 }
 
+// Geocoding địa chỉ chuỗi thông qua OpenStreetMap Nominatim
+const isGeocodeBtnEnabled = computed(() => {
+    return !!(postStore.form.province || postStore.form.ward || postStore.form.detail_address);
+});
+
+const triggerGeocoding = async () => {
+    if (!isGeocodeBtnEnabled.value) return;
+
+    const city = (provinceOption.value.find(item => item.value === postStore.form.province)?.label as string) || '';
+    const ward = (wardOptions.value.find(item => item.value === postStore.form.ward)?.label as string) || '';
+    const detail = postStore.form.detail_address || '';
+
+    // Xây dựng địa chỉ tìm kiếm theo cấu trúc chuẩn
+    const queryParts: string[] = [];
+    if (detail) queryParts.push(detail);
+    if (ward) queryParts.push(ward as any);
+    if (city) queryParts.push(city as any);
+    queryParts.push('Việt Nam');
+
+    const queryString = queryParts.join(', ');
+
+    try {
+        loadingGeocode.value = true;
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryString)}&limit=1`, {
+            headers: {
+                'Accept-Language': 'vi'
+            }
+        });
+        const data = await res.json();
+
+        if (data && data.length > 0) {
+            const result = data[0];
+            const lat = parseFloat(result.lat);
+            const lng = parseFloat(result.lon);
+
+            postStore.form.latitude = lat;
+            postStore.form.longitude = lng;
+
+            // Cập nhật lên bản đồ tương tác
+            if (interactiveMapInstance && interactiveMarkerInstance) {
+                interactiveMarkerInstance.setLatLng([lat, lng]);
+                interactiveMapInstance.setView([lat, lng], 16);
+            }
+        }
+    } catch (err) {
+        console.error('Lỗi khi geocoding địa chỉ:', err);
+    } finally {
+        loadingGeocode.value = false;
+    }
+};
+
+// Cập nhật vị trí marker khi gõ tay toạ độ trong modal
+const onCoordsManualChange = () => {
+    const lat = postStore.form.latitude;
+    const lng = postStore.form.longitude;
+    if (lat && lng && interactiveMapInstance && interactiveMarkerInstance) {
+        interactiveMarkerInstance.setLatLng([lat, lng]);
+        interactiveMapInstance.setView([lat, lng], 16);
+    }
+}
+
 watch(
     () => [postStore.form.province, postStore.form.ward],
     async ([newProvince, newWard], [oldProvince, oldWard]) => {
-        // Reset dự án đã chọn nếu tỉnh hoặc xã thay đổi
         if (newProvince !== oldProvince || newWard !== oldWard) {
             postStore.form.project_id = null
         }
@@ -180,8 +433,38 @@ watch(
     }
 )
 
-onMounted(() => {
-    fetchListProvice()
-    // fetchListProject()
+watch(
+    () => postStore.form.detail_address,
+    () => {
+        onDetailAddressDebounced();
+    }
+)
+
+// Khởi tạo bản đồ tĩnh bên ngoài nếu đã có dữ liệu toạ độ sẵn (VD: edit tin đăng cũ, hoặc load nháp)
+watch(
+    () => [postStore.form.latitude, postStore.form.longitude, collapsed.value],
+    async ([lat, lng, isCollapsed]) => {
+        if (lat && lng && !isCollapsed) {
+            await nextTick();
+            initStaticMap();
+        }
+    }
+)
+
+onMounted(async () => {
+    await fetchListProvice()
+    if (postStore.form.province) {
+        await onWardChange(postStore.form.province)
+    }
+    if (postStore.form.latitude && postStore.form.longitude) {
+        initStaticMap();
+    }
 })
 </script>
+
+<style scoped>
+/* Ensure map is rendered correctly on high DPI screen */
+#interactive-address-map, #static-address-map {
+    outline: none;
+}
+</style>

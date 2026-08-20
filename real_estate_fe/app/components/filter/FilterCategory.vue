@@ -30,15 +30,17 @@ const showPopover = ref(false);
 const keyword = ref("");
 const realEstateStore = useRealEstateStore();
 const filterStore = useFilterStore();
-
+const menuStore = useMenuStore()
 
 type CategoryTreeOption = TreeOption & { slug?: string };
 
 const treeData = computed<CategoryTreeOption[]>(() => {
-  if (typeof window === "undefined" || !window.menu) return [];
-  return (window.menu.settings?.categories ?? []).map(toTreeOption);
-});
+  if (menuStore.menu) {
+    return (menuStore.menu.categories ?? []).map(toTreeOption);
+  }
+  return []
 
+});
 
 function toTreeOption(cat: Category): CategoryTreeOption {
   return {

@@ -19,7 +19,6 @@ func InitRealEstateRoutes(Router fiber.Router) {
 		authGroup := realEstateRouter.Group("/", middleware.AuthMiddleware)
 		{
 			authGroup.Post("/list", realEstateHandler.List)
-
 		}
 
 		// Route khong can auth
@@ -49,5 +48,6 @@ func InitRealEstateRoutes(Router fiber.Router) {
 		//real estate SEO URL
 		realEstateRouter.Get("/:category", realEstateHandler.ListBySEOURL)
 		realEstateRouter.Get("/:category/*", realEstateHandler.ListBySEOURL)
+
 	}
 }

@@ -58,6 +58,8 @@ type RealEstateResponse struct {
 	PriceElectricity *float64 `json:"price_electricity,omitempty" gorm:"column:price_electricity"`
 	PriceWater       *float64 `json:"price_water,omitempty" gorm:"column:price_water"`
 	PriceInternet    *float64 `json:"price_internet,omitempty" gorm:"column:price_internet"`
+	Latitude         *float64 `json:"latitude,omitempty" gorm:"column:latitude"`
+	Longitude        *float64 `json:"longitude,omitempty" gorm:"column:longitude"`
 	// Tiện ích lưu JSON string trong DB (`["camera"]`), DTO trả mảng string
 	Amenities []string `json:"amenities,omitempty" gorm:"-"`
 	// AmenitiesRaw nhận giá trị raw từ cột amenities (JSON string) khi scan
@@ -134,6 +136,8 @@ type CreateRealEstateRequest struct {
 	ContactPhone     string   `json:"contact_phone"`
 	Title            string   `json:"title"`
 	Description      string   `json:"description"`
+	Latitude         *float64 `json:"latitude,omitempty"`
+	Longitude        *float64 `json:"longitude,omitempty"`
 	// Id ảnh/video đã upload, để liên kết với tin đăng
 	Images []ImageResponse `json:"images"`
 }

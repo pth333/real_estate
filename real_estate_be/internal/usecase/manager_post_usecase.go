@@ -40,10 +40,9 @@ func NewManagerPostUseCase(managerRepo repo.ManagerPostRepository, realEstateRep
 }
 
 func (u *managerPostUseCase) GenerateListingSlug(title string, id uint64) string {
-	// Logic tạo slug cơ bản
-	return fmt.Sprintf("%s-%d", strings.ToLower(strings.ReplaceAll(title, " ", "-")), id)
+	slug := strings.ToLower(strings.ReplaceAll(title, " ", "-"))
+	return fmt.Sprintf("%s-rs%d", slug, id)
 }
-
 func (u *managerPostUseCase) GetManagerPostsList(userID uint64, search string, page, size int) ([]dto.ManagerPostListResponse, int64, error) {
 	if page < 1 {
 		page = 1
@@ -143,6 +142,8 @@ func (s *managerPostUseCase) CreateRealEstate(req dto.CreateRealEstateRequest, u
 		PriceElectricity: req.PriceElectricity,
 		PriceWater:       req.PriceWater,
 		PriceInternet:    req.PriceInternet,
+		Latitude:         req.Latitude,
+		Longitude:        req.Longitude,
 	}
 
 	if err := s.realEstateRepo.Create(estate); err != nil {
@@ -237,6 +238,8 @@ func (s *managerPostUseCase) UpdateRealEstate(id uint64, req dto.CreateRealEstat
 	rawEstate.PriceElectricity = req.PriceElectricity
 	rawEstate.PriceWater = req.PriceWater
 	rawEstate.PriceInternet = req.PriceInternet
+	rawEstate.Latitude = req.Latitude
+	rawEstate.Longitude = req.Longitude
 
 	if err := s.realEstateRepo.Save(&rawEstate); err != nil {
 		return err
