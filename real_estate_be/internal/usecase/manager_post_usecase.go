@@ -115,8 +115,17 @@ func (s *managerPostUseCase) CreateRealEstate(req dto.CreateRealEstateRequest, u
 		return 0, fmt.Errorf("lỗi mã hoá tiện ích: %w", err)
 	}
 
+	cityName := req.Province
+	if name, err := s.realEstateRepo.GetProvinceNameByCode(req.Province); err == nil && name != "" {
+		cityName = name
+	}
+	wardName := req.Ward
+	if name, err := s.realEstateRepo.GetWardNameByCode(req.Ward); err == nil && name != "" {
+		wardName = name
+	}
+
 	address := strings.TrimSpace(strings.Join([]string{
-		req.DetailAddress, req.Ward, req.Province,
+		req.DetailAddress, wardName, cityName,
 	}, " "))
 
 	estate := &model.RealEstate{
@@ -125,8 +134,8 @@ func (s *managerPostUseCase) CreateRealEstate(req dto.CreateRealEstateRequest, u
 		Title:            req.Title,
 		PriceVND:         priceVND,
 		Address:          address,
-		District:         req.Ward,
-		City:             req.Province,
+		District:         wardName,
+		City:             cityName,
 		Acreage:          req.Area,
 		PricePerM2:       pricePerM2,
 		CategoryID:       categoryID,
@@ -213,16 +222,27 @@ func (s *managerPostUseCase) UpdateRealEstate(id uint64, req dto.CreateRealEstat
 		return fmt.Errorf("lỗi mã hoá tiện ích: %w", err)
 	}
 
+	// Đổi code tỉnh/phường → tên trước khi lưu (FE gửi code, cột city/district cần tên).
+	// Không tìm thấy code (giá trị đã là tên, VD khi edit tin cũ) → giữ nguyên.
+	cityName := req.Province
+	if name, err := s.realEstateRepo.GetProvinceNameByCode(req.Province); err == nil && name != "" {
+		cityName = name
+	}
+	wardName := req.Ward
+	if name, err := s.realEstateRepo.GetWardNameByCode(req.Ward); err == nil && name != "" {
+		wardName = name
+	}
+
 	address := strings.TrimSpace(strings.Join([]string{
-		req.DetailAddress, req.Ward, req.Province,
+		req.DetailAddress, wardName, cityName,
 	}, " "))
 
 	rawEstate.ProjectID = req.ProjectID
 	rawEstate.Title = req.Title
 	rawEstate.PriceVND = priceVND
 	rawEstate.Address = address
-	rawEstate.District = req.Ward
-	rawEstate.City = req.Province
+	rawEstate.District = wardName
+	rawEstate.City = cityName
 	rawEstate.Acreage = req.Area
 	rawEstate.PricePerM2 = pricePerM2
 	rawEstate.CategoryID = categoryID

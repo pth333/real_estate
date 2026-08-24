@@ -27,9 +27,9 @@ type RealEstateRepository interface {
 	GetListWard(provinceCode string) ([]model.Ward, error)
 	GetListRealEstateTypes() ([]model.Category, error)
 	// Lấy tên tỉnh/thành từ code (VD "79" → "Hồ Chí Minh")
-	// GetProvinceNameByCode(name string) (string, error)
+	GetProvinceNameByCode(code string) (string, error)
 	// Lấy tên phường/xã từ code (VD "76049" → "Phường 12")
-	// GetWardNameByCode(anm string) (string, error)
+	GetWardNameByCode(code string) (string, error)
 	// Lấy N thành phố có nhiều BĐS nhất (theo cột city)
 	GetTopCityByCount(limit int) ([]model.CityStat, error)
 	// Lấy khoảng giá/diện tích theo slug SEO (filter_ranges). Không parse chuỗi.
@@ -324,6 +324,30 @@ func (r *realEstateRepo) GetListWard(provinceCode string) ([]model.Ward, error) 
 		return nil, result.Error
 	}
 	return wards, nil
+}
+
+// GetProvinceNameByCode lấy tên tỉnh/thành theo code (VD "79" → "Hồ Chí Minh").
+// Không tìm thấy → trả name rỗng (để usecase giữ nguyên giá trị đã gửi lên).
+func (r *realEstateRepo) GetProvinceNameByCode(code string) (string, error) {
+	var name string
+	if err := r.db.Model(&model.Province{}).
+		Where("code = ?", code).
+		Pluck("name", &name).Error; err != nil {
+		return "", err
+	}
+	return name, nil
+}
+
+// GetWardNameByCode lấy tên phường/xã theo code (VD "76049" → "Phường 12").
+// Không tìm thấy → trả name rỗng (để usecase giữ nguyên giá trị đã gửi lên).
+func (r *realEstateRepo) GetWardNameByCode(code string) (string, error) {
+	var name string
+	if err := r.db.Model(&model.Ward{}).
+		Where("code = ?", code).
+		Pluck("name", &name).Error; err != nil {
+		return "", err
+	}
+	return name, nil
 }
 
 func (r *realEstateRepo) GetListRealEstateTypes() ([]model.Category, error) {

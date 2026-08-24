@@ -506,12 +506,6 @@ func (h *RealEstateHandler) GetRecommendations(c *fiber.Ctx) error {
 		})
 	}
 
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": err.Error(),
-		})
-	}
-
 	return c.JSON(fiber.Map{
 		"data": props,
 	})
