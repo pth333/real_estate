@@ -13,7 +13,7 @@
         <div v-else class="grid grid-cols-1 md:grid-cols-4 gap-5">
 
             <!-- Cột trái: Hình ảnh và thông tin chi tiết (md:col-span-3 - chiếm 75% độ rộng) -->
-            <div class="md:col-span-3 space-y-4">
+            <div class="md:col-span-3 space-y-2">
                 <!-- Gallery -->
                 <div class="overflow-hidden rounded-lg border border-gray-200 bg-gray-100 shadow-sm">
                     <!-- Main image -->
@@ -66,7 +66,7 @@
                 </nav>
 
                 <!-- Tiêu đề + Giá -->
-                <div class="border border-gray-200 bg-white rounded-lg p-4 shadow-sm">
+                <div class=" bg-white rounded-lg p-4">
                     <h1 class="text-xl font-bold leading-snug text-gray-800">{{ realEstateDetailStore.listing.title }}
                     </h1>
 
@@ -109,7 +109,7 @@
 
                 <!-- Thông tin mô tả -->
                 <div v-if="realEstateDetailStore.listing.description"
-                    class="border border-gray-200 bg-white rounded-lg p-4 shadow-sm">
+                    class=" bg-white rounded-lg p-4 ">
                     <h2 class="mb-3 border-b border-gray-200 pb-2 text-base font-bold text-gray-800">
                         Thông tin mô tả
                     </h2>
@@ -127,8 +127,8 @@
                     </div>
                 </div>
 
-                <!-- Đặc điểm bất động sản (Dùng toàn bộ hệ thống icon mới cực đẹp) -->
-                <div class="border border-gray-200 bg-white rounded-lg p-4 shadow-sm">
+                <!-- Đặc điểm bất động sản  -->
+                <div class=" bg-white rounded-lg p-4 ">
                     <h2 class="mb-4 border-b border-gray-200 pb-2 text-base font-bold text-gray-800">
                         Đặc điểm bất động sản
                     </h2>
@@ -147,9 +147,12 @@
                     </div>
                 </div>
 
+                <!--Tiện ích quanh bds  -->
+                <NearbyAmenities />
+
                 <!-- Footer meta -->
-                <div
-                    class="grid grid-cols-2 gap-3 border border-gray-200 bg-white rounded-lg p-4 shadow-sm sm:grid-cols-3">
+                <!-- <div
+                    class="grid grid-cols-2 gap-3 bg-white rounded-lg p-4  sm:grid-cols-3">
                     <div>
                         <p class="text-xs text-gray-500">Ngày đăng</p>
                         <p class="text-sm font-medium text-gray-800">{{
@@ -173,7 +176,7 @@
                         <p v-else class="text-sm font-medium text-gray-800">{{ realEstateDetailStore.listing.source }}
                         </p>
                     </div>
-                </div>
+                </div> -->
             </div>
 
             <ContactRealestateDetail />
@@ -223,7 +226,6 @@ const AMENITY_LABELS: Record<string, string> = {
     camera: 'Camera', bao_ve: 'Bảo vệ', pccc: 'PCCC',
 };
 
-// Chi tiết đặc điểm (Tất cả icon tự động Auto Import bởi Nuxt 3/4)
 const attrs = computed(() => {
     const l = realEstateDetailStore.listing;
     if (!l) return [];
@@ -238,16 +240,12 @@ const attrs = computed(() => {
         { label: 'Hướng ban công', icon: 'IconBalcony', value: l.balcony_direction ? DIRECTION_LABELS[l.balcony_direction] ?? l.balcony_direction : '' },
         { label: 'Pháp lý', icon: 'IconShieldCheck', value: l.legal_docs ? LEGAL_DOC_LABELS[l.legal_docs] ?? l.legal_docs : '' },
         { label: 'Nội thất', icon: 'IconSofa', value: l.interior ? INTERIOR_LABELS[l.interior] ?? l.interior : '' },
-        { label: 'Giá điện', icon: 'IconZap', value: l.price_electricity ? `${formatNumber(l.price_electricity)} đ/kWh` : '' },
-        { label: 'Giá nước', icon: 'IconDroplet', value: l.price_water ? `${formatNumber(l.price_water)} đ/m³` : '' },
-        { label: 'Giá internet', icon: 'IconWifi', value: l.price_internet ? `${formatNumber(l.price_internet)} đ/tháng` : '' },
+        { label: 'Giá điện', icon: 'IconZap', value: l.price_electricity ? `${formatPriceNumber(l.price_electricity)} đ/kWh` : '' },
+        { label: 'Giá nước', icon: 'IconDroplet', value: l.price_water ? `${formatPriceNumber(l.price_water)} đ/m³` : '' },
+        { label: 'Giá internet', icon: 'IconWifi', value: l.price_internet ? `${formatPriceNumber(l.price_internet)} đ/tháng` : '' },
         { label: 'Tiện ích', icon: 'IconSparkles', value: l.amenities?.length ? l.amenities.map((a) => AMENITY_LABELS[a] ?? a).join(', ') : '' },
     ];
 });
-
-function formatNumber(n: number): string {
-    return n.toLocaleString('vi-VN');
-}
 
 
 const props = defineProps<{ id: number }>();

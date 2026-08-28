@@ -89,9 +89,12 @@
 import type { SelectOption } from 'naive-ui'
 import type { CityOption, WardOption, ProjectOption } from '~/types/real_estate'
 import { useCreatePost } from '~/stores/create-post'
+import { useGoogleMaps } from '~/composables/useGoogleMaps'
 
 const { $api } = useNuxtApp()
 const postStore = useCreatePost()
+const { getMap, getMarker, geocodeAddress, toCoordinate, mapId } = useGoogleMaps()
+
 const collapsed = ref(false)
 const showLocationModal = ref(false)
 const isDisabledWard = computed(() => !postStore.form.province)
@@ -99,38 +102,10 @@ const isDisabledPJ = computed(() => !postStore.form.province || !postStore.form.
 
 // Trạng thái load bản đồ và geocoding
 const loadingGeocode = ref(false)
-let leafletLib: any = null
 let interactiveMapInstance: any = null
 let interactiveMarkerInstance: any = null
 let staticMapInstance: any = null
 let staticMarkerInstance: any = null
-
-// Load Leaflet từ CDN một cách an toàn trên client
-const loadLeaflet = (): Promise<any> => {
-    if (leafletLib) return Promise.resolve(leafletLib);
-    if ((window as any).L) {
-        leafletLib = (window as any).L;
-        return Promise.resolve((window as any).L);
-    }
-
-    return new Promise((resolve, reject) => {
-        // Thêm Leaflet CSS
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-        document.head.appendChild(link);
-
-        // Thêm Leaflet JS
-        const script = document.createElement('script');
-        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-        script.onload = () => {
-            leafletLib = (window as any).L;
-            resolve((window as any).L);
-        };
-        script.onerror = (err) => reject(err);
-        document.body.appendChild(script);
-    });
-};
 
 const openModal = () => {
     showLocationModal.value = true
@@ -138,17 +113,18 @@ const openModal = () => {
 
 const onModalOpen = async () => {
     try {
-        const L = await loadLeaflet();
-        initInteractiveMap(L);
+        const { Map } = await getMap();
+        const { AdvancedMarkerElement } = await getMarker();
+        if (!Map || !AdvancedMarkerElement) return;
+        initInteractiveMap(Map, AdvancedMarkerElement);
     } catch (e) {
-        console.error('Không thể tải Leaflet Map:', e);
+        console.error('Không thể tải Google Maps:', e);
     }
 }
 
-// Khởi tạo bản đồ tương tác trong Modal
-const initInteractiveMap = (L: any) => {
+// Khởi tạo bản đồ tương tác trong Modal (Google Maps, AdvancedMarkerElement)
+const initInteractiveMap = (Map: any, AdvancedMarkerElement: any) => {
     if (interactiveMapInstance) {
-        interactiveMapInstance.remove();
         interactiveMapInstance = null;
         interactiveMarkerInstance = null;
     }
@@ -158,40 +134,31 @@ const initInteractiveMap = (L: any) => {
     const initLng = postStore.form.longitude || 106.7009;
     const zoom = postStore.form.latitude ? 16 : 10;
 
-    interactiveMapInstance = L.map('interactive-address-map').setView([initLat, initLng], zoom);
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    }).addTo(interactiveMapInstance);
-
-    // custom icon marker mặc định tránh bị lỗi đường dẫn ảnh của Leaflet webpack
-    const defaultIcon = L.icon({
-        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-        iconSize: [25, 41],
-        iconAnchor: [12, 41],
-        popupAnchor: [1, -34],
-        shadowSize: [41, 41]
+    interactiveMapInstance = new Map(document.getElementById('interactive-address-map'), {
+        center: { lat: initLat, lng: initLng },
+        zoom,
+        // mapId bắt buộc cho AdvancedMarkerElement
+        ...(mapId.value ? { mapId: mapId.value } : {}),
     });
 
-    interactiveMarkerInstance = L.marker([initLat, initLng], {
-        draggable: true,
-        icon: defaultIcon
-    }).addTo(interactiveMapInstance);
+    interactiveMarkerInstance = new AdvancedMarkerElement({
+        position: { lat: initLat, lng: initLng },
+        map: interactiveMapInstance,
+        gmpDraggable: true,
+    });
 
     // Lắng nghe sự kiện kéo thả marker
-    interactiveMarkerInstance.on('dragend', () => {
-        const position = interactiveMarkerInstance.getLatLng();
+    interactiveMarkerInstance.addListener('gmp-dragend', () => {
+        const position = toCoordinate(interactiveMarkerInstance.position);
         postStore.form.latitude = position.lat;
         postStore.form.longitude = position.lng;
     });
 
     // Lắng nghe click lên bản đồ để di chuyển marker
-    interactiveMapInstance.on('click', (e: any) => {
-        const position = e.latlng;
-        interactiveMarkerInstance.setLatLng(position);
-        postStore.form.latitude = position.lat;
-        postStore.form.longitude = position.lng;
+    interactiveMapInstance.addListener('click', (e: any) => {
+        interactiveMarkerInstance.position = e.latLng;
+        postStore.form.latitude = e.latLng.lat();
+        postStore.form.longitude = e.latLng.lng();
     });
 };
 
@@ -200,13 +167,14 @@ const initStaticMap = async () => {
     if (!postStore.form.latitude || !postStore.form.longitude) return;
 
     try {
-        const L = await loadLeaflet();
+        const { Map } = await getMap();
+        const { AdvancedMarkerElement } = await getMarker();
+        if (!Map || !AdvancedMarkerElement) return;
 
         // Đợi DOM render xong thẻ chứa bản đồ tĩnh
         await nextTick();
 
         if (staticMapInstance) {
-            staticMapInstance.remove();
             staticMapInstance = null;
             staticMarkerInstance = null;
         }
@@ -214,29 +182,22 @@ const initStaticMap = async () => {
         const mapEl = document.getElementById('static-address-map');
         if (!mapEl) return;
 
-        staticMapInstance = L.map('static-address-map', {
+        // Bản đồ thu nhỏ, chỉ xem, không tương tác
+        staticMapInstance = new Map(mapEl, {
+            center: { lat: postStore.form.latitude, lng: postStore.form.longitude },
+            zoom: 16,
+            disableDefaultUI: true,
+            draggable: false,
+            scrollwheel: false,
             zoomControl: false,
-            dragging: false,
-            scrollWheelZoom: false,
-            doubleClickZoom: false,
-            boxZoom: false
-        }).setView([postStore.form.latitude, postStore.form.longitude], 16);
-
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap'
-        }).addTo(staticMapInstance);
-
-        const defaultIcon = L.icon({
-            iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-            shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-            iconSize: [25, 41],
-            iconAnchor: [12, 41],
-            shadowSize: [41, 41]
+            // mapId bắt buộc cho AdvancedMarkerElement
+            ...(mapId.value ? { mapId: mapId.value } : {}),
         });
 
-        staticMarkerInstance = L.marker([postStore.form.latitude, postStore.form.longitude], {
-            icon: defaultIcon
-        }).addTo(staticMapInstance);
+        staticMarkerInstance = new AdvancedMarkerElement({
+            position: { lat: postStore.form.latitude, lng: postStore.form.longitude },
+            map: staticMapInstance,
+        });
 
     } catch (e) {
         console.error('Lỗi khi vẽ bản đồ tĩnh bên ngoài:', e);
@@ -362,7 +323,7 @@ const fetchListProject = async () => {
     }
 }
 
-// Geocoding địa chỉ chuỗi thông qua OpenStreetMap Nominatim
+// Geocoding địa chỉ chuỗi thông qua Google Maps Geocoder
 const isGeocodeBtnEnabled = computed(() => {
     return !!(postStore.form.province || postStore.form.ward || postStore.form.detail_address);
 });
@@ -385,25 +346,17 @@ const triggerGeocoding = async () => {
 
     try {
         loadingGeocode.value = true;
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryString)}&limit=1`, {
-            headers: {
-                'Accept-Language': 'vi'
-            }
-        });
-        const data = await res.json();
+        const coord = await geocodeAddress(queryString);
 
-        if (data && data.length > 0) {
-            const result = data[0];
-            const lat = parseFloat(result.lat);
-            const lng = parseFloat(result.lon);
-
-            postStore.form.latitude = lat;
-            postStore.form.longitude = lng;
+        if (coord) {
+            postStore.form.latitude = coord.lat;
+            postStore.form.longitude = coord.lng;
 
             // Cập nhật lên bản đồ tương tác
             if (interactiveMapInstance && interactiveMarkerInstance) {
-                interactiveMarkerInstance.setLatLng([lat, lng]);
-                interactiveMapInstance.setView([lat, lng], 16);
+                interactiveMarkerInstance.position = { lat: coord.lat, lng: coord.lng };
+                interactiveMapInstance.setCenter({ lat: coord.lat, lng: coord.lng });
+                interactiveMapInstance.setZoom(16);
             }
         }
     } catch (err) {
@@ -418,8 +371,9 @@ const onCoordsManualChange = () => {
     const lat = postStore.form.latitude;
     const lng = postStore.form.longitude;
     if (lat && lng && interactiveMapInstance && interactiveMarkerInstance) {
-        interactiveMarkerInstance.setLatLng([lat, lng]);
-        interactiveMapInstance.setView([lat, lng], 16);
+        interactiveMarkerInstance.position = { lat, lng };
+        interactiveMapInstance.setCenter({ lat, lng });
+        interactiveMapInstance.setZoom(16);
     }
 }
 
