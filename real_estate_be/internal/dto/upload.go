@@ -13,6 +13,9 @@ type PresignResponse struct {
 
 type ConfirmUploadRequest struct {
 	Key string `json:"key"`
+	// Kind xác định loại record lưu: "" (mặc định) = ảnh tin đăng (bảng images),
+	// "project" = ảnh dự án (bảng image_projects).
+	Kind string `json:"kind"`
 }
 
 type ConfirmUploadResponse struct {

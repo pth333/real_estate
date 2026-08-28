@@ -55,7 +55,7 @@
                   <!-- Thumbnail dự án -->
                   <n-grid-item :span="4" class="relative overflow-hidden bg-gray-100">
                     <img
-                      src="https://placehold.co/440x296/e2e8f0/94a3b8?text=Project"
+                      :src="project.thumbnail || 'https://placehold.co/440x296/e2e8f0/94a3b8?text=Project'"
                       :alt="project.name"
                       class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
@@ -178,6 +178,7 @@ interface Project {
   status: string
   full_address: string
   description?: string
+  thumbnail?: string
   total_area_ha?: number
   total_units?: number
   price_min?: number

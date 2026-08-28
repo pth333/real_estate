@@ -86,12 +86,14 @@
 </template>
 <script setup lang="ts">
 import { useCreatePost } from '~/stores/create-post'
+import { useManagerStore } from '~/stores/manager'
 import { InformationRealestate, type CreatePostResponse, type ImageResponse, type RealEstateResponse, type UpdatePostResponse, type UploadedMediaItem } from '~/types/real_estate'
 definePageMeta({
     alias: "/nguoi-ban/dang-tin",
 })
 const { phoneVerified, verifiedPhone, showOTPModal } = usePhoneVerification()
 const { $api } = useNuxtApp()
+const managerStore = useManagerStore()
 
 const postStore = useCreatePost()
 const uploadComponent = ref()
@@ -163,6 +165,8 @@ const submitCreatePost = async () => {
             window.message?.success(isEdit ? 'Cập nhật tin đăng thành công' : 'Đăng tin thành công')
             postStore.clearCurrentDraft()
             postStore.resetForm()
+            // Đánh dấu cache bài viết cũ → trang quản lý bài viết sẽ fetch lại
+            managerStore.invalidatePosts()
             navigateTo('/nguoi-ban/quan-ly-tin-dang')
         }
     } catch (err: unknown) {

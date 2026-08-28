@@ -2,7 +2,6 @@ package repo
 
 import (
 	"errors"
-	"strconv"
 
 	"real_estate_be/internal/dto"
 	model "real_estate_be/internal/models"
@@ -48,6 +47,18 @@ type RealEstateRepository interface {
 	GetTrending(limit int) ([]dto.RealEstateResponse, error)
 	GetByIDs(ids []uint64) ([]dto.RealEstateResponse, error)
 	GetRecommendationsBasic(userID uint64, sessionID string, limit int) ([]dto.RealEstateResponse, error)
+
+	// ── Bất động sản yêu thích (favorite) ──
+	AddFavorite(userID, realEstateID uint64) error
+	RemoveFavorite(userID, realEstateID uint64) error
+	IsFavorite(userID, realEstateID uint64) bool
+	GetFavoriteRealEstateIDs(userID uint64) ([]uint64, error)
+	ListFavoriteRealEstates(userID uint64, limit, offset int) ([]dto.RealEstateResponse, int64, error)
+
+	// ── Dự án (project) ──
+	CreateProject(project *model.RealEstateProject) error
+	UpdateProject(project *model.RealEstateProject) error
+	ListProjects(limit, offset int, search string) ([]model.RealEstateProject, int64, error)
 }
 
 func NewRealEstateRepository(db *gorm.DB) RealEstateRepository {
@@ -289,20 +300,51 @@ func (r *realEstateRepo) GetListProject(provinceCode, wardCode string) ([]model.
 	var projects []model.RealEstateProject
 	query := r.db.Select("id, name").Model(&model.RealEstateProject{})
 
-	// Lọc theo mã tỉnh/thành (VD "79" → province_id = 79)
-	if provinceID, err := strconv.ParseUint(provinceCode, 10, 64); err == nil && provinceCode != "" {
-		query = query.Where("province_id = ?", provinceID)
+	// Lọc theo mã tỉnh/thành (string, giữ số 0 đầu VD "000331")
+	if provinceCode != "" {
+		query = query.Where("province_code = ?", provinceCode)
 	}
 
-	// Lọc theo mã phường/xã (VD "27184" → ward_id = 27184)
-	if wardID, err := strconv.ParseUint(wardCode, 10, 64); err == nil && wardCode != "" {
-		query = query.Where("ward_id = ?", wardID)
+	// Lọc theo mã phường/xã (string)
+	if wardCode != "" {
+		query = query.Where("ward_code = ?", wardCode)
 	}
 
 	if err := query.Find(&projects).Error; err != nil {
 		return nil, err
 	}
 	return projects, nil
+}
+
+// CreateProject tạo mới 1 dự án.
+func (r *realEstateRepo) CreateProject(project *model.RealEstateProject) error {
+	return r.db.Create(project).Error
+}
+
+// UpdateProject cập nhật 1 dự án.
+func (r *realEstateRepo) UpdateProject(project *model.RealEstateProject) error {
+	return r.db.Save(project).Error
+}
+
+// ListProjects trả về danh sách dự án (phân trang, lọc theo tên/địa chỉ).
+func (r *realEstateRepo) ListProjects(limit, offset int, search string) ([]model.RealEstateProject, int64, error) {
+	var projects []model.RealEstateProject
+	query := r.db.Model(&model.RealEstateProject{})
+
+	if search != "" {
+		like := "%" + search + "%"
+		query = query.Where("name LIKE ? OR full_address LIKE ?", like, like)
+	}
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	if err := query.Order("created_at DESC").Limit(limit).Offset(offset).Find(&projects).Error; err != nil {
+		return nil, 0, err
+	}
+	return projects, total, nil
 }
 
 func (r *realEstateRepo) GetProjectsByCategoryID(categoryID int64) ([]model.RealEstateProject, error) {
@@ -642,4 +684,70 @@ func (r *realEstateRepo) GetRecommendationsBasic(userID uint64, sessionID string
 	// 	toResponse(&items[i])
 	// }
 	return items, nil
+}
+
+// ── Bất động sản yêu thích (favorite) ──
+
+// AddFavorite thêm 1 tin đăng vào danh mục yêu thích của user (không tạo bản ghi trùng).
+func (r *realEstateRepo) AddFavorite(userID, realEstateID uint64) error {
+	return r.db.Where(&model.Favorite{UserID: userID, RealEstateID: realEstateID}).
+		FirstOrCreate(&model.Favorite{UserID: userID, RealEstateID: realEstateID}).Error
+}
+
+// RemoveFavorite xoá 1 tin đăng khỏi danh mục yêu thích của user.
+func (r *realEstateRepo) RemoveFavorite(userID, realEstateID uint64) error {
+	return r.db.Where("user_id = ? AND real_estate_id = ?", userID, realEstateID).
+		Delete(&model.Favorite{}).Error
+}
+
+// IsFavorite kiểm tra user đã yêu thích tin đăng chưa.
+func (r *realEstateRepo) IsFavorite(userID, realEstateID uint64) bool {
+	var count int64
+	r.db.Model(&model.Favorite{}).
+		Where("user_id = ? AND real_estate_id = ?", userID, realEstateID).
+		Count(&count)
+	return count > 0
+}
+
+// GetFavoriteRealEstateIDs trả về danh sách id tin đăng đã yêu thích của user.
+func (r *realEstateRepo) GetFavoriteRealEstateIDs(userID uint64) ([]uint64, error) {
+	var ids []uint64
+	err := r.db.Model(&model.Favorite{}).
+		Where("user_id = ?", userID).
+		Pluck("real_estate_id", &ids).Error
+	return ids, err
+}
+
+// ListFavoriteRealEstates trả về danh sách tin đăng yêu thích của user (kèm pagination).
+func (r *realEstateRepo) ListFavoriteRealEstates(userID uint64, limit, offset int) ([]dto.RealEstateResponse, int64, error) {
+	var items []dto.RealEstateResponse
+
+	// Đếm tổng số yêu thích để phân trang
+	var total int64
+	if err := r.db.Model(&model.Favorite{}).Where("user_id = ?", userID).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	query := r.db.
+		Table("real_estates re").
+		Select(`re.*,
+			COALESCE(c.id, '') AS real_estate_type,
+			COALESCE(u.name, '') AS agent_name,
+			COALESCE(u.phone, '') AS agent_phone,
+			COALESCE(u.email, '') AS agent_email,
+			COALESCE(GROUP_CONCAT(DISTINCT img.url ORDER BY img.id SEPARATOR '|'), '') AS image_urls`).
+		Joins("LEFT JOIN categories c ON c.id = re.category_id").
+		Joins("LEFT JOIN users u ON u.id = re.user_id").
+		Joins("LEFT JOIN images img ON img.real_estate_id = re.id").
+		Joins("JOIN favorites f ON f.real_estate_id = re.id AND f.user_id = ?", userID).
+		Group("re.id").
+		Order("f.created_at DESC, re.id DESC").
+		Limit(limit).
+		Offset(offset)
+
+	if err := query.Scan(&items).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return items, total, nil
 }

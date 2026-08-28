@@ -43,10 +43,14 @@ const dropdownOptions = computed(() => {
       key: option.key,
       icon: () => {
         let iconComp = null;
-        if (option.key === "manage-posts") {
+        if (option.key === "manage-projects") {
           iconComp = resolveComponent("IconBuilding");
+        } else if (option.key === "manage-posts") {
+          iconComp = resolveComponent("IconCreateOutline");
         } else if (option.key === "manage-customers") {
           iconComp = resolveComponent("IconPhone");
+        } else if (option.key === "manage-favorites") {
+          iconComp = resolveComponent("IconHeart");
         } else if (option.key === "logout") {
           iconComp = resolveComponent("IconLock");
         }

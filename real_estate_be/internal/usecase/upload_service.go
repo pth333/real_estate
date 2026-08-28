@@ -112,7 +112,27 @@ func (s *uploadService) ConfirmUpload(req dto.ConfirmUploadRequest) (*dto.Confir
 		thumbnailURL = global.Config.R2.PublicURL + "/" + thumbnailKey
 	}
 
-	// Lưu record vào DB
+	// Lưu record vào DB (phân loại ảnh dự án / ảnh tin đăng theo req.Kind)
+	if req.Kind == "project" {
+		projectImage := &model.ImageProject{
+			Key:          req.Key,
+			Filename:     filename,
+			FileType:     contentType,
+			FileSize:     aws.ToInt64(headObj.ContentLength),
+			URL:          global.Config.R2.PublicURL + "/" + req.Key,
+			ThumbnailURL: thumbnailURL,
+		}
+		if err := s.imageRepo.CreateProjectImage(projectImage); err != nil {
+			return nil, fiber.NewError(fiber.StatusInternalServerError, "Lưu thông tin ảnh dự án thất bại")
+		}
+		return &dto.ConfirmUploadResponse{
+			ImageID:      projectImage.ID,
+			PublicURL:    projectImage.URL,
+			Key:          req.Key,
+			ThumbnailURL: thumbnailURL,
+		}, nil
+	}
+
 	image := &model.Image{
 		Key:          req.Key,
 		Filename:     filename,

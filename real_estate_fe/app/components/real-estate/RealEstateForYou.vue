@@ -58,20 +58,16 @@
             <!-- Footer: ngày đăng + yêu thích -->
             <div class="flex items-center justify-between mt-1">
               <span class="text-xs text-gray-400">{{ item.postedAt }}</span>
-              <n-button
-                circle
-                quaternary
-                size="small"
-                class="hover:text-red-500 transition-colors"
+              <button
+                class="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 transition-colors hover:border-red-400 hover:text-red-500"
+                :class="item.isFavorite ? 'border-red-500 text-red-500' : ''"
                 @click.stop="toggleFavorite(item.id)"
               >
-                <template #icon>
-                  <IconHeart
-                    class="h-4 w-4"
-                    :class="item.isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'"
-                  />
-                </template>
-              </n-button>
+                <IconHeart
+                  class="h-4 w-4"
+                  :class="item.isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'"
+                />
+              </button>
             </div>
           </div>
         </n-card>
@@ -102,6 +98,7 @@ const expanded = ref(false);
 const loading = ref(false);
 const items = ref<any[]>([]);
 const { $api } = useNuxtApp();
+const favorite = useFavorite();
 
 // Fetch dữ liệu gợi ý từ API
 const fetchRecommendations = async () => {
@@ -127,6 +124,10 @@ const visibleItems = computed(() => expanded.value ? items.value : items.value.s
 
 function toggleFavorite(id: number) {
   const item = items.value.find(i => i.id === id);
-  if (item) item.isFavorite = !item.isFavorite;
+  if (item) {
+    favorite.toggleWithConfirm(id, item.isFavorite).then((next) => {
+      if (next !== null) item.isFavorite = next;
+    });
+  }
 }
 </script>

@@ -13,21 +13,21 @@ type RealEstateProject struct {
 	ID uint64 `gorm:"primaryKey"`
 
 	// Tên và định danh dự án
-	Name           string `gorm:"column:name;index"`
-	Slug           string `gorm:"column:slug;uniqueIndex"`
+	Name            string `gorm:"column:name;index"`
+	Slug            string `gorm:"column:slug;uniqueIndex"`
 	AlternativeName string `gorm:"column:alternative_name"`
-	CategoryID     *int64 `gorm:"column:category_id;index" json:"category_id"` // Liên kết với danh mục dự án trên Menu
+	CategoryID      *int64 `gorm:"column:category_id;index" json:"category_id"` // Liên kết với danh mục dự án trên Menu
 
 	// Trạng thái dự án
 	Status string `gorm:"column:status;index"`
 
-	// Địa chỉ dự án
-	FullAddress string `gorm:"column:full_address"`
-	ProvinceID  *uint64 `gorm:"column:province_id;index"`
-	DistrictID  *uint64 `gorm:"column:district_id;index"`
-	WardID      *uint64 `gorm:"column:ward_id;index"`
-	Latitude    *float64 `gorm:"column:latitude"`
-	Longitude   *float64 `gorm:"column:longitude"`
+	// Địa chỉ dự án — lưu MÃ tỉnh/phường dạng string (giữ số 0 đầu, VD "000331")
+	// để map đúng với bảng provinces/wards khi hiển thị name vị trí.
+	FullAddress  string  `gorm:"column:full_address"`
+	ProvinceCode string  `gorm:"column:province_code;index"`
+	WardCode     string  `gorm:"column:ward_code;index"`
+	Latitude     *float64 `gorm:"column:latitude"`
+	Longitude    *float64 `gorm:"column:longitude"`
 
 	// Quy mô dự án
 	TotalAreaHA         *float64 `gorm:"column:total_area_ha"`
@@ -38,21 +38,21 @@ type RealEstateProject struct {
 	ExpectedPopulation  *uint32  `gorm:"column:expected_population"`
 
 	// Giá dự án
-	PriceMin       *float64 `gorm:"column:price_min"`
-	PriceMax       *float64 `gorm:"column:price_max"`
-	PricePerM2Min  *float64 `gorm:"column:price_per_m2_min"`
-	PricePerM2Max  *float64 `gorm:"column:price_per_m2_max"`
-	InvestorID     *uint64  `gorm:"column:investor_id"`
-	LegalStatus    string   `gorm:"column:legal_status"`
+	PriceMin      *float64 `gorm:"column:price_min"`
+	PriceMax      *float64 `gorm:"column:price_max"`
+	PricePerM2Min *float64 `gorm:"column:price_per_m2_min"`
+	PricePerM2Max *float64 `gorm:"column:price_per_m2_max"`
+	InvestorID    *uint64  `gorm:"column:investor_id"`
+	LegalStatus   string   `gorm:"column:legal_status"`
 
 	// Mốc thời gian
 	ConstructionStartDate *time.Time `gorm:"column:construction_start_date"`
 	HandoverDate          *time.Time `gorm:"column:handover_date"`
 
 	// Thống kê & SEO
-	ListingCount   int64  `gorm:"column:listing_count;default:0"`
-	ViewCount      int64  `gorm:"column:view_count;default:0"`
-	MetaTitle      string `gorm:"column:meta_title"`
+	ListingCount    int64  `gorm:"column:listing_count;default:0"`
+	ViewCount       int64  `gorm:"column:view_count;default:0"`
+	MetaTitle       string `gorm:"column:meta_title"`
 	MetaDescription string `gorm:"column:meta_description;type:text"`
 
 	// Soft delete: GORM tự fill deleted_at

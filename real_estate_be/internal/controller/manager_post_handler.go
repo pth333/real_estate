@@ -117,3 +117,69 @@ func (h *ManagerPostHandler) DeleteManagerPost(c *fiber.Ctx) error {
 
 	return response.OK(c, "Xóa bài viết thành công")
 }
+
+// CreateProject - Tạo dự án mới (tác nhân quản lý dự án).
+func (h *ManagerPostHandler) CreateProject(c *fiber.Ctx) error {
+	var req dto.CreateProjectRequest
+	if err := c.BodyParser(&req); err != nil {
+		return response.BadRequest(c, "Invalid request body", err.Error())
+	}
+
+	id, err := h.service.CreateProject(req)
+	if err != nil {
+		return response.InternalServerError(c, "Tạo dự án thất bại", err.Error())
+	}
+
+	return response.Created(c, "Tạo dự án thành công", fiber.Map{
+		"id": id,
+	})
+}
+
+// ListProjects - Lấy danh sách dự án (phân trang, lọc theo tên/địa chỉ).
+func (h *ManagerPostHandler) ListProjects(c *fiber.Ctx) error {
+	search := c.Query("search", "")
+	page, _ := strconv.Atoi(c.Query("page", "1"))
+	size, _ := strconv.Atoi(c.Query("size", "10"))
+
+	projects, total, err := h.service.ListProjects(search, page, size)
+	if err != nil {
+		return response.InternalServerError(c, "Lấy danh sách dự án thất bại", err.Error())
+	}
+
+	return c.JSON(fiber.Map{
+		"total": total,
+		"data":  projects,
+	})
+}
+
+// GetProjectDetail - Lấy chi tiết 1 dự án (để điền form chỉnh sửa).
+func (h *ManagerPostHandler) GetProjectDetail(c *fiber.Ctx) error {
+	id, err := strconv.ParseUint(c.Params("id"), 10, 64)
+	if err != nil || id == 0 {
+		return response.BadRequest(c, "ID dự án không hợp lệ", nil)
+	}
+
+	project, err := h.service.GetProjectDetail(id)
+	if err != nil {
+		return response.InternalServerError(c, "Lấy chi tiết dự án thất bại", err.Error())
+	}
+	return response.OK(c, project)
+}
+
+// UpdateProject - Cập nhật thông tin dự án.
+func (h *ManagerPostHandler) UpdateProject(c *fiber.Ctx) error {
+	id, err := strconv.ParseUint(c.Params("id"), 10, 64)
+	if err != nil || id == 0 {
+		return response.BadRequest(c, "ID dự án không hợp lệ", nil)
+	}
+
+	var req dto.CreateProjectRequest
+	if err := c.BodyParser(&req); err != nil {
+		return response.BadRequest(c, "Invalid request body", err.Error())
+	}
+
+	if err := h.service.UpdateProject(id, req); err != nil {
+		return response.InternalServerError(c, "Cập nhật dự án thất bại", err.Error())
+	}
+	return response.OK(c, "Cập nhật dự án thành công")
+}

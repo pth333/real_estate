@@ -102,12 +102,17 @@ export function uploadToR2(
 
 /**
  * Xác nhận upload với backend
+ * @param kind "project" → lưu vào bảng image_projects (ảnh dự án)
  */
 export async function confirmUpload(
   key: string,
+  kind?: "project",
 ): Promise<{ image_id: number; public_url: string; thumbnail_url?: string }> {
   const { $api } = useNuxtApp();
-  const res = await $api.post<ConfirmResponse>("/upload/confirm", { key });
+  const res = await $api.post<ConfirmResponse>("/upload/confirm", {
+    key,
+    ...(kind ? { kind } : {}),
+  });
 
   if (!res.success || !res.data) {
     throw new Error(res.message || "Xác nhận upload thất bại");
@@ -118,8 +123,9 @@ export async function confirmUpload(
 
 /**
  * Upload hoàn chỉnh: presign → R2 → confirm, cập nhật status & progress vào item
+ * @param kind "project" → confirm lưu vào bảng image_projects
  */
-export async function uploadFile(item: FileItem): Promise<void> {
+export async function uploadFile(item: FileItem, kind?: "project"): Promise<void> {
   try {
     item.status = "gettingPresign";
     const { upload_url, key, expires_at } = await getPresignedUrl(
@@ -140,7 +146,7 @@ export async function uploadFile(item: FileItem): Promise<void> {
 
     // Step 5: Confirm với backend
     item.status = "confirming";
-    const result = await confirmUpload(key);
+    const result = await confirmUpload(key, kind);
 
     Object.assign(item, {
       imageId: result.image_id,

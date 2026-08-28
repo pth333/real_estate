@@ -251,6 +251,19 @@ const fetchListProvice = async () => {
     }
 }
 
+// Nếu form đang giữ NAME tỉnh (từ res.city khi edit tin cũ) → đổi sang CODE
+// để khớp option select + fetch phường/dự án theo mã.
+const normalizeProvinceToCode = () => {
+    const current = postStore.form.province
+    if (!current) return
+    const matched = provinceOption.value.find(o => o.value === current)
+    if (matched) return // đã là code
+    const byLabel = provinceOption.value.find(o => o.label === current)
+    if (byLabel) {
+        postStore.form.province = byLabel.value as string
+    }
+}
+
 const onProvinceChange = (provinceCode: string | null) => {
     onWardChange(provinceCode);
     // Tự động geocode lại nếu chọn tỉnh mới
@@ -277,6 +290,8 @@ const onDetailAddressDebounced = () => {
 }
 
 const onWardChange = async (provinceCode: string | null) => {
+    // Giữ name phường cũ (từ res.district khi edit) để normalize sang code sau khi load
+    const previousWard = postStore.form.ward
     postStore.form.ward = null
     wardOptions.value = []
     clearError('province')
@@ -292,6 +307,13 @@ const onWardChange = async (provinceCode: string | null) => {
             label: item.name,
             value: item.code
         }))
+        // Nếu trước đó form giữ NAME phường (edit tin cũ) → đổi sang CODE
+        if (previousWard) {
+            const byLabel = wardOptions.value.find(o => o.label === previousWard)
+            if (byLabel) {
+                postStore.form.ward = byLabel.value as string
+            }
+        }
     } catch (error) {
         console.error("Lỗi khi tải danh sách phường/xã:", error)
         wardOptions.value = []
@@ -407,6 +429,8 @@ watch(
 
 onMounted(async () => {
     await fetchListProvice()
+    // Edit tin cũ: form.province đang là NAME → đổi sang CODE trước khi load phường
+    normalizeProvinceToCode()
     if (postStore.form.province) {
         await onWardChange(postStore.form.province)
     }

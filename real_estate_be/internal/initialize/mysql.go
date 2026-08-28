@@ -32,6 +32,17 @@ func InitMysql() {
 	db.AutoMigrate(&model.ViewHistory{})
 	db.AutoMigrate(&model.RealEstateProject{})
 	db.AutoMigrate(&model.FilterRange{})
+	db.AutoMigrate(&model.Favorite{})
+	db.AutoMigrate(&model.ImageProject{})
+
+	// Xoá cột cũ province_id/ward_id (đã thay bằng province_code/ward_code string
+	// để giữ số 0 đầu của mã vị trí). AutoMigrate không tự xoá cột.
+	if db.Migrator().HasColumn(&model.RealEstateProject{}, "province_id") {
+		_ = db.Migrator().DropColumn(&model.RealEstateProject{}, "province_id")
+	}
+	if db.Migrator().HasColumn(&model.RealEstateProject{}, "ward_id") {
+		_ = db.Migrator().DropColumn(&model.RealEstateProject{}, "ward_id")
+	}
 
 	if err != nil {
 		panic(err)

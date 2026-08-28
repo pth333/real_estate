@@ -19,6 +19,10 @@ func InitRealEstateRoutes(Router fiber.Router) {
 		authGroup := realEstateRouter.Group("/", middleware.AuthMiddleware)
 		{
 			authGroup.Post("/list", realEstateHandler.List)
+
+			// Bất động sản yêu thích (cần đăng nhập)
+			authGroup.Post("/favorite/:id", realEstateHandler.ToggleFavorite)
+			authGroup.Get("/favorites", realEstateHandler.ListFavorites)
 		}
 
 		// Route khong can auth

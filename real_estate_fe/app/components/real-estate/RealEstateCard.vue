@@ -83,9 +83,14 @@
             <IconPhone /> {{ formattedPhone }}
           </button>
           <button
-            class="flex h-10 w-10 cursor-pointer items-center justify-center border-2 border-gray-300 rounded-md bg-transparent transition hover:border-emerald-500"
-            :class="{ 'border-red-500 bg-red-500 text-white': isFavorite }" @click="handleToggleFavorite">
-            <IconHeart />
+            class="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 transition-colors hover:border-red-400 hover:text-red-500"
+            :class="isFavorite ? 'border-red-500 text-red-500' : ''"
+            @click.stop="handleToggleFavorite"
+          >
+            <IconHeart
+              class="h-4 w-4"
+              :class="isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'"
+            />
           </button>
         </div>
       </div>
@@ -106,10 +111,11 @@ const props = defineProps({
 
 const emit = defineEmits<{
   call: [phone: string]
-  toggleFavorite: [id: number]
+  toggleFavorite: [id: number, isFavorite: boolean]
 }>()
 
 const isFavorite = ref(props.estate.is_favorite || false)
+const favorite = useFavorite()
 
 // Grid ảnh: ảnh chính + 2 ảnh phụ thumbnail + ô +N (nhúng trực tiếp, không dùng composable)
 const DEFAULT_IMAGE = ''
@@ -175,9 +181,10 @@ const handleCall = () => {
   }
 }
 
-const handleToggleFavorite = () => {
-  isFavorite.value = !isFavorite.value
-  emit('toggleFavorite', props.estate.id)
+const handleToggleFavorite = async () => {
+  const next = await favorite.toggleWithConfirm(props.estate.id, isFavorite.value)
+  if (next !== null) isFavorite.value = next
+  emit('toggleFavorite', props.estate.id, next !== null ? next : !isFavorite.value)
 }
 
 // Điều hướng sang trang chi tiết bằng SLUG của real estate (đi qua

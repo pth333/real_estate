@@ -5,9 +5,11 @@
         <NConfigProvider :theme-overrides="themeOverrides">
           <NNotificationProvider>
             <NMessageProvider>
-              <GlobalInit>
-                <NuxtPage />
-              </GlobalInit>
+              <NDialogProvider>
+                <GlobalInit>
+                  <NuxtPage />
+                </GlobalInit>
+              </NDialogProvider>
             </NMessageProvider>
           </NNotificationProvider>
         </NConfigProvider>

@@ -8,8 +8,7 @@ import PostListTable from "~/components/manager/PostListTable.vue";
 
 definePageMeta({
   alias: [
-    "/nguoi-ban/quan-ly-tin-dang",
-    "/manager/posts"
+    "/nguoi-ban/quan-ly-tin-dang"
   ],
 });
 </script>

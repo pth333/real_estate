@@ -142,7 +142,8 @@ const fetchFeaturedProjects = async () => {
         })
         projects.value = (res.data || []).map((p, index) => ({
             ...p,
-            thumbnail: `https://placehold.co/400x300/e2e8f0/94a3b8?text=Project+${index + 1}`
+            // Ưu tiên ảnh từ API, fallback placeholder
+            thumbnail: p.thumbnail || `https://placehold.co/400x300/e2e8f0/94a3b8?text=Project+${index + 1}`
         }))
     } catch (error) {
         console.error("Lỗi khi tải danh sách dự án nổi bật:", error)

@@ -28,27 +28,6 @@
     <!-- Pagination -->
     <Pagination :current-page="realEstateStore.currentPage" :total-pages="totalPages" @page-change="goToPage" />
   </div>
-  <div class="mx-auto max-w-[1200px] px-6 py-6">
-
-
-    <!-- Loading -->
-    <SkeletonCard v-if="loading" :count="pageSize" />
-
-    <!-- Empty -->
-    <div v-else-if="realEstates.length === 0" class="px-6 py-16 text-center">
-      <p class="text-base text-gray-400">Không tìm thấy bất động sản nào</p>
-    </div>
-
-    <!-- Data grid -->
-    <div v-else class="mb-8 flex flex-col gap-4">
-      <RealEstateCard v-for="estate in realEstates" :key="estate.id" :estate="estate" @call="handleCall"
-        @toggle-favorite="handleToggleFavorite" />
-
-    </div>
-
-    <!-- Pagination -->
-    <Pagination :current-page="realEstateStore.currentPage" :total-pages="totalPages" @page-change="goToPage" />
-  </div>
 </template>
 
 <style scoped></style>
@@ -148,10 +127,10 @@ function handleCall(phone: string) {
   window.open(`tel:${phone}`, "_self");
 }
 
-function handleToggleFavorite(id: number) {
+function handleToggleFavorite(id: number, isFavorite: boolean) {
   const estate = realEstates.value.find((e: RealEstateResponse) => e.id === id);
   if (estate) {
-    estate.is_favorite = !estate.is_favorite;
+    estate.is_favorite = isFavorite;
   }
 }
 

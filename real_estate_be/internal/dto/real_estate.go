@@ -70,6 +70,9 @@ type RealEstateResponse struct {
 
 	// Trả FE
 	ImageURLs []string `json:"image_urls,omitempty" gorm:"-"`
+
+	// Đánh dấu tin đăng này có thuộc danh mục yêu thích của user hiện tại không
+	IsFavorite bool `json:"is_favorite" gorm:"-"`
 }
 
 type ProvinceResponse struct {

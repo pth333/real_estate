@@ -215,6 +215,11 @@ func (h *RealEstateHandler) Detail(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusNotFound, "Không tìm thấy tin đăng", nil)
 	}
 
+	// Gắn cờ yêu thích nếu user đã đăng nhập
+	if userID := h.getUserIDFromHeader(c); userID > 0 {
+		item.IsFavorite = h.repo.IsFavorite(userID, id)
+	}
+
 	images, err := h.imgRepo.GetImagesByRealEstateID(id)
 	if err != nil {
 		return response.InternalServerError(c, "Lấy danh sách ảnh thất bại", err.Error())
@@ -302,6 +307,7 @@ func (h *RealEstateHandler) ListProject(c *fiber.Ctx) error {
 	})
 }
 
+// ListWard trả về danh sách phường/xã theo mã tỉnh (province code).
 func (h *RealEstateHandler) ListWard(c *fiber.Ctx) error {
 	provinceCode := c.Query("code")
 	if provinceCode == "" {
@@ -386,6 +392,7 @@ func (h *RealEstateHandler) ListProjectsByProjectCategory(c *fiber.Ctx) error {
 			ViewCount:   uint32(project.ViewCount),
 		}
 	}
+	h.populateProjectThumbnails(options)
 
 	return c.JSON(fiber.Map{
 		"data": options,
@@ -442,6 +449,7 @@ func (h *RealEstateHandler) ListFeaturedProjects(c *fiber.Ctx) error {
 			ViewCount:   uint32(project.ViewCount),
 		}
 	}
+	h.populateProjectThumbnails(options)
 
 	return c.JSON(fiber.Map{
 		"data": options,
@@ -476,6 +484,9 @@ func (h *RealEstateHandler) GetProjectDetail(c *fiber.Ctx) error {
 		PriceMax:    project.PriceMax,
 		ViewCount:   uint32(project.ViewCount),
 	}
+	resList := []dto.ProjectResponse{res}
+	h.populateProjectThumbnails(resList)
+	res = resList[0]
 
 	return c.JSON(fiber.Map{
 		"data": res,
@@ -485,6 +496,27 @@ func (h *RealEstateHandler) GetProjectDetail(c *fiber.Ctx) error {
 // helper trích xuất UserID từ Authorization Header nếu có cho API recommend
 func (h *RealEstateHandler) getUserIDFromHeader(c *fiber.Ctx) uint64 {
 	return jwt.ExtractUserIDFromHeader(c.Get("Authorization"))
+}
+
+// populateProjectThumbnails gán ảnh đại diện (ảnh đầu tiên từ image_projects)
+// cho danh sách dự án trước khi trả về FE.
+func (h *RealEstateHandler) populateProjectThumbnails(projects []dto.ProjectResponse) {
+	if len(projects) == 0 {
+		return
+	}
+	ids := make([]uint64, len(projects))
+	for i, p := range projects {
+		ids[i] = p.ID
+	}
+	covers, err := h.imgRepo.GetProjectCoverImages(ids)
+	if err != nil {
+		return
+	}
+	for i := range projects {
+		if url, ok := covers[projects[i].ID]; ok {
+			projects[i].Thumbnail = url
+		}
+	}
 }
 
 // GetRecommendations lấy danh sách gợi ý BĐS (Public)
@@ -508,5 +540,54 @@ func (h *RealEstateHandler) GetRecommendations(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"data": props,
+	})
+}
+
+// ToggleFavorite thêm / bỏ 1 tin đăng vào danh mục yêu thích của user hiện tại.
+func (h *RealEstateHandler) ToggleFavorite(c *fiber.Ctx) error {
+	userID := h.getUserIDFromHeader(c)
+	if userID == 0 {
+		return response.Unauthorized(c, "Bạn cần đăng nhập để yêu thích", nil)
+	}
+
+	id, err := strconv.ParseUint(c.Params("id"), 10, 64)
+	if err != nil || id == 0 {
+		return response.BadRequest(c, "Mã tin đăng không hợp lệ", nil)
+	}
+
+	isFavorite, err := h.service.ToggleFavorite(userID, id)
+	if err != nil {
+		return response.InternalServerError(c, "Thay đổi yêu thích thất bại", err.Error())
+	}
+
+	return response.OK(c, fiber.Map{
+		"is_favorite": isFavorite,
+	})
+}
+
+// ListFavorites trả về danh sách BĐS yêu thích của user hiện tại (phân trang).
+func (h *RealEstateHandler) ListFavorites(c *fiber.Ctx) error {
+	userID := h.getUserIDFromHeader(c)
+	if userID == 0 {
+		return response.Unauthorized(c, "Bạn cần đăng nhập để xem yêu thích", nil)
+	}
+
+	page, _ := strconv.Atoi(c.Query("page", "1"))
+	size, _ := strconv.Atoi(c.Query("size", "12"))
+	if page < 1 {
+		page = 1
+	}
+	if size < 1 {
+		size = 12
+	}
+
+	items, total, err := h.service.ListFavorites(userID, page, size)
+	if err != nil {
+		return response.InternalServerError(c, "Lấy danh mục yêu thích thất bại", err.Error())
+	}
+
+	return c.JSON(fiber.Map{
+		"total": total,
+		"data":  items,
 	})
 }

@@ -7,6 +7,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"time"
 
 	"real_estate_be/internal/dto"
 	"real_estate_be/internal/global"
@@ -21,6 +22,10 @@ type IManagerPostUseCase interface {
 	UpdateRealEstate(id uint64, req dto.CreateRealEstateRequest) error
 	DeleteManagerPost(postID uint64) error
 	GenerateListingSlug(title string, id uint64) string
+	CreateProject(req dto.CreateProjectRequest) (uint64, error)
+	UpdateProject(id uint64, req dto.CreateProjectRequest) error
+	GetProjectDetail(id uint64) (*dto.ManagerProjectDetailResponse, error)
+	ListProjects(search string, page, size int) ([]dto.ManagerProjectResponse, int64, error)
 }
 
 type managerPostUseCase struct {
@@ -292,4 +297,193 @@ func (u *managerPostUseCase) DeleteManagerPost(postID uint64) error {
 	_ = u.managerRepo.UnlinkImages(postID)
 
 	return u.managerRepo.DeleteManagerPost(postID)
+}
+
+// CreateProject tạo dự án mới. province/ward là MÃ tỉnh/phường (VD "000331"),
+// lưu dạng string để giữ số 0 đầu và map đúng với bảng provinces/wards.
+func (u *managerPostUseCase) CreateProject(req dto.CreateProjectRequest) (uint64, error) {
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		return 0, fmt.Errorf("tên dự án không được để trống")
+	}
+	if req.ProvinceCode == "" {
+		return 0, fmt.Errorf("vui lòng chọn tỉnh/thành phố")
+	}
+
+	status := req.Status
+	if status == "" {
+		status = "active"
+	}
+
+	project := &model.RealEstateProject{
+		Name:            name,
+		AlternativeName: req.AlternativeName,
+		Slug:            slugify(name),
+		Status:          status,
+		FullAddress:     req.FullAddress,
+		ProvinceCode:    req.ProvinceCode,
+		WardCode:        req.WardCode,
+		CategoryID:      req.CategoryID,
+		TotalAreaHA:     req.TotalAreaHA,
+		TotalUnits:      req.TotalUnits,
+		PriceMin:        req.PriceMin,
+		PriceMax:        req.PriceMax,
+	}
+
+	// Parse ngày bắt đầu / bàn giao (format "2006-01-02")
+	if req.ConstructionStartDate != nil && *req.ConstructionStartDate != "" {
+		if t, err := time.Parse("2006-01-02", *req.ConstructionStartDate); err == nil {
+			project.ConstructionStartDate = &t
+		}
+	}
+	if req.HandoverDate != nil && *req.HandoverDate != "" {
+		if t, err := time.Parse("2006-01-02", *req.HandoverDate); err == nil {
+			project.HandoverDate = &t
+		}
+	}
+
+	if err := u.realEstateRepo.CreateProject(project); err != nil {
+		return 0, err
+	}
+
+	// Liên kết ảnh dự án đã upload với dự án vừa tạo
+	if err := u.imageRepo.LinkToProject(req.ImageIDs, project.ID); err != nil {
+		return 0, fmt.Errorf("liên kết ảnh dự án thất bại: %w", err)
+	}
+
+	return project.ID, nil
+}
+
+// ListProjects trả về danh sách dự án (phân trang, lọc theo tên/địa chỉ).
+func (u *managerPostUseCase) ListProjects(search string, page, size int) ([]dto.ManagerProjectResponse, int64, error) {	if page < 1 {
+		page = 1
+	}
+	if size < 1 {
+		size = 10
+	}
+	offset := (page - 1) * size
+
+	projects, total, err := u.realEstateRepo.ListProjects(size, offset, search)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	items := make([]dto.ManagerProjectResponse, 0, len(projects))
+	for _, p := range projects {
+		items = append(items, dto.ManagerProjectResponse{
+			ID:              p.ID,
+			Name:            p.Name,
+			Slug:            p.Slug,
+			AlternativeName: p.AlternativeName,
+			Status:          p.Status,
+			FullAddress:     p.FullAddress,
+			TotalAreaHA:     p.TotalAreaHA,
+			TotalUnits:      p.TotalUnits,
+			PriceMin:        p.PriceMin,
+			PriceMax:        p.PriceMax,
+			CreatedAt:       p.CreatedAt.Format("02-01-2006"),
+		})
+	}
+
+	// Gắn ảnh đại diện (ảnh đầu tiên) cho từng dự án
+	if len(items) > 0 {
+		ids := make([]uint64, len(items))
+		for i := range items {
+			ids[i] = items[i].ID
+		}
+		if covers, err := u.imageRepo.GetProjectCoverImages(ids); err == nil {
+			for i := range items {
+				if url, ok := covers[items[i].ID]; ok {
+					items[i].Thumbnail = url
+				}
+			}
+		}
+	}
+
+	return items, total, nil
+}
+
+// GetProjectDetail trả về chi tiết 1 dự án để điền form chỉnh sửa.
+func (u *managerPostUseCase) GetProjectDetail(id uint64) (*dto.ManagerProjectDetailResponse, error) {
+	project, err := u.realEstateRepo.GetProjectByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &dto.ManagerProjectDetailResponse{
+		ID:              project.ID,
+		Name:            project.Name,
+		Slug:            project.Slug,
+		AlternativeName: project.AlternativeName,
+		Status:          project.Status,
+		FullAddress:     project.FullAddress,
+		ProvinceCode:    project.ProvinceCode,
+		WardCode:        project.WardCode,
+		CategoryID:      project.CategoryID,
+		TotalAreaHA:     project.TotalAreaHA,
+		TotalUnits:      project.TotalUnits,
+		PriceMin:        project.PriceMin,
+		PriceMax:        project.PriceMax,
+	}
+	if project.ConstructionStartDate != nil {
+		resp.ConstructionStartDate = project.ConstructionStartDate.Format("2006-01-02")
+	}
+	if project.HandoverDate != nil {
+		resp.HandoverDate = project.HandoverDate.Format("2006-01-02")
+	}
+	// Kèm danh sách ảnh dự án (để hiển thị khi chỉnh sửa)
+	resp.Images, _ = u.imageRepo.GetImagesByProjectID(id)
+	return resp, nil
+}
+
+// UpdateProject cập nhật thông tin dự án.
+func (u *managerPostUseCase) UpdateProject(id uint64, req dto.CreateProjectRequest) error {
+	project, err := u.realEstateRepo.GetProjectByID(id)
+	if err != nil {
+		return fmt.Errorf("không tìm thấy dự án")
+	}
+
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		return fmt.Errorf("tên dự án không được để trống")
+	}
+
+	project.Name = name
+	project.AlternativeName = req.AlternativeName
+	project.Status = req.Status
+	if project.Status == "" {
+		project.Status = "active"
+	}
+	project.FullAddress = req.FullAddress
+
+	// Cập nhật vị trí (mã tỉnh/phường, giữ số 0 đầu)
+	project.ProvinceCode = req.ProvinceCode
+	project.WardCode = req.WardCode
+	project.CategoryID = req.CategoryID
+
+	project.TotalAreaHA = req.TotalAreaHA
+	project.TotalUnits = req.TotalUnits
+	project.PriceMin = req.PriceMin
+	project.PriceMax = req.PriceMax
+
+	// Cập nhật mốc thời gian (xóa nếu không gửi)
+	project.ConstructionStartDate = nil
+	project.HandoverDate = nil
+	if req.ConstructionStartDate != nil && *req.ConstructionStartDate != "" {
+		if t, err := time.Parse("2006-01-02", *req.ConstructionStartDate); err == nil {
+			project.ConstructionStartDate = &t
+		}
+	}
+	if req.HandoverDate != nil && *req.HandoverDate != "" {
+		if t, err := time.Parse("2006-01-02", *req.HandoverDate); err == nil {
+			project.HandoverDate = &t
+		}
+	}
+
+	if err := u.realEstateRepo.UpdateProject(project); err != nil {
+		return err
+	}
+
+	// Liên kết ảnh dự án đã upload với dự án
+	return u.imageRepo.LinkToProject(req.ImageIDs, id)
 }

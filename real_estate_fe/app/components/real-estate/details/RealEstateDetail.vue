@@ -97,11 +97,21 @@
                         </div>
                         <!-- Action icons -->
                         <div class="ml-auto flex items-center gap-3 text-gray-400">
-                            <button class="hover:text-emerald-500" @click="realEstateDetailStore.handleShare">
-                                <IconShare />
+                            <button
+                                class="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 transition-colors hover:border-emerald-400 hover:text-emerald-500"
+                                @click="realEstateDetailStore.handleShare"
+                            >
+                                <IconShare class="h-5 w-5" />
                             </button>
-                            <button class="hover:text-emerald-500">
-                                <IconHeart />
+                            <button
+                                class="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 transition-colors hover:border-red-400 hover:text-red-500"
+                                :class="realEstateDetailStore.listing?.is_favorite ? 'border-red-500 text-red-500' : ''"
+                                @click="toggleFavoriteDetail"
+                            >
+                                <IconHeart
+                                    class="h-5 w-5"
+                                    :class="realEstateDetailStore.listing?.is_favorite ? 'fill-red-500 text-red-500' : 'text-gray-400'"
+                                />
                             </button>
                         </div>
                     </div>
@@ -192,8 +202,19 @@ import { useTracking } from '~/composables/useTracking';
 
 const realEstateDetailStore = useRealEstateDetail()
 const { trackView, cleanupTracking } = useTracking()
+const favorite = useFavorite()
 
 const activeImageIndex = ref(0);
+
+// Bật/tắt yêu thích tin đăng (gọi API backend)
+const toggleFavoriteDetail = async () => {
+  const id = realEstateDetailStore.listing?.id
+  if (!id) return
+  const next = await favorite.toggleWithConfirm(id, realEstateDetailStore.listing?.is_favorite || false)
+  if (next !== null && realEstateDetailStore.listing) {
+    realEstateDetailStore.listing.is_favorite = next
+  }
+};
 
 
 const allImages = computed(() => (realEstateDetailStore.listing?.images ?? []).map(img => img.url));

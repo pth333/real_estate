@@ -21,6 +21,7 @@ export interface RealEstateResponse {
   created_at: string;
 
   real_estate_type: string;
+  project_id?: number | null;
 
   // Optional fields
   images?: ImageResponse[];
@@ -246,6 +247,7 @@ export class InformationRealestate {
 
     form.ward = res.district || null;
     form.detail_address = res.address || null;
+    form.project_id = res.project_id ?? null;
 
     if (res.images && res.images.length > 0) {
       form.images = res.images.map((img) => ({

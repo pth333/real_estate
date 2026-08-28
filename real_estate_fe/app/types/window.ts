@@ -54,8 +54,10 @@ export class UserMenu {
   constructor(role?: string) {
     this.role = role;
     this.options = [
+      new UserMenuOption("manage-projects", "Quản lý dự án", "nguoi-ban/quan-ly-du-an"),
       new UserMenuOption("manage-posts", "Quản lý bài viết", "nguoi-ban/quan-ly-tin-dang"),
       new UserMenuOption("manage-customers", "Quản lý khách hàng", "nguoi-ban/quan-ly-khach-hang"),
+      new UserMenuOption("manage-favorites", "Quản lý yêu thích", "nguoi-ban/quan-ly-yeu-thich"),
       new UserMenuOption("logout", "Đăng xuất")
     ];
   }

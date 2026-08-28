@@ -48,6 +48,10 @@ type IRealEstateService interface {
 	GetFeaturedProjects(limit int) ([]model.RealEstateProject, error)
 	GetProjectByID(id uint64) (*model.RealEstateProject, error)
 	GetRecommendations(userID uint64, sessionID string, limit int) ([]dto.RealEstateResponse, error)
+
+	// ── Bất động sản yêu thích (favorite) ──
+	ToggleFavorite(userID, realEstateID uint64) (bool, error)
+	ListFavorites(userID uint64, page, size int) ([]dto.RealEstateResponse, int64, error)
 }
 
 func NewRealEstateService(
@@ -106,6 +110,9 @@ func (s *RealEstateService) ListRealEstate(req dto.RealEstateSearchRequest, user
 	if err != nil {
 		return nil, 0, err
 	}
+
+	// Gắn cờ yêu thích cho user đã đăng nhập
+	s.flagFavorites(data, userID)
 
 	// Tự động lưu lịch sử tìm kiếm tối giản nếu tìm thấy kết quả
 	if req.Search != "" && len(data) > 0 {
@@ -204,6 +211,12 @@ func (s *RealEstateService) GetUserByEmail(email string) (*model.User, error) {
 }
 
 func (s *RealEstateService) ToSlug(input string) string {
+	return slugify(input)
+}
+
+// slugify bỏ dấu tiếng Việt, hạ thường và nối bằng dấu "-" (dùng chung cho cả
+// slug tin đăng và slug dự án).
+func slugify(input string) string {
 	var accents = map[rune]string{
 		'à': "a", 'á': "a", 'ả': "a", 'ã': "a", 'ạ': "a", 'ă': "a", 'ắ': "a", 'ằ': "a", 'ẳ': "a", 'ẵ': "a", 'ặ': "a", 'â': "a", 'ấ': "a", 'ầ': "a", 'ẩ': "a", 'ẫ': "a", 'ậ': "a",
 		'è': "e", 'é': "e", 'ẻ': "e", 'ẽ': "e", 'ẹ': "e", 'ê': "e", 'ế': "e", 'ề': "e", 'ể': "e", 'ễ': "e", 'ệ': "e",
@@ -269,6 +282,7 @@ func (s *RealEstateService) GetRecommendations(userID uint64, sessionID string, 
 				// Query DB lấy chi tiết tin từ danh sách ID đã cache (đảm bảo tính chất ranking)
 				props, err := s.repo.GetByIDs(cachedIDs)
 				if err == nil && len(props) > 0 {
+					s.flagFavorites(props, userID)
 					return props, nil
 				}
 			}
@@ -329,6 +343,7 @@ func (s *RealEstateService) GetRecommendations(userID uint64, sessionID string, 
 	}
 
 	_ = strategyUsed // Có thể dùng để log hoặc xử lý thêm nếu cần
+	s.flagFavorites(props, userID)
 	return props, nil
 }
 
@@ -357,4 +372,64 @@ func (s *RealEstateService) autoRecordSearch(userID uint64, sessionID string, qu
 			RealEstateID: &estateID,
 		})
 	}
+}
+
+// ── Bất động sản yêu thích (favorite) ──
+
+// flagFavorites gắn cờ IsFavorite cho danh sách BĐS dựa trên danh sách ID yêu thích của user.
+func (s *RealEstateService) flagFavorites(items []dto.RealEstateResponse, userID uint64) {
+	if userID == 0 || len(items) == 0 {
+		return
+	}
+	ids, err := s.repo.GetFavoriteRealEstateIDs(userID)
+	if err != nil {
+		return
+	}
+	set := make(map[uint64]bool, len(ids))
+	for _, id := range ids {
+		set[id] = true
+	}
+	for i := range items {
+		items[i].IsFavorite = set[items[i].ID]
+	}
+}
+
+// ToggleFavorite thêm/bỏ 1 tin đăng vào danh mục yêu thích của user.
+// Trả về trạng thái mới: true = đã yêu thích, false = đã bỏ yêu thích.
+func (s *RealEstateService) ToggleFavorite(userID, realEstateID uint64) (bool, error) {
+	if userID == 0 {
+		return false, fmt.Errorf("người dùng chưa đăng nhập")
+	}
+
+	// Đảm bảo tin đăng tồn tại
+	if _, err := s.repo.GetByID(realEstateID); err != nil {
+		return false, fmt.Errorf("không tìm thấy bất động sản")
+	}
+
+	if s.repo.IsFavorite(userID, realEstateID) {
+		if err := s.repo.RemoveFavorite(userID, realEstateID); err != nil {
+			return false, err
+		}
+		return false, nil
+	}
+
+	if err := s.repo.AddFavorite(userID, realEstateID); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// ListFavorites trả về danh sách BĐS yêu thích của user (phân trang).
+func (s *RealEstateService) ListFavorites(userID uint64, page, size int) ([]dto.RealEstateResponse, int64, error) {
+	if userID == 0 {
+		return []dto.RealEstateResponse{}, 0, nil
+	}
+	if page < 1 {
+		page = 1
+	}
+	if size < 1 {
+		size = 12
+	}
+	offset := (page - 1) * size
+	return s.repo.ListFavoriteRealEstates(userID, size, offset)
 }
