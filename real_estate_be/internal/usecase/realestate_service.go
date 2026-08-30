@@ -141,8 +141,8 @@ func (s *RealEstateService) ListRealEstateByCategory(req dto.RealEstateSearchReq
 		if id, errCat := s.categoryRepo.GetCategoryIdBySlug(req.Slug); errCat == nil && id > 0 {
 			data, total, err = s.repo.GetListByCategory(offset, req, limit)
 
-			jsonData, _ := json.MarshalIndent(data, " ", " ")
-			fmt.Println("JSON DATA: ", string(jsonData))
+			// jsonData, _ := json.MarshalIndent(data, " ", " ")
+			// fmt.Println("JSON DATA: ", string(jsonData))
 		}
 	} else {
 		data, total, err = s.repo.GetList(req, offset, limit)

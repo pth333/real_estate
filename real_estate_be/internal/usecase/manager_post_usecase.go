@@ -129,16 +129,16 @@ func (s *managerPostUseCase) CreateRealEstate(req dto.CreateRealEstateRequest, u
 		wardName = name
 	}
 
-	address := strings.TrimSpace(strings.Join([]string{
-		req.DetailAddress, wardName, cityName,
-	}, " "))
+	// address := strings.TrimSpace(strings.Join([]string{
+	// 	req.DetailAddress, wardName, cityName,
+	// }, " "))
 
 	estate := &model.RealEstate{
 		ProjectID:        req.ProjectID,
 		UserID:           &userID,
 		Title:            req.Title,
 		PriceVND:         priceVND,
-		Address:          address,
+		Address:          req.DetailAddress,
 		District:         wardName,
 		City:             cityName,
 		Acreage:          req.Area,
@@ -238,14 +238,14 @@ func (s *managerPostUseCase) UpdateRealEstate(id uint64, req dto.CreateRealEstat
 		wardName = name
 	}
 
-	address := strings.TrimSpace(strings.Join([]string{
-		req.DetailAddress, wardName, cityName,
-	}, " "))
+	// address := strings.TrimSpace(strings.Join([]string{
+	// 	req.DetailAddress, wardName, cityName,
+	// }, " "))
 
 	rawEstate.ProjectID = req.ProjectID
 	rawEstate.Title = req.Title
 	rawEstate.PriceVND = priceVND
-	rawEstate.Address = address
+	rawEstate.Address = req.DetailAddress
 	rawEstate.District = wardName
 	rawEstate.City = cityName
 	rawEstate.Acreage = req.Area
@@ -355,7 +355,8 @@ func (u *managerPostUseCase) CreateProject(req dto.CreateProjectRequest) (uint64
 }
 
 // ListProjects trả về danh sách dự án (phân trang, lọc theo tên/địa chỉ).
-func (u *managerPostUseCase) ListProjects(search string, page, size int) ([]dto.ManagerProjectResponse, int64, error) {	if page < 1 {
+func (u *managerPostUseCase) ListProjects(search string, page, size int) ([]dto.ManagerProjectResponse, int64, error) {
+	if page < 1 {
 		page = 1
 	}
 	if size < 1 {

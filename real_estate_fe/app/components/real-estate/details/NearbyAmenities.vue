@@ -49,8 +49,8 @@
                 Không tìm thấy {{ activeCategoryHeading }} nào trong khu vực
             </p>
 
-            <!-- Danh sách -->
-            <ul v-else class="mt-1">
+            <!-- Danh sách (giới hạn ~5 dòng, nhiều hơn thì cuộn trong khung) -->
+            <ul v-else class="mt-1 max-h-[300px] overflow-y-auto pr-1">
                 <li v-for="item in activeItems" :key="item.placeId"
                     class="flex items-center gap-3 border-b border-gray-100 py-3">
                     <component :is="activeCategoryIcon" class="h-4 w-4 shrink-0 text-emerald-500" />
@@ -70,7 +70,7 @@
 
 <script setup lang="ts">
 import { useRealEstateDetail } from '~/stores/detail/real_estate_detail'
-import { useGoogleMaps, type Coordinate } from '~/composables/useGoogleMaps'
+import { useGeoapify, type Coordinate, type NearbyPlace } from '~/composables/useGeoapify'
 import IconSchool from '~/icons/IconSchool.vue'
 import IconShopping from '~/icons/IconShopping.vue'
 import IconPark from '~/icons/IconPark.vue'
@@ -78,7 +78,7 @@ import IconHospital from '~/icons/IconHospital.vue'
 import IconRestaurant from '~/icons/IconRestaurant.vue'
 
 const realEstateDetailStore = useRealEstateDetail()
-const { loadGoogleMaps, getMap, getMarker, importLibrary, distanceMeters, formatDistance, error: googleMapsError, toCoordinate, mapId } = useGoogleMaps()
+const { createMap, getLeaflet, nearbyPlaces, distanceMeters, formatDistance, error: geoapifyError } = useGeoapify()
 
 const listing = computed(() => realEstateDetailStore.listing)
 const projectName = computed(() => listing.value?.title || 'Bất động sản')
@@ -89,44 +89,40 @@ const listingCoords = computed<Coordinate | null>(() =>
 )
 const hasCoords = computed(() => listingCoords.value !== null)
 
-interface NearbyItem {
-    placeId: string
-    name: string
-    address: string
-    distance: string
-    duration: string
-    lat: number
-    lng: number
-}
-
 interface NearbyCategory {
     key: string
     label: string
     heading: string
-    // Loại Places API (Google Nearby Search)
-    placeType: 'school' | 'supermarket' | 'park' | 'hospital' | 'restaurant'
+    // Danh mục Geoapify Places
+    geoapifyCategory: string
     icon: any
 }
 
+// Địa điểm hiển thị: dữ liệu Places + khoảng cách/thời gian đi bộ
+interface NearbyItem extends NearbyPlace {
+    distance: string
+    duration: string
+}
+
 const categories: NearbyCategory[] = [
-    { key: 'school', label: 'Trường học', heading: 'trường học', placeType: 'school', icon: IconSchool },
-    { key: 'supermarket', label: 'Siêu thị', heading: 'siêu thị', placeType: 'supermarket', icon: IconShopping },
-    { key: 'park', label: 'Công viên', heading: 'công viên', placeType: 'park', icon: IconPark },
-    { key: 'hospital', label: 'Bệnh viện', heading: 'bệnh viện', placeType: 'hospital', icon: IconHospital },
-    { key: 'restaurant', label: 'Nhà hàng', heading: 'nhà hàng', placeType: 'restaurant', icon: IconRestaurant },
+    { key: 'school', label: 'Trường học', heading: 'trường học', geoapifyCategory: 'education.school', icon: IconSchool },
+    { key: 'supermarket', label: 'Siêu thị', heading: 'siêu thị', geoapifyCategory: 'commercial.supermarket', icon: IconShopping },
+    { key: 'park', label: 'Công viên', heading: 'công viên', geoapifyCategory: 'leisure.park', icon: IconPark },
+    { key: 'hospital', label: 'Bệnh viện', heading: 'bệnh viện', geoapifyCategory: 'healthcare.hospital', icon: IconHospital },
+    { key: 'restaurant', label: 'Nhà hàng', heading: 'nhà hàng', geoapifyCategory: 'catering.restaurant', icon: IconRestaurant },
 ]
 
 const activeCategory = ref<NearbyCategory['key']>('school')
 const activeCategoryData = computed<NearbyCategory>(() => categories.find(c => c.key === activeCategory.value) ?? categories[0]!)
 const activeItems = ref<NearbyItem[]>([])
 const loadingPlaces = ref(false)
-const mapsError = computed(() => googleMapsError.value)
+const mapsError = computed(() => geoapifyError.value)
 
 const activeCategoryHeading = computed(() => activeCategoryData.value.heading)
 const activeCategoryIcon = computed(() => activeCategoryData.value.icon)
 const totalCount = computed(() => activeItems.value.length)
 
-// ── Google Maps ──
+// ── Geoapify / Leaflet ──
 let mapInstance: any = null
 let projectMarkerInstance: any = null
 let userMarkerInstance: any = null
@@ -143,96 +139,62 @@ const estimateWalkDuration = (distance: number): string => {
     return `${minutes} phút`
 }
 
-// Vẽ marker các địa điểm (xoá marker cũ trước) bằng AdvancedMarkerElement
-const renderPlaceMarkers = (AdvancedMarkerElement: any, g: any) => {
-    placeMarkerInstances.forEach(m => { m.map = null })
+// Vẽ marker các địa điểm (xoá marker cũ trước)
+const renderPlaceMarkers = (L: any) => {
+    placeMarkerInstances.forEach(m => m.remove())
     placeMarkerInstances.length = 0
     if (!mapInstance || !listingCoords.value) return
 
     activeItems.value.forEach(item => {
-        const marker = new AdvancedMarkerElement({
-            position: { lat: item.lat, lng: item.lng },
-            map: mapInstance,
-        })
-        marker.addListener('gmp-click', () => {
-            const info = new g.maps.InfoWindow({ content: `<strong>${item.name}</strong>` })
-            info.open({ map: mapInstance, anchor: marker })
-        })
+        const marker = L.marker([item.lat, item.lng]).addTo(mapInstance)
+        marker.bindPopup(`<strong>${item.name}</strong>`)
         placeMarkerInstances.push(marker)
     })
 }
 
-// Lấy danh sách tiện ích quanh vị trí bằng Google Place (searchNearby) - API mới
+// Lấy danh sách tiện ích quanh vị trí bằng Geoapify Places API
 const fetchPlaces = async () => {
     if (!listingCoords.value) return
-    const { AdvancedMarkerElement } = await getMarker()
-    // google global (googleLib) để dùng InfoWindow (core)
-    const g = await loadGoogleMaps()
-    if (!AdvancedMarkerElement || !g || !mapInstance) return
-
-    const { Place } = await importLibrary('places')
-    if (!Place) return
 
     loadingPlaces.value = true
     try {
-        Place.searchNearby(
-            {
-                // location phải là LatLng instance (LatLngLiteral đôi khi gây "unknown property location")
-                location: new g.maps.LatLng(listingCoords.value.lat, listingCoords.value.lng),
-                radius: 2000,
-                includedTypes: [activeCategoryData.value.placeType],
-                maxResultCount: 20,
-            },
-            (results: any, status: string) => {
-                if (status === 'OK' && results?.length) {
-                    activeItems.value = results.map((r: any) => {
-                        const placeCoord = toCoordinate(r.location)
-                        const distance = distanceMeters(listingCoords.value!, placeCoord)
-                        return {
-                            placeId: r.placeId,
-                            name: r.displayName?.text || 'Không có tên',
-                            address: r.formattedAddress || r.displayName?.text || '',
-                            distance: formatDistance(distance),
-                            duration: estimateWalkDuration(distance),
-                            lat: placeCoord.lat,
-                            lng: placeCoord.lng,
-                        }
-                    })
-                } else if (status === 'ZERO_RESULTS') {
-                    activeItems.value = []
-                } else {
-                    // OVER_QUERY_LIMIT, REQUEST_DENIED... → giữ danh sách cũ
-                    console.warn('Place searchNearby status:', status)
-                }
-                loadingPlaces.value = false
-                renderPlaceMarkers(AdvancedMarkerElement, g)
-            },
-        )
+        const places = await nearbyPlaces(listingCoords.value, [activeCategoryData.value.geoapifyCategory], 2000)
+        // Tính khoảng cách + thời gian đi bộ
+        activeItems.value = places.map((p) => {
+            const distance = distanceMeters(listingCoords.value!, { lat: p.lat, lng: p.lng })
+            return {
+                ...p,
+                distance: formatDistance(distance),
+                duration: estimateWalkDuration(distance),
+            }
+        })
     } catch (e) {
         console.error('Lỗi khi tải Places Nearby:', e)
+        activeItems.value = []
+    } finally {
         loadingPlaces.value = false
+        const L = getLeaflet()
+        if (L) renderPlaceMarkers(L)
     }
 }
 
 const initMap = async () => {
     if (!listingCoords.value) return
-    const { Map } = await getMap()
-    const { AdvancedMarkerElement } = await getMarker()
-    if (!Map || !AdvancedMarkerElement) return
     if (mapInstance) {
+        mapInstance.remove()
         mapInstance = null
         projectMarkerInstance = null
     }
-    mapInstance = new Map(document.getElementById('nearby-amenities-map'), {
-        center: listingCoords.value,
-        zoom: 15,
-        // mapId bắt buộc cho AdvancedMarkerElement
-        ...(mapId.value ? { mapId: mapId.value } : {}),
-    })
-    projectMarkerInstance = new AdvancedMarkerElement({
-        position: listingCoords.value,
-        map: mapInstance,
-    })
+
+    const el = document.getElementById('nearby-amenities-map')
+    if (!el) return
+
+    mapInstance = await createMap(el, { lat: listingCoords.value.lat, lng: listingCoords.value.lng, zoom: 15 })
+    if (!mapInstance) return
+
+    const L = getLeaflet()
+    if (!L) return
+    projectMarkerInstance = L.marker([listingCoords.value.lat, listingCoords.value.lng]).addTo(mapInstance)
     fetchPlaces()
 }
 
@@ -240,14 +202,13 @@ const initMap = async () => {
 const locateMe = () => {
     if (!navigator.geolocation) return
     navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-            const { AdvancedMarkerElement } = await getMarker()
-            if (!AdvancedMarkerElement || !mapInstance) return
+        (pos) => {
+            const L = getLeaflet()
+            if (!L || !mapInstance) return
             const coord = { lat: pos.coords.latitude, lng: pos.coords.longitude }
-            if (userMarkerInstance) userMarkerInstance.map = null
-            userMarkerInstance = new AdvancedMarkerElement({ position: coord, map: mapInstance })
-            mapInstance.setCenter(coord)
-            mapInstance.setZoom(16)
+            if (userMarkerInstance) userMarkerInstance.remove()
+            userMarkerInstance = L.marker([coord.lat, coord.lng]).addTo(mapInstance)
+            mapInstance.setView([coord.lat, coord.lng], 16)
         },
         () => window.message?.warning('Không thể lấy vị trí của bạn'),
     )

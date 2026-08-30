@@ -1,12 +1,15 @@
-import { InformationRealestate, type IInformationRealestate } from "~/types/real_estate";
+import {
+  InformationRealestate,
+  type IInformationRealestate,
+} from "~/types/real_estate";
 import { saveDraft, loadDraft, clearDraft } from "~/utils/create-post-draft";
 
 export const useCreatePost = defineStore("create-post", () => {
-  // Dữ liệu tin đăng tổ chức dưới dạng POJO sử dụng Interface
   const form = ref<IInformationRealestate>(InformationRealestate.createEmpty());
 
   // Helper getters cho trạng thái tab (sử dụng các static method của Class)
-  const isTabInformation = () => InformationRealestate.isTabInformation(form.value);
+  const isTabInformation = () =>
+    InformationRealestate.isTabInformation(form.value);
   const isTabUpload = () => InformationRealestate.isTabUpload(form.value);
   const isTabReview = () => InformationRealestate.isTabReview(form.value);
 
@@ -37,14 +40,13 @@ export const useCreatePost = defineStore("create-post", () => {
     description: "",
   });
 
-  // Tách id + tên từ chuỗi "12-CanHo" (value của n-select). KHÔNG mutate form
   // để payload gửi đi tách lấy id riêng, còn form giữ chuỗi gốc cho hiển thị select.
   const customValueRealEstateType = computed(() => {
     if (!form.value.real_estate_type) return null;
     const [id, name] = form.value.real_estate_type.split("-");
     return { id: Number(id), name };
   });
-  // ── Payload: copy form, tách real_estate_type ra chỉ còn id để gửi backend ──
+
   const payload = computed(() => {
     const { real_estate_type, ...rest } = form.value;
     const [id] = (real_estate_type ?? "").split("-");
@@ -149,9 +151,18 @@ export const useCreatePost = defineStore("create-post", () => {
   // Reset toàn bộ form về mặc định + xoá lỗi, dùng sau khi đăng tin thành công
   const resetForm = () => {
     form.value = InformationRealestate.createEmpty();
-    errorsMainInfo.value = { real_estate_type: "", area: "", price_per_m2: "", unit: "" };
+    errorsMainInfo.value = {
+      real_estate_type: "",
+      area: "",
+      price_per_m2: "",
+      unit: "",
+    };
     errorsAddress.value = { province: "", ward: "", detail_address: "" };
-    errorsContact.value = { contact_name: "", contact_email: "", contact_phone: "" };
+    errorsContact.value = {
+      contact_name: "",
+      contact_email: "",
+      contact_phone: "",
+    };
     errorsDescription.value = { title: "", description: "" };
   };
 

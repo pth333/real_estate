@@ -64,23 +64,7 @@
         <ModalOTPAuthentication v-model:show="showOTPModal" />
 
         <!-- Modal hỏi tiếp tục bản nháp cũ -->
-        <n-modal v-model:show="showDraftModal" preset="dialog" type="warning" title="Phát hiện bản nháp"
-            :mask-closable="false" @click="onDraftModalClose">
-            <template #default>
-                <p>
-                    Bạn có bản nháp tin đăng chưa hoàn thành. Bạn có muốn tiếp tục
-                    sử dụng bản nháp trước đó không?
-                </p>
-            </template>
-            <template #action>
-                <n-button size="large" @click="discardDraft">
-                    Không, tạo tin mới
-                </n-button>
-                <n-button size="large" type="error" @click="continueDraft">
-                    Tiếp tục bản nháp
-                </n-button>
-            </template>
-        </n-modal>
+        <DraftModal v-model:show="showDraftModal" />
 
     </div>
 </template>
@@ -95,6 +79,9 @@ const { phoneVerified, verifiedPhone, showOTPModal } = usePhoneVerification()
 const { $api } = useNuxtApp()
 const managerStore = useManagerStore()
 
+const route = useRoute()
+const isEdit = route.query.id
+
 const postStore = useCreatePost()
 const uploadComponent = ref()
 
@@ -105,20 +92,6 @@ const handleExit = () => {
     navigateTo('/')
 }
 
-const continueDraft = () => {
-    postStore.applyDraft()
-    showDraftModal.value = false
-}
-
-const discardDraft = () => {
-    postStore.clearCurrentDraft()
-    postStore.resetForm()
-    showDraftModal.value = false
-}
-
-const onDraftModalClose = () => {
-    showDraftModal.value = false
-}
 const nextPage = () => {
     if (postStore.isTabInformation()) {
         if (!postStore.validateInformation()) {
@@ -175,23 +148,12 @@ const submitCreatePost = async () => {
     }
 };
 
-const route = useRoute()
-const isEdit = route.query.id
-
-// Tự động điền số điện thoại khi đã xác thực thành công hoặc khi số xác thực thay đổi
-watch(verifiedPhone, (newPhone) => {
-    if (newPhone && !postStore.form.contact_phone && !isEdit) {
-        postStore.form.contact_phone = newPhone
-    }
-}, { immediate: true })
-
 onMounted(async () => {
     // Nếu là chế độ chỉnh sửa, bỏ qua bước OTP & phục hồi bản nháp cũ
     if (isEdit) {
         loadingPostDetail()
         return
     }
-
     if (!phoneVerified.value) {
         showOTPModal.value = true
         return
@@ -214,7 +176,6 @@ const loadingPostDetail = async () => {
 
             const editForm = InformationRealestate.fromResponse(res.data)
             postStore.form = editForm
-            console.log(res.data)
             // Đẩy danh sách ảnh vào upload component để hiển thị preview
             if (editForm.images && editForm.images.length > 0) {
                 nextTick(() => {
@@ -228,5 +189,13 @@ const loadingPostDetail = async () => {
         window.message?.error("Không thể tải thông tin chi tiết bài viết cần sửa")
     }
 }
+
+// Tự động điền số điện thoại khi đã xác thực thành công hoặc khi số xác thực thay đổi
+watch(verifiedPhone, (newPhone) => {
+    if (newPhone && !postStore.form.contact_phone && !isEdit) {
+        postStore.form.contact_phone = newPhone
+    }
+}, { immediate: true })
+
 
 </script>

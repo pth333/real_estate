@@ -25,11 +25,9 @@ export default defineNuxtConfig({
       apiBaseUrl:
         process.env.NUXT_PUBLIC_API_BASE_URL ||
         "http://localhost:8000/api/2026",
-      googleMapsApiKey:
-        process.env.NUXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
-      // Map ID (bắt buộc cho Advanced Marker) — tạo trong Google Cloud Console
-      googleMapsMapId:
-        process.env.NUXT_PUBLIC_GOOGLE_MAPS_MAP_ID || "",
+      // Geoapify API key — dùng cho bản đồ + geocoding + places (NUXT_PUBLIC_GEOAPIFY_API_KEY)
+      geoapifyApiKey:
+        process.env.NUXT_PUBLIC_GEOAPIFY_API_KEY || "",
     },
   },
 
