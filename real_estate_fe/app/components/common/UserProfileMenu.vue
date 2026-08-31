@@ -72,7 +72,7 @@ const dropdownOptions = computed(() => {
  */
 const handleLogout = async () => {
   await auth.logout();
-  navigateTo("/login");
+  navigateTo("/dang-nhap");
 };
 
 /**

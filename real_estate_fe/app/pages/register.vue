@@ -39,7 +39,7 @@
 
         <p class="mt-8 text-sm text-limestone/60">
           Đã có tài khoản?
-          <NuxtLink to="/login" class="font-medium text-oak hover:underline">Đăng nhập</NuxtLink>
+          <NuxtLink to="/dang-nhap" class="font-medium text-oak hover:underline">Đăng nhập</NuxtLink>
         </p>
       </div>
     </div>
@@ -74,7 +74,10 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ layout: false });
+definePageMeta({
+  layout: false,
+  alias: "/dang-ky",
+});
 
 useHead({
   title: "Đăng ký",
@@ -142,7 +145,7 @@ async function handleRegister() {
       password: form.value.password,
     });
     successMsg.value = "Đăng ký thành công! Đang chuyển đến trang đăng nhập…";
-    setTimeout(() => navigateTo("/login"), 1500);
+    setTimeout(() => navigateTo("/dang-nhap"), 1500);
   } catch (err: any) {
     apiError.value = err.message || "Đăng ký thất bại";
   } finally {

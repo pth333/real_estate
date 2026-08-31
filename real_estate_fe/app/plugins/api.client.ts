@@ -133,7 +133,7 @@ export const api = {
           window.message?.warning(
             "Phiên đăng nhập hết hạn, vui lòng đăng nhập lại",
           );
-          navigateTo("/login");
+          navigateTo("/dang-nhap");
           throw refreshErr;
         } finally {
           isRefreshing.value = false;

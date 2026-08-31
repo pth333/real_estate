@@ -31,7 +31,7 @@
 
         <p class="mt-8 text-sm text-limestone/60">
           Chưa có tài khoản?
-          <NuxtLink to="/register" class="font-medium text-oak hover:underline">Đăng ký</NuxtLink>
+          <NuxtLink to="/dang-ky" class="font-medium text-oak hover:underline">Đăng ký</NuxtLink>
         </p>
       </div>
     </div>
@@ -66,7 +66,10 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ layout: false });
+definePageMeta({
+  layout: false,
+  alias: "/dang-nhap",
+});
 
 useHead({
   title: "Đăng nhập",

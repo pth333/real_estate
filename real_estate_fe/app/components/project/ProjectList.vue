@@ -136,7 +136,7 @@
             class="overflow-hidden"
           >
             <template #header-extra>
-              <n-button text type="primary" class="text-xs font-semibold" @click="navigateTo('/reviews')">
+              <n-button text type="primary" class="text-xs font-semibold" @click="navigateTo('/danh-gia')">
                 Xem tất cả →
               </n-button>
             </template>

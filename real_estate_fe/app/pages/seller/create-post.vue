@@ -61,7 +61,7 @@
             </n-button>
         </div>
 
-        <ModalOTPAuthentication v-model:show="showOTPModal" />
+        <ModalOTPAuthentication />
 
         <!-- Modal hỏi tiếp tục bản nháp cũ -->
         <DraftModal v-model:show="showDraftModal" />

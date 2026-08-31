@@ -1,5 +1,4 @@
 // Quản lý trạng thái xác thực số điện thoại (dùng cho đăng tin)
-import { onMounted } from 'vue'
 import { useState } from '#app'
 
 const KEY = 'phone_verified'
@@ -8,30 +7,41 @@ const PHONES_LIST_KEY = 'verified_phones_list'
 
 export const usePhoneVerification = () => {
   // Sử dụng useState để đảm bảo an toàn SSR (tránh rò rỉ dữ liệu giữa các user)
-  const phoneVerified = useState('phone_verified', () => false)
-  const verifiedPhone = useState('verified_phone', () => '')
-  const verifiedPhones = useState<string[]>('verified_phones_list', () => [])
-  const showOTPModal = useState('show_otp_modal', () => false)
-
-  // Khởi tạo trạng thái từ localStorage (chỉ chạy ở client-side khi mounted)
-  onMounted(() => {
+  // Khởi tạo trực tiếp từ localStorage ngay khi chạy ở Client-side
+  const phoneVerified = useState('phone_verified', () => {
     if (import.meta.client) {
-      phoneVerified.value = localStorage.getItem(KEY) === 'true'
-      verifiedPhone.value = localStorage.getItem(PHONE_KEY) || ''
+      return localStorage.getItem(KEY) === 'true'
+    }
+    return false
+  })
+
+  const verifiedPhone = useState('verified_phone', () => {
+    if (import.meta.client) {
+      return localStorage.getItem(PHONE_KEY) || ''
+    }
+    return ''
+  })
+
+  const verifiedPhones = useState<string[]>('verified_phones_list', () => {
+    if (import.meta.client) {
       try {
         const listStr = localStorage.getItem(PHONES_LIST_KEY)
         if (listStr) {
-          verifiedPhones.value = JSON.parse(listStr)
-        } else if (verifiedPhone.value) {
-          verifiedPhones.value = [verifiedPhone.value]
-          localStorage.setItem(PHONES_LIST_KEY, JSON.stringify(verifiedPhones.value))
+          return JSON.parse(listStr)
+        }
+        const currentPhone = localStorage.getItem(PHONE_KEY)
+        if (currentPhone) {
+          localStorage.setItem(PHONES_LIST_KEY, JSON.stringify([currentPhone]))
+          return [currentPhone]
         }
       } catch (e) {
         console.error('Lỗi parse verified_phones_list:', e)
-        verifiedPhones.value = verifiedPhone.value ? [verifiedPhone.value] : []
       }
     }
+    return []
   })
+
+  const showOTPModal = useState('show_otp_modal', () => false)
 
   function setPhoneVerified(phone: string) {
     if (import.meta.client) {

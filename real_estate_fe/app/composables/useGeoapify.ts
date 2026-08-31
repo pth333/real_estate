@@ -144,7 +144,6 @@ export function useGeoapify() {
       const url = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(text)}&lang=vi&apiKey=${apiKey.value}`;
       const res = await fetch(url);
       const data = await res.json();
-      console.log(data)
       if (data.features?.length) {
         const [lng, lat] = data.features[0].geometry.coordinates;
         return { lat, lng };
