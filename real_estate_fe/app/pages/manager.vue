@@ -92,6 +92,11 @@ const currentTitle = computed(() => {
   return "Danh mục bất động sản yêu thích";
 });
 
+// Đồng bộ tiêu đề trang động theo tab hiện tại của Manager
+useHead({
+  title: currentTitle,
+});
+
 const goToHome = () => {
   navigateTo("/");
 };

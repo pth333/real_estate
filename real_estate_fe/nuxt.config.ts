@@ -10,7 +10,8 @@ export default defineNuxtConfig({
     head: {
       charset: "utf-8",
       viewport: "width=device-width, initial-scale=1",
-      title: "Real Estate App",
+      title: "Phan Hieu Land",
+      titleTemplate: "%s - Phan Hieu Land",
     },
   },
 

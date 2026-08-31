@@ -1,14 +1,10 @@
 /**
  * Composable thao tác bất động sản yêu thích (favorite).
  * Gọi API backend POST /real-estate/favorite/:id (toggle thêm/bỏ).
- * Khi THÊM mới yêu thích → hiện modal xác nhận (NDialog).
  */
-
-import { useDialog } from 'naive-ui'
 
 export function useFavorite() {
   const { $api } = useNuxtApp()
-  const dialog = useDialog()
   const toggling = ref(false)
 
   /**
@@ -29,25 +25,5 @@ export function useFavorite() {
     }
   }
 
-  /**
-   * Toggle kèm modal xác nhận khi THÊM (chưa yêu thích).
-   * Nếu đang yêu thích (bỏ) → thao tác luôn, không cần xác nhận.
-   */
-  const toggleWithConfirm = (id: number, isFavorite: boolean): Promise<boolean | null> => {
-    if (isFavorite) {
-      return toggle(id)
-    }
-    return new Promise((resolve) => {
-      dialog.warning({
-        title: 'Thêm vào danh mục yêu thích',
-        content: 'Bạn có muốn thêm bất động sản này vào danh mục yêu thích?',
-        positiveText: 'Thêm',
-        negativeText: 'Hủy',
-        onPositiveClick: () => toggle(id).then(resolve),
-        onNegativeClick: () => resolve(null),
-      })
-    })
-  }
-
-  return { toggle, toggleWithConfirm, toggling }
+  return { toggle, toggling }
 }

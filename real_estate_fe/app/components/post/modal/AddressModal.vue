@@ -279,12 +279,12 @@ watch(() => locationLabel.value, (value) => {
     emit('update:locationLabel', value)
 }, { immediate: true })
 
-const onProvinceChange = (provinceCode: string | null) => {
+const onProvinceChange = () => {
     
     triggerGeocoding()
 }
 
-const onWardSelectChange = (wardCode: string | null) => {
+const onWardSelectChange = () => {
     clearError('ward');
     // Tự động định vị khi chọn phường/xã
     triggerGeocoding();

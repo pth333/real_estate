@@ -41,6 +41,10 @@
 <script setup lang="ts">
 import { useMenuStore } from "~/stores/menu"
 
+useHead({
+  title: "Trang chủ",
+})
+
 const menuStore = useMenuStore()
 const searchQuery = ref('')
 

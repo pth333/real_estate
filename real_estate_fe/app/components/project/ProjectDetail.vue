@@ -234,6 +234,11 @@ function formatPriceRange(min?: number, max?: number) {
   return `Đến ${toBillion(max!)}`
 }
 
+const projectTitle = computed(() => project.value?.name || "Chi tiết dự án")
+useHead({
+  title: projectTitle,
+})
+
 onMounted(async () => {
   // Trigger tăng lượt xem dự án ở backend ngay khi người dùng xem chi tiết
   try {

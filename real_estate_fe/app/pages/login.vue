@@ -68,6 +68,10 @@
 <script setup lang="ts">
 definePageMeta({ layout: false });
 
+useHead({
+  title: "Đăng nhập",
+});
+
 import { useAuthStore } from "~/stores/auth";
 
 const auth = useAuthStore();

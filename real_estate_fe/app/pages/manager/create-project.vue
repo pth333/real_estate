@@ -50,6 +50,10 @@ definePageMeta({
   ],
 })
 
+useHead({
+  title: "Tạo dự án mới",
+})
+
 const { $api } = useNuxtApp()
 const managerStore = useManagerStore()
 const route = useRoute()

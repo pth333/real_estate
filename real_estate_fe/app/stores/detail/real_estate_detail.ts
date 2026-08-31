@@ -20,6 +20,7 @@ export const useRealEstateDetail = defineStore("real_estate_detail", () => {
       loading.value = false;
     }
   }
+
   const maskedPhone = computed(() => {
     const phone = listing.value?.agent_phone || "";
     if (showPhone.value || !phone) return phone;
@@ -30,5 +31,12 @@ export const useRealEstateDetail = defineStore("real_estate_detail", () => {
     window.message?.success("Đã copy link chia sẻ");
   }
 
-  return { loading, listing, showPhone, maskedPhone, handleShare, fetchDetail };
+  return {
+    loading,
+    listing,
+    showPhone,
+    maskedPhone,
+    handleShare,
+    fetchDetail,
+  };
 });

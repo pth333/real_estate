@@ -19,6 +19,7 @@
 </template>
 <script setup lang="ts">
 import { useCreatePost } from '~/stores/create-post'
+const { verifiedPhone } = usePhoneVerification()
 
 const props = defineProps<{
     show: boolean
@@ -44,6 +45,7 @@ const continueDraft = () => {
 const discardDraft = () => {
     postStore.clearCurrentDraft()
     postStore.resetForm()
+    postStore.form.contact_phone = verifiedPhone.value || ""
     emit('update:show', false)
 }
 </script>

@@ -73,4 +73,21 @@ const pageType = computed<'real_estate' | 'project' | null>(() => {
 
   return category.Type === 'project' ? 'project' : 'real_estate'
 })
+
+const currentCategory = computed(() => {
+  const categories = menuStore.menu?.categories || []
+  return findCategory(categories, categorySlug.value)
+})
+
+const pageTitle = computed(() => {
+  if (detailId.value > 0 || projectId.value > 0) {
+    // Tiêu đề trang chi tiết sẽ được tự động ghi đè bởi component con (RealEstateDetail / ProjectDetail)
+    return null
+  }
+  return currentCategory.value?.Name || "Danh sách bất động sản"
+})
+
+useHead({
+  title: pageTitle,
+})
 </script>

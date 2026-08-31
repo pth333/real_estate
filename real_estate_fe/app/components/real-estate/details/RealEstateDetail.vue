@@ -73,7 +73,7 @@
                     <!-- Địa chỉ -->
                     <p class="mt-2 flex items-start gap-1 text-sm">
                         <IconLocationOutline class="mt-0.5 h-4 w-4 shrink-0 text-gray-500" />
-                        <span class="text-gray-600">{{ realEstateDetailStore.listing.address }}</span>
+                        <span class="text-gray-600">{{ locationFull }}</span>
                     </p>
 
                     <!-- Giá / Diện tích / Phòng ngủ -->
@@ -99,27 +99,22 @@
                         <div class="ml-auto flex items-center gap-3 text-gray-400">
                             <button
                                 class="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 transition-colors hover:border-emerald-400 hover:text-emerald-500"
-                                @click="realEstateDetailStore.handleShare"
-                            >
+                                @click="realEstateDetailStore.handleShare">
                                 <IconShare class="h-5 w-5" />
                             </button>
                             <button
                                 class="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 transition-colors hover:border-red-400 hover:text-red-500"
                                 :class="realEstateDetailStore.listing?.is_favorite ? 'border-red-500 text-red-500' : ''"
-                                @click="toggleFavoriteDetail"
-                            >
-                                <IconHeart
-                                    class="h-5 w-5"
-                                    :class="realEstateDetailStore.listing?.is_favorite ? 'fill-red-500 text-red-500' : 'text-gray-400'"
-                                />
+                                @click="toggleFavoriteDetail">
+                                <IconHeart class="h-5 w-5"
+                                    :class="realEstateDetailStore.listing?.is_favorite ? 'fill-red-500 text-red-500' : 'text-gray-400'" />
                             </button>
                         </div>
                     </div>
                 </div>
 
                 <!-- Thông tin mô tả -->
-                <div v-if="realEstateDetailStore.listing.description"
-                    class=" bg-white rounded-lg p-4 ">
+                <div v-if="realEstateDetailStore.listing.description" class=" bg-white rounded-lg p-4 ">
                     <h2 class="mb-3 border-b border-gray-200 pb-2 text-base font-bold text-gray-800">
                         Thông tin mô tả
                     </h2>
@@ -196,9 +191,10 @@
 </template>
 
 <script setup lang="ts">
-import { formatPrice, formatPricePerM2, formatDate } from '~/utils/format';
+import { formatPrice, formatPricePerM2 } from '~/utils/format';
 import { useRealEstateDetail } from '~/stores/detail/real_estate_detail';
 import { useTracking } from '~/composables/useTracking';
+const props = defineProps<{ id: number }>();
 
 const realEstateDetailStore = useRealEstateDetail()
 const { trackView, cleanupTracking } = useTracking()
@@ -206,16 +202,23 @@ const favorite = useFavorite()
 
 const activeImageIndex = ref(0);
 
-// Bật/tắt yêu thích tin đăng (gọi API backend)
-const toggleFavoriteDetail = async () => {
-  const id = realEstateDetailStore.listing?.id
-  if (!id) return
-  const next = await favorite.toggleWithConfirm(id, realEstateDetailStore.listing?.is_favorite || false)
-  if (next !== null && realEstateDetailStore.listing) {
-    realEstateDetailStore.listing.is_favorite = next
-  }
-};
+const locationFull = computed(() => {
+    const l = realEstateDetailStore.listing;
+    if (!l) return "";
+    const parts = [l.address, l.district, l.city].filter(
+        (p) => p && p.trim() !== "",
+    );
+    return parts.join(", ");
+});
 
+const toggleFavoriteDetail = async () => {
+    const id = realEstateDetailStore.listing?.id
+    if (!id) return
+    const next = await favorite.toggle(id)
+    if (next !== null && realEstateDetailStore.listing) {
+        realEstateDetailStore.listing.is_favorite = next
+    }
+};
 
 const allImages = computed(() => (realEstateDetailStore.listing?.images ?? []).map(img => img.url));
 const mainImage = computed(() => allImages.value[activeImageIndex.value] || '');
@@ -268,13 +271,16 @@ const attrs = computed(() => {
     ];
 });
 
-
-const props = defineProps<{ id: number }>();
-
 onMounted(() => {
     realEstateDetailStore.fetchDetail(props.id);
     trackView(props.id);
 });
+
+// Cập nhật tiêu đề trang cho Bất động sản
+const detailTitle = computed(() => realEstateDetailStore.listing?.title || "Chi tiết bất động sản")
+useHead({
+    title: detailTitle,
+})
 
 // Gửi tracking khi Huỷ Component (Rời trang)
 onBeforeUnmount(() => {

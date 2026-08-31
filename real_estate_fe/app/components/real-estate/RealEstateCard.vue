@@ -182,7 +182,7 @@ const handleCall = () => {
 }
 
 const handleToggleFavorite = async () => {
-  const next = await favorite.toggleWithConfirm(props.estate.id, isFavorite.value)
+  const next = await favorite.toggle(props.estate.id)
   if (next !== null) isFavorite.value = next
   emit('toggleFavorite', props.estate.id, next !== null ? next : !isFavorite.value)
 }

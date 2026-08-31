@@ -125,7 +125,7 @@ const visibleItems = computed(() => expanded.value ? items.value : items.value.s
 function toggleFavorite(id: number) {
   const item = items.value.find(i => i.id === id);
   if (item) {
-    favorite.toggleWithConfirm(id, item.isFavorite).then((next) => {
+    favorite.toggle(id).then((next) => {
       if (next !== null) item.isFavorite = next;
     });
   }

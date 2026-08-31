@@ -71,16 +71,21 @@
 <script setup lang="ts">
 import { useCreatePost } from '~/stores/create-post'
 import { useManagerStore } from '~/stores/manager'
-import { InformationRealestate, type CreatePostResponse, type ImageResponse, type RealEstateResponse, type UpdatePostResponse, type UploadedMediaItem } from '~/types/real_estate'
+import { InformationRealestate, type CreatePostResponse, type RealEstateResponse, type UpdatePostResponse } from '~/types/real_estate'
 definePageMeta({
     alias: "/nguoi-ban/dang-tin",
 })
+
+useHead({
+    title: "Đăng tin bất động sản",
+})
+
 const { phoneVerified, verifiedPhone, showOTPModal } = usePhoneVerification()
 const { $api } = useNuxtApp()
 const managerStore = useManagerStore()
 
 const route = useRoute()
-const isEdit = route.query.id
+const isEdit = computed(() => route.query.id)
 
 const postStore = useCreatePost()
 const uploadComponent = ref()
@@ -122,9 +127,9 @@ const submitCreatePost = async () => {
     try {
         let res;
 
-        if (isEdit) {
+        if (isEdit.value) {
             res = await $api.put<UpdatePostResponse>(
-                `/manager/update-post/${isEdit}`,
+                `/manager/update-post/${isEdit.value}`,
                 postStore.payload
             )
         } else {
@@ -135,7 +140,7 @@ const submitCreatePost = async () => {
         }
 
         if (res.success) {
-            window.message?.success(isEdit ? 'Cập nhật tin đăng thành công' : 'Đăng tin thành công')
+            window.message?.success(isEdit.value ? 'Cập nhật tin đăng thành công' : 'Đăng tin thành công')
             postStore.clearCurrentDraft()
             postStore.resetForm()
             // Đánh dấu cache bài viết cũ → trang quản lý bài viết sẽ fetch lại
@@ -148,32 +153,11 @@ const submitCreatePost = async () => {
     }
 };
 
-onMounted(async () => {
-    // Nếu là chế độ chỉnh sửa, bỏ qua bước OTP & phục hồi bản nháp cũ
-    if (isEdit) {
-        loadingPostDetail()
-        return
-    }
-    if (!phoneVerified.value) {
-        showOTPModal.value = true
-        return
-    }
-    // Điền số điện thoại mặc định từ localStorage nếu chưa có
-    if (verifiedPhone.value && !postStore.form.contact_phone) {
-        postStore.form.contact_phone = verifiedPhone.value
-    }
-    // Có bản nháp cũ → hỏi người dùng có tiếp tục không
-    if (postStore.loadCurrentDraft()) {
-        showDraftModal.value = true
-    }
-})
-
 // Tải thông tin chi tiết bài đăng cũ và đưa vào form store bằng Class Object
 const loadingPostDetail = async () => {
     try {
-        const res = await $api.get<{ data: RealEstateResponse }>(`/real-estate/detail/${isEdit}`)
+        const res = await $api.get<{ data: RealEstateResponse }>(`/real-estate/detail/${isEdit.value}`)
         if (res) {
-
             const editForm = InformationRealestate.fromResponse(res.data)
             postStore.form = editForm
             // Đẩy danh sách ảnh vào upload component để hiển thị preview
@@ -190,12 +174,21 @@ const loadingPostDetail = async () => {
     }
 }
 
-// Tự động điền số điện thoại khi đã xác thực thành công hoặc khi số xác thực thay đổi
-watch(verifiedPhone, (newPhone) => {
-    if (newPhone && !postStore.form.contact_phone && !isEdit) {
-        postStore.form.contact_phone = newPhone
+watch(() => isEdit.value, (newId) => {
+    if (newId) {
+        postStore.resetForm()
+        loadingPostDetail()
+    } else {
+        postStore.resetForm()
+        // Có bản nháp cũ → hỏi người dùng có tiếp tục không
+        if (postStore.loadCurrentDraft()) {
+            showDraftModal.value = true
+        }
+        if (!phoneVerified.value) {
+            showOTPModal.value = true
+            return
+        }
+        postStore.form.contact_phone = verifiedPhone.value || ""
     }
 }, { immediate: true })
-
-
 </script>
