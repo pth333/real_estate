@@ -12,11 +12,7 @@
 
             <!-- Loading State -->
             <div v-if="loading" class="grid grid-cols-4 gap-4">
-                <div v-for="i in 4" :key="i" class="border border-gray-100 rounded-lg p-4 animate-pulse">
-                    <div class="aspect-[4/3] bg-gray-200 rounded-md mb-4"></div>
-                    <div class="h-4 bg-gray-200 rounded w-2/3 mb-2"></div>
-                    <div class="h-3 bg-gray-200 rounded w-1/2"></div>
-                </div>
+                <SkeletonCard :count="4" type="project" />
             </div>
 
             <!-- Slider wrapper -->

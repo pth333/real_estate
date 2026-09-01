@@ -11,8 +11,13 @@
         </div>
       </div>
 
+      <!-- Loading State -->
+      <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <SkeletonCard :count="8" type="card" />
+      </div>
+
       <!-- Grid -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         <n-card
           v-for="item in visibleItems"
           :key="item.id"

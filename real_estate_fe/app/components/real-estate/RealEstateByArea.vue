@@ -3,7 +3,9 @@
         <div class="container mx-auto px-24">
         <h1 class="text-lg font-bold text-gray-600 mb-4">Bất động sản theo địa điểm</h1>
 
-        <div class="flex gap-3" style="height: 360px;">
+        <SkeletonCard v-if="loading" type="area" />
+
+        <div v-else class="flex gap-3" style="height: 360px;">
             <div class="relative overflow-hidden rounded-lg cursor-pointer group shrink-0" style="flex: 0 0 45%;"
                 @click="goToCity(featured)">
                 <img :src="featured?.image" :alt="featured?.name"
@@ -61,14 +63,18 @@ const featured = computed(() => {
 })
 
 const listTopCity = ref<ListTopCity[]>([])
+const loading = ref(false)
 
 const { $api } = useNuxtApp()
 const fetchListTopCity = async () => {
+    loading.value = true
     try {
         const result = await $api.get<{ data: ListTopCity[] }>('/real-estate/list/top-city')
         listTopCity.value = result.data
     } catch (e) {
         console.log(e)
+    } finally {
+        loading.value = false
     }
 }
 
