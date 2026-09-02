@@ -87,7 +87,6 @@ export const useNotificationStore = defineStore("notification", () => {
           created_at: new Date().toISOString()
         });
 
-        // Hiển thị toast (dùng window.message từ naive-ui)
         if (typeof window !== 'undefined' && (window as any).$message) {
             (window as any).$message.success(`BĐS mới: ${payload.title} - ${(payload.price / 1_000_000_000).toFixed(1)} tỷ`, {
                 duration: 5000,

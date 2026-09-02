@@ -1,9 +1,6 @@
 <template>
   <header class="sticky top-0 z-50 bg-white shadow-sm">
     <div class="container mx-auto flex justify-between items-center p-2 gap-4">
-      <!-- <h1 class="text-xl font-bold text-blue-600 whitespace-nowrap">
-        RealEstate
-      </h1> -->
       <CategoryMenu />
       <nav class="flex items-center gap-6 text-gray-700 whitespace-nowrap">
         <template v-if="auth.isAuthenticated">

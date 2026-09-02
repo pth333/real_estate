@@ -41,3 +41,8 @@ __screenshots__/
 !.env.example
 
 CLAUDE.md
+
+# Project specific
+.nuxt
+.output
+temp_protoc

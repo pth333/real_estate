@@ -276,6 +276,8 @@ func (s *RealEstateService) GetRecommendations(userID uint64, sessionID string, 
 	// 2. Thử lấy danh sách ID từ Redis Cache
 	if cacheKey != "" && global.RedisClient != nil {
 		cachedData, err := global.RedisClient.Get(ctx, cacheKey).Result()
+		fmt.Printf("Cache data: %s, key: %s", cachedData, cacheKey)
+
 		if err == nil && cachedData != "" {
 			var cachedIDs []uint64
 			if err := json.Unmarshal([]byte(cachedData), &cachedIDs); err == nil && len(cachedIDs) > 0 {
