@@ -276,13 +276,13 @@ func (s *RealEstateService) GetRecommendations(userID uint64, sessionID string, 
 	// 2. Thử lấy danh sách ID từ Redis Cache
 	if cacheKey != "" && global.RedisClient != nil {
 		cachedData, err := global.RedisClient.Get(ctx, cacheKey).Result()
-		fmt.Printf("Cache data: %s, key: %s", cachedData, cacheKey)
 
 		if err == nil && cachedData != "" {
 			var cachedIDs []uint64
 			if err := json.Unmarshal([]byte(cachedData), &cachedIDs); err == nil && len(cachedIDs) > 0 {
 				// Query DB lấy chi tiết tin từ danh sách ID đã cache (đảm bảo tính chất ranking)
 				props, err := s.repo.GetByIDs(cachedIDs)
+				MapRealEstateResponse(props)
 				if err == nil && len(props) > 0 {
 					s.flagFavorites(props, userID)
 					return props, nil
@@ -297,6 +297,7 @@ func (s *RealEstateService) GetRecommendations(userID uint64, sessionID string, 
 	var strategyUsed = "db_fallback"
 
 	if global.RecommendationClient != nil {
+		fmt.Println(123)
 		var ids []uint64
 		ids, strategyUsed, err = global.RecommendationClient.GetRecommendations(
 			ctx,

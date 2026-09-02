@@ -2,6 +2,7 @@ package repo
 
 import (
 	"errors"
+	"fmt"
 
 	"real_estate_be/internal/dto"
 	model "real_estate_be/internal/models"
@@ -276,7 +277,7 @@ func (r *realEstateRepo) GetListByCategory(offset int, req dto.RealEstateSearchR
 			"GROUP BY re.id "+
 			"ORDER BY re.created_at DESC, re.id DESC",
 		listArgs...,
-	).Debug().Scan(&items).Error
+	).Scan(&items).Error
 	if err != nil {
 		return nil, 0, err
 	}
@@ -584,7 +585,7 @@ func (r *realEstateRepo) GetByIDs(ids []uint64) ([]dto.RealEstateResponse, error
 			"WHERE re.id IN (?) "+
 			"GROUP BY re.id",
 		ids,
-	).Scan(&items).Error
+	).Debug().Scan(&items).Error
 
 	if err != nil {
 		return nil, err
@@ -592,10 +593,9 @@ func (r *realEstateRepo) GetByIDs(ids []uint64) ([]dto.RealEstateResponse, error
 
 	// Sắp xếp lại theo đúng thứ tự của mảng ids truyền vào (giữ tính chất ranking)
 	idMap := make(map[uint64]dto.RealEstateResponse)
-	// for _, item := range items {
-	// 	toResponse(&item)
-	// 	idMap[item.ID] = item
-	// }
+	for _, item := range items {
+		idMap[item.ID] = item
+	}
 
 	sortedItems := make([]dto.RealEstateResponse, 0, len(items))
 	for _, id := range ids {
@@ -604,7 +604,9 @@ func (r *realEstateRepo) GetByIDs(ids []uint64) ([]dto.RealEstateResponse, error
 		}
 	}
 
-	return sortedItems, nil
+	fmt.Printf("GetByIDs: Items=%v\n", sortedItems)
+
+	return items, nil
 }
 
 // GetRecommendationsBasic gợi ý cơ bản dựa trên lịch sử xem gần nhất (khi chưa có Python ML)
