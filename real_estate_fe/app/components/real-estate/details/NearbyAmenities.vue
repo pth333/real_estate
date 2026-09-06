@@ -1,5 +1,5 @@
 <template>
-    <div class="bg-white rounded-lg p-4">
+    <div class="bg-white rounded-lg py-4">
         <h2 class="mb-3 border-b border-gray-200 pb-2 text-base font-bold text-gray-800">
             Vị trí dự án {{ projectName }}
         </h2>

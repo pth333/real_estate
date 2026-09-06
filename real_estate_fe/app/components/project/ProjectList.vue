@@ -20,12 +20,7 @@
         <!-- Sort selector Naive UI xịn sò -->
         <n-space align="center">
           <n-text depth="3" class="text-sm">Sắp xếp:</n-text>
-          <n-select
-            v-model:value="sortOrder"
-            :options="sortOptions"
-            class="w-40"
-            size="small"
-          />
+          <n-select v-model:value="sortOrder" :options="sortOptions" class="w-40" size="small" />
         </n-space>
       </n-space>
 
@@ -35,38 +30,24 @@
         <n-grid-item :span="3" class="min-w-0">
           <n-spin :show="loading">
             <!-- Empty State Naive UI -->
-            <n-empty v-if="!loading && projects.length === 0" description="Không tìm thấy dự án nào thuộc danh mục này" class="py-20">
-              <template #extra>
-                <n-button type="primary" @click="navigateTo('/')">Quay lại trang chủ</n-button>
-              </template>
+            <n-empty v-if="!loading && projects.length === 0" description="Không tìm thấy dự án nào thuộc danh mục này"
+              class="py-20">
+
             </n-empty>
 
             <!-- Danh sách dự án bằng n-space vertical và n-card -->
             <n-space v-else vertical :size="16">
-              <n-card
-                v-for="project in pagedProjects"
-                :key="project.id"
-                hoverable
-                content-style="padding: 0;"
-                class="overflow-hidden cursor-pointer group"
-                @click="goToProject(project)"
-              >
+              <n-card v-for="project in pagedProjects" :key="project.id" hoverable content-style="padding: 0;"
+                class="overflow-hidden cursor-pointer group" @click="goToProject(project)">
                 <n-grid :cols="12" class="h-44">
                   <!-- Thumbnail dự án -->
                   <n-grid-item :span="4" class="relative overflow-hidden bg-gray-100">
-                    <img
-                      :src="project.thumbnail || 'https://placehold.co/440x296/e2e8f0/94a3b8?text=Project'"
+                    <img :src="project.thumbnail || 'https://placehold.co/440x296/e2e8f0/94a3b8?text=Project'"
                       :alt="project.name"
-                      class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
+                      class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                     <!-- Trạng thái tag Naive UI -->
                     <div class="absolute top-2.5 left-2.5">
-                      <n-tag
-                        :type="statusTagType(project.status)"
-                        size="small"
-                        round
-                        class="shadow-sm font-semibold"
-                      >
+                      <n-tag :type="statusTagType(project.status)" size="small" round class="shadow-sm font-semibold">
                         {{ formatStatus(project.status) }}
                       </n-tag>
                     </div>
@@ -76,7 +57,8 @@
                   <n-grid-item :span="8" class="p-4 flex flex-col justify-between min-w-0">
                     <n-space vertical :size="6" class="min-w-0">
                       <!-- Tên dự án -->
-                      <n-h2 class="!text-base !font-bold !m-0 !text-gray-900 group-hover:text-emerald-600 transition-colors truncate">
+                      <n-h2
+                        class="!text-base !font-bold !m-0 !text-gray-900 group-hover:text-emerald-600 transition-colors truncate">
                         {{ project.name }}
                       </n-h2>
 
@@ -99,7 +81,8 @@
 
                       <!-- Mô tả ngắn -->
                       <n-text depth="3" class="text-xs line-clamp-2 leading-relaxed">
-                        {{ project.description || `${project.name} là dự án bất động sản tọa lạc tại ${project.full_address || 'vị trí đang cập nhật'}.` }}
+                        {{ project.description || `${project.name} là dự án bất động sản tọa lạc tại
+                        ${project.full_address || 'vị trí đang cập nhật'}.` }}
                       </n-text>
                     </n-space>
 
@@ -115,26 +98,16 @@
               </n-card>
 
               <!-- Phân trang dùng component có sẵn Pagination.vue -->
-              <Pagination
-                v-if="pageCount > 1"
-                :current-page="page"
-                :total-pages="pageCount"
-                :total-items="projects.length"
-                :page-size="pageSize"
-                @update:current-page="handlePageChange"
-              />
+              <Pagination v-if="pageCount > 1" :current-page="page" :total-pages="pageCount"
+                :total-items="projects.length" :page-size="pageSize" @update:current-page="handlePageChange" />
             </n-space>
           </n-spin>
         </n-grid-item>
 
         <!-- Cột phải: Sidebar (Chiếm 1/4 cột) -->
         <n-grid-item :span="1">
-          <n-card
-            title="Đánh giá dự án"
-            header-style="border-b: 1px solid #f3f4f6; padding: 12px 16px;"
-            content-style="padding: 0;"
-            class="overflow-hidden"
-          >
+          <n-card title="Đánh giá dự án" header-style="border-b: 1px solid #f3f4f6; padding: 12px 16px;"
+            content-style="padding: 0;" class="overflow-hidden">
             <template #header-extra>
               <n-button text type="primary" class="text-xs font-semibold" @click="navigateTo('/danh-gia')">
                 Xem tất cả →
@@ -143,16 +116,10 @@
 
             <!-- Sidebar list sử dụng n-space vertical -->
             <n-space vertical :size="0" class="divide-y divide-gray-100">
-              <div
-                v-for="(item, i) in sidebarReviews"
-                :key="i"
-                class="relative h-40 overflow-hidden cursor-pointer group"
-              >
-                <img
-                  :src="item.img"
-                  :alt="item.title"
-                  class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
+              <div v-for="(item, i) in sidebarReviews" :key="i"
+                class="relative h-40 overflow-hidden cursor-pointer group">
+                <img :src="item.img" :alt="item.title"
+                  class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                 <div class="absolute inset-0 from-black/70 via-black/10 to-transparent"></div>
                 <div class="absolute bottom-0 left-0 right-0 p-3">
                   <n-text class="text-white text-xs font-semibold line-clamp-2 leading-snug">

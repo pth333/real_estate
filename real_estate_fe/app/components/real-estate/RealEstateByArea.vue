@@ -1,37 +1,37 @@
 <template>
     <section class="py-8">
         <div class="container mx-auto px-24">
-        <h1 class="text-lg font-bold text-gray-600 mb-4">Bất động sản theo địa điểm</h1>
+            <h1 class="text-lg font-bold text-gray-600 mb-4">Bất động sản theo địa điểm</h1>
 
-        <SkeletonCard v-if="loading" type="area" />
+            <SkeletonCard v-if="loading" type="area" />
 
-        <div v-else class="flex gap-3" style="height: 360px;">
-            <div class="relative overflow-hidden rounded-lg cursor-pointer group shrink-0" style="flex: 0 0 45%;"
-                @click="goToCity(featured)">
-                <img :src="featured?.image" :alt="featured?.name"
-                    class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                <div class="absolute inset-0 bg-linear-to-t from-black/60 via-black/20 to-transparent" />
-                <div class="absolute bottom-0 left-0 p-4 text-white">
-                    <p class="font-bold text-lg leading-tight"> {{ featured?.name }} </p>
-                    <p class="text-sm text-white/80 mt-0.5"> {{ featured?.count }} tin đăng </p>
+            <div v-else class="flex gap-3" style="height: 360px;">
+                <div class="relative overflow-hidden rounded-lg cursor-pointer group shrink-0" style="flex: 0 0 45%;"
+                    @click="goToCity(featured)">
+                    <img :src="featured?.image" :alt="featured?.name"
+                        class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                    <div class="absolute inset-0 bg-linear-to-t from-black/60 via-black/20 to-transparent" />
+                    <div class="absolute bottom-0 left-0 p-4 text-white">
+                        <p class="font-bold text-lg leading-tight"> {{ featured?.name }} </p>
+                        <p class="text-sm text-white/80 mt-0.5"> {{ featured?.count }} tin đăng </p>
+                    </div>
                 </div>
-            </div>
 
-            <div class="flex-1 grid grid-cols-2 grid-rows-2 gap-3">
-                <div v-for="location in restLocations" :key="location.id"
-                    class="relative overflow-hidden rounded-lg cursor-pointer group">
-                    <div @click="goToCity(location)" class="w-full h-full">
-                        <img :src="location.image" :alt="location.name"
-                            class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                        <div class="absolute inset-0 bg-linear-to-t from-black/60 via-black/20 to-transparent" />
-                        <div class="absolute bottom-0 left-0 p-3 text-white">
-                            <p class="font-bold text-sm leading-tight"> {{ location.name }} </p>
-                            <p class="text-xs text-white/80 mt-0.5"> {{ location.count }} tin đăng </p>
+                <div class="flex-1 grid grid-cols-2 grid-rows-2 gap-3">
+                    <div v-for="location in restLocations" :key="location.id"
+                        class="relative overflow-hidden rounded-lg cursor-pointer group">
+                        <div @click="goToCity(location)" class="w-full h-full">
+                            <img :src="location.image" :alt="location.name"
+                                class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                            <div class="absolute inset-0 bg-linear-to-t from-black/60 via-black/20 to-transparent" />
+                            <div class="absolute bottom-0 left-0 p-3 text-white">
+                                <p class="font-bold text-sm leading-tight"> {{ location.name }} </p>
+                                <p class="text-xs text-white/80 mt-0.5"> {{ location.count }} tin đăng </p>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
         </div>
     </section>
 </template>
@@ -62,8 +62,9 @@ const featured = computed(() => {
     return listTopCity.value[0]
 })
 
+
 const listTopCity = ref<ListTopCity[]>([])
-const loading = ref(false)
+const loading = ref(true)
 
 const { $api } = useNuxtApp()
 const fetchListTopCity = async () => {

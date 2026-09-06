@@ -2,8 +2,7 @@
   <div class="flex flex-col gap-16">
     <section class="hero-bg py-40 px-2 relative overflow-hidden">
       <!-- Background image -->
-      <div class="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        :style="{ backgroundImage: `url('https://pub-5eb4e976c2fe4062ba3cdabce48568cc.r2.dev/uploads/931c3b1968a2e54e32e00dace86c38de.jpg')` }">
+      <div class="absolute inset-0 bg-cover bg-center bg-no-repeat" :style="backgroundStyle">
         <!-- Overlay -->
         <div class="absolute inset-0 bg-white/70 backdrop-blur-[2px]" />
       </div>
@@ -40,18 +39,17 @@
 
 <script setup lang="ts">
 import { useMenuStore } from "~/stores/menu"
+import { useHeroBg } from "~/composables/useHeroBg"
 
 useHead({
   title: "Trang chủ",
 })
 
 const menuStore = useMenuStore()
+const { backgroundStyle } = useHeroBg()
 const searchQuery = ref('')
 
-/**
- * Xử lý tìm kiếm bất động sản từ trang chủ
- * Điều hướng người dùng sang trang danh mục mặc định kèm từ khóa tìm kiếm
- */
+
 const handleSearchRealEstate = async () => {
   const keyword = searchQuery.value.trim()
   if (!keyword) return

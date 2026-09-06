@@ -4,10 +4,11 @@
             <!-- Header -->
             <div class="flex items-center justify-between mb-5">
                 <h2 class="text-xl font-bold text-gray-900">Dự án bất động sản nổi bật</h2>
-                <a href="#" class="flex items-center gap-1 text-emerald-600 text-sm font-medium hover:underline">
+                <NuxtLink :to="thirdCategorySlug ? `/${thirdCategorySlug}` : '#'"
+                    class="flex items-center gap-1 text-emerald-600 text-sm font-medium hover:underline">
                     Xem thêm
                     <IconArrowRight class="h-4 w-4" />
-                </a>
+                </NuxtLink>
             </div>
 
             <!-- Loading State -->
@@ -27,14 +28,13 @@
 
                 <!-- Cards -->
                 <div class="grid grid-cols-4 gap-4 overflow-hidden">
-                    <div v-for="item in visibleItems" :key="item.id"
-                        class="bg-white border border-gray-100 rounded-lg shadow-sm hover:shadow-md overflow-hidden cursor-pointer group flex flex-col"
-                        @click="goToProject(item)">
+
+                    <NuxtLink v-for="item in visibleItems" :key="item.id" :to="`${item.slug}-pj${item.id}`"
+                        class="bg-white border border-gray-100 rounded-lg shadow-sm hover:shadow-md overflow-hidden cursor-pointer group flex flex-col no-underline">
                         <!-- Ảnh -->
                         <div class="relative aspect-[4/3] overflow-hidden bg-gray-100 rounded-t-lg">
                             <img :src="item.thumbnail" :alt="item.name"
                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                            <!-- Số ảnh -->
                             <div
                                 class="absolute bottom-2 right-2 flex items-center gap-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded">
                                 <IconImage class="h-3 w-3" />
@@ -44,30 +44,24 @@
 
                         <!-- Nội dung -->
                         <div class="p-4 flex flex-col gap-1.5 flex-grow">
-                            <!-- Badge trạng thái -->
                             <div class="flex items-center gap-2 flex-wrap">
                                 <span class="text-[10px] font-semibold px-2 py-0.5 border rounded"
                                     :class="statusClass(item.status)">
                                     {{ formatStatus(item.status) }}
                                 </span>
                             </div>
-
-                            <!-- Tên dự án -->
                             <div
                                 class="font-semibold text-gray-900 text-sm truncate group-hover:text-emerald-600 transition-colors">
                                 {{ item.name }}
                             </div>
-
-                            <!-- Quy mô diện tích -->
                             <div class="text-xs text-gray-500">
                                 Quy mô: {{ item.total_area_ha ? item.total_area_ha + ' ha' : 'Đang cập nhật' }}
                             </div>
-
-                            <!-- Địa chỉ -->
-                            <div class="text-xs text-gray-400 truncate">{{ item.full_address || 'Địa chỉ đang cập nhật'
-                            }}</div>
+                            <div class="text-xs text-gray-400 truncate">
+                                {{ item.full_address || 'Địa chỉ đang cập nhật' }}
+                            </div>
                         </div>
-                    </div>
+                    </NuxtLink>
                 </div>
 
                 <!-- Nút next -->
@@ -88,6 +82,7 @@
 </template>
 
 <script setup lang="ts">
+import { useMenuStore } from '~/stores/menu';
 interface Project {
     id: number
     name: string
@@ -100,7 +95,11 @@ interface Project {
     price_max?: number
     thumbnail?: string
 }
+const menuStore = useMenuStore();
 
+const thirdCategorySlug = computed(() => {
+    return menuStore.menu?.categories?.[2]?.Slug;
+});
 const formatStatus = (status?: string | boolean): string => {
     if (!status) return 'Chưa cập nhật'
     const s = String(status).toLowerCase().trim()
@@ -126,7 +125,7 @@ function statusClass(status?: string) {
 
 const { $api } = useNuxtApp()
 const projects = ref<Project[]>([])
-const loading = ref(false)
+const loading = ref(true)
 
 const fetchFeaturedProjects = async () => {
     loading.value = true
@@ -139,7 +138,7 @@ const fetchFeaturedProjects = async () => {
         projects.value = (res.data || []).map((p, index) => ({
             ...p,
             // Ưu tiên ảnh từ API, fallback placeholder
-            thumbnail: p.thumbnail || `https://placehold.co/400x300/e2e8f0/94a3b8?text=Project+${index + 1}`
+            thumbnail: p.thumbnail
         }))
     } catch (error) {
         console.error("Lỗi khi tải danh sách dự án nổi bật:", error)

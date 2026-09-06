@@ -2,7 +2,7 @@
  * Format giá BĐS VND: tỷ → triệu → đ
  * VD: 2.500.000.000 → "2.5 tỷ", 800.000 → "800.000 đ"
  */
-export function formatPrice(priceVND: number): string {
+export function formatPrice(priceVND: number | undefined): string {
   if (!priceVND) return "Thỏa thuận";
 
   if (priceVND >= 1_000_000_000) {
@@ -18,7 +18,9 @@ export function formatPrice(priceVND: number): string {
  * Format giá/m²
  * VD: 25.000.000 → "25 tr/m²", 500.000 → "500.000 đ/m²"
  */
-export function formatPricePerM2(pricePerM2: number): string {
+export function formatPricePerM2(pricePerM2: number | undefined): string {
+  if (!pricePerM2) return "Thỏa thuận";
+
   if (pricePerM2 >= 1_000_000) {
     return `${(pricePerM2 / 1_000_000).toLocaleString("vi-VN", { maximumFractionDigits: 2 })} tr/m²`;
   }
@@ -28,7 +30,9 @@ export function formatPricePerM2(pricePerM2: number): string {
 /**
  * Format compact hiển thị ở dashboard: "2.5B", "800M", "500K"
  */
-export function formatPriceCompact(priceVND: number): string {
+export function formatPriceCompact(priceVND: number | undefined): string {
+  if (!priceVND) return "Thỏa thuận";
+
   if (priceVND >= 1_000_000_000) {
     return `${(priceVND / 1_000_000_000).toFixed(1)}B`;
   }
@@ -37,6 +41,12 @@ export function formatPriceCompact(priceVND: number): string {
   }
   return `${(priceVND / 1000).toFixed(0)}K`;
 }
+
+export function formatAcreage(acreage: number | undefined): string {
+  if (!acreage) return "—";
+  return `${acreage.toLocaleString("vi-VN", { maximumFractionDigits: 2 })} m²`;
+}
+
 
 /**
  * Format tiền theo đơn vị tiền tệ (VND/USD/EUR) với Intl
