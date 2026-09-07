@@ -47,7 +47,6 @@ export function formatAcreage(acreage: number | undefined): string {
   return `${acreage.toLocaleString("vi-VN", { maximumFractionDigits: 2 })} m²`;
 }
 
-
 /**
  * Format tiền theo đơn vị tiền tệ (VND/USD/EUR) với Intl
  */
@@ -123,4 +122,53 @@ export function fromNow(dateStr: string): string {
   if (diffDays < 7) return `Đăng ${diffDays} ngày trước`;
 
   return d.toLocaleDateString("vi-VN");
+}
+
+export const formatStatus = (status?: string | boolean): string => {
+  switch (status?.toString().toLowerCase()) {
+    case "active":
+      return "Đang hoạt động";
+    case "inactive":
+      return "Ngừng hoạt động";
+    case "upcoming":
+      return "Sắp ra mắt";
+    case "completed":
+      return "Đã hoàn thành";
+    case "paused":
+      return "Tạm dừng";
+    default:
+      return "Không xác định";
+  }
+};
+
+// Trả về type màu chuẩn Naive UI cho tag (success, warning, error, default)
+export const statusTagType = (status?: string) => {
+  switch (status?.toLowerCase()) {
+    case "active":
+      return "success";
+    case "inactive":
+      return "warning";
+    case "upcoming":
+      return "info";
+    case "completed":
+      return "default";
+    case "paused":
+      return "warning";
+    default:
+      return "default";
+  }
+};
+
+export function formatPriceRange(min?: number, max?: number) {
+  if (!min && !max) return "Liên hệ";
+
+  const toBillion = (val: number) => {
+    return (val / 1000000000).toFixed(1).replace(".0", "") + " tỷ";
+  };
+
+  if (min && max) {
+    return `${toBillion(min)} - ${toBillion(max)}`;
+  }
+  if (min) return `Từ ${toBillion(min)}`;
+  return `Đến ${toBillion(max!)}`;
 }

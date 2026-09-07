@@ -60,6 +60,7 @@ type RealEstateRepository interface {
 	CreateProject(project *model.RealEstateProject) error
 	UpdateProject(project *model.RealEstateProject) error
 	ListProjects(limit, offset int, search string) ([]model.RealEstateProject, int64, error)
+	GetRealEstateListingsByProjectID(projectID uint64) ([]dto.RealEstateResponse, error)
 }
 
 func NewRealEstateRepository(db *gorm.DB) RealEstateRepository {
@@ -752,4 +753,18 @@ func (r *realEstateRepo) ListFavoriteRealEstates(userID uint64, limit, offset in
 	}
 
 	return items, total, nil
+}
+
+func (r *realEstateRepo) GetRealEstateListingsByProjectID(projectID uint64) ([]dto.RealEstateResponse, error) {
+	var items []dto.RealEstateResponse
+	err := r.db.
+		Model(&model.RealEstate{}).
+		Select(`*`).
+		Where("project_id = ?", projectID).Debug().
+		Scan(&items).Error
+
+	if err != nil {
+		return nil, err
+	}
+	return items, nil
 }

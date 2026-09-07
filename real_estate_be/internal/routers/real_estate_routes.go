@@ -42,6 +42,7 @@ func InitRealEstateRoutes(Router fiber.Router) {
 		realEstateRouter.Get("/project-category/:category_slug", realEstateHandler.ListProjectsByProjectCategory)
 		realEstateRouter.Post("/project/view/:id", realEstateHandler.IncrementProjectView)
 		realEstateRouter.Get("/project/detail/:id", realEstateHandler.GetProjectDetail)
+		realEstateRouter.Get("/project/:id/listings", realEstateHandler.GetRealEstateListingsByProjectID)
 
 		// Gợi ý BĐS (Public)
 		realEstateRouter.Get("/recommend", realEstateHandler.GetRecommendations)

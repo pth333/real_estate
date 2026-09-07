@@ -20,7 +20,7 @@
         <!-- Sort selector Naive UI xịn sò -->
         <n-space align="center">
           <n-text depth="3" class="text-sm">Sắp xếp:</n-text>
-          <n-select v-model:value="sortOrder" :options="sortOptions" class="w-40" size="small" />
+          <n-select v-model:value="sortOrder" :options="sortOptions" class="w-48" size="small" />
         </n-space>
       </n-space>
 
@@ -37,8 +37,8 @@
 
             <!-- Danh sách dự án bằng n-space vertical và n-card -->
             <n-space v-else vertical :size="16">
-              <n-card v-for="project in pagedProjects" :key="project.id" hoverable content-style="padding: 0;"
-                class="overflow-hidden cursor-pointer group" @click="goToProject(project)">
+              <NuxtLink v-for="project in pagedProjects" :key="project.id" hoverable content-style="padding: 0;"
+                class="overflow-hidden cursor-pointer group" :to="`${project.slug}`">
                 <n-grid :cols="12" class="h-44">
                   <!-- Thumbnail dự án -->
                   <n-grid-item :span="4" class="relative overflow-hidden bg-gray-100">
@@ -90,12 +90,12 @@
                     <n-space justify="space-between" align="center" class="border-t border-gray-50 pt-2">
                       <n-text depth="3" class="text-xs">Mức giá khoảng</n-text>
                       <n-text type="success" class="!font-bold !text-sm text-emerald-600">
-                        {{ formatPriceRange(project) }}
+                        {{ formatPriceRange(project.price_min, project.price_max) }}
                       </n-text>
                     </n-space>
                   </n-grid-item>
                 </n-grid>
-              </n-card>
+              </NuxtLink>
 
               <!-- Phân trang dùng component có sẵn Pagination.vue -->
               <Pagination v-if="pageCount > 1" :current-page="page" :total-pages="pageCount"
@@ -136,7 +136,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
 
 interface Project {
   id: number
@@ -189,41 +188,6 @@ const sidebarReviews = ref([
   },
 ])
 
-const formatStatus = (status?: string | boolean): string => {
-  if (!status) return 'Đang cập nhật'
-  const s = String(status).toLowerCase().trim()
-  if (s === 'active') {
-    return 'Đang mở bán'
-  }
-  if (s === 'inactive') {
-    return 'Sắp mở bán'
-  }
-  return status as string
-}
-
-// Map trạng thái sang kiểu màu Naive UI (default, primary, info, success, warning, error)
-const statusTagType = (status?: string) => {
-  const formatted = formatStatus(status)
-  if (formatted === 'Đang mở bán') return 'success'
-  if (formatted === 'Sắp mở bán') return 'warning'
-  return 'default'
-}
-
-const formatPriceRange = (project: Project) => {
-  const min = project.price_min
-  const max = project.price_max
-  if (!min && !max) return 'Liên hệ'
-
-  const toBillion = (val: number) => {
-    return (val / 1000000000).toFixed(1).replace('.0', '') + ' tỷ'
-  }
-
-  if (min && max) {
-    return `${toBillion(min)} - ${toBillion(max)}`
-  }
-  if (min) return `Từ ${toBillion(min)}`
-  return `Đến ${toBillion(max!)}`
-}
 
 const sortedProjects = computed(() => {
   const list = [...projects.value]

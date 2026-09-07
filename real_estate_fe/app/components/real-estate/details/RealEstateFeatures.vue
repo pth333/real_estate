@@ -21,6 +21,19 @@
 <script setup lang="ts">
 import { formatPrice, formatPricePerM2 } from '~/utils/format';
 import { useRealEstateDetail } from '~/stores/detail/real_estate_detail';
+import IconPrice from '~/icons/IconPrice.vue';
+import IconArea from '~/icons/IconArea.vue';
+import IconBed from '~/icons/IconBed.vue';
+import IconBath from '~/icons/IconBath.vue';
+import IconBuilding from '~/icons/IconBuilding.vue';
+import IconCompass from '~/icons/IconCompass.vue';
+import IconBalcony from '~/icons/IconBalcony.vue';
+import IconShieldCheck from '~/icons/IconShieldCheck.vue';
+import IconSofa from '~/icons/IconSofa.vue';
+import IconZap from '~/icons/IconZap.vue';
+import IconDroplet from '~/icons/IconDroplet.vue';
+import IconWifi from '~/icons/IconWifi.vue';
+import IconSparkles from '~/icons/IconSparkles.vue';
 
 const store = useRealEstateDetail();
 
@@ -44,20 +57,20 @@ const attrs = computed(() => {
     const l = store.listing;
     if (!l) return [];
     return [
-        { label: 'Khoảng giá', icon: 'IconPrice', value: formatPrice(l.price_vnd) },
-        { label: 'Giá/m²', icon: 'IconPrice', value: formatPricePerM2(l.price_per_m2) },
-        { label: 'Diện tích', icon: 'IconArea', value: `${l.acreage} m²` },
-        { label: 'Số phòng ngủ', icon: 'IconBed', value: l.bedrooms ? `${l.bedrooms} phòng` : '' },
-        { label: 'Số phòng tắm, vệ sinh', icon: 'IconBath', value: l.bathrooms ? `${l.bathrooms} phòng` : '' },
-        { label: 'Số tầng', icon: 'IconBuilding', value: l.floors ? `${l.floors} tầng` : '' },
-        { label: 'Hướng nhà', icon: 'IconCompass', value: l.house_direction ? DIRECTION_LABELS[l.house_direction] ?? l.house_direction : '' },
-        { label: 'Hướng ban công', icon: 'IconBalcony', value: l.balcony_direction ? DIRECTION_LABELS[l.balcony_direction] ?? l.balcony_direction : '' },
-        { label: 'Pháp lý', icon: 'IconShieldCheck', value: l.legal_docs ? LEGAL_DOC_LABELS[l.legal_docs] ?? l.legal_docs : '' },
-        { label: 'Nội thất', icon: 'IconSofa', value: l.interior ? INTERIOR_LABELS[l.interior] ?? l.interior : '' },
-        { label: 'Giá điện', icon: 'IconZap', value: l.price_electricity ? `${formatPriceNumber(l.price_electricity)} đ/kWh` : '' },
-        { label: 'Giá nước', icon: 'IconDroplet', value: l.price_water ? `${formatPriceNumber(l.price_water)} đ/m³` : '' },
-        { label: 'Giá internet', icon: 'IconWifi', value: l.price_internet ? `${formatPriceNumber(l.price_internet)} đ/tháng` : '' },
-        { label: 'Tiện ích', icon: 'IconSparkles', value: l.amenities?.length ? l.amenities.map((a) => AMENITY_LABELS[a] ?? a).join(', ') : '' },
+        { label: 'Khoảng giá', icon: IconPrice, value: formatPrice(l.price_vnd) },
+        { label: 'Giá/m²', icon: IconPrice, value: formatPricePerM2(l.price_per_m2) },
+        { label: 'Diện tích', icon: IconArea, value: `${l.acreage} m²` },
+        { label: 'Số phòng ngủ', icon: IconBed, value: l.bedrooms ? `${l.bedrooms} phòng` : '' },
+        { label: 'Số phòng tắm, vệ sinh', icon: IconBath, value: l.bathrooms ? `${l.bathrooms} phòng` : '' },
+        { label: 'Số tầng', icon: IconBuilding, value: l.floors ? `${l.floors} tầng` : '' },
+        { label: 'Hướng nhà', icon: IconCompass, value: l.house_direction ? DIRECTION_LABELS[l.house_direction] ?? l.house_direction : '' },
+        { label: 'Hướng ban công', icon: IconBalcony, value: l.balcony_direction ? DIRECTION_LABELS[l.balcony_direction] ?? l.balcony_direction : '' },
+        { label: 'Pháp lý', icon: IconShieldCheck, value: l.legal_docs ? LEGAL_DOC_LABELS[l.legal_docs] ?? l.legal_docs : '' },
+        { label: 'Nội thất', icon: IconSofa, value: l.interior ? INTERIOR_LABELS[l.interior] ?? l.interior : '' },
+        { label: 'Giá điện', icon: IconZap, value: l.price_electricity ? `${formatPriceNumber(l.price_electricity)} đ/kWh` : '' },
+        { label: 'Giá nước', icon: IconDroplet, value: l.price_water ? `${formatPriceNumber(l.price_water)} đ/m³` : '' },
+        { label: 'Giá internet', icon: IconWifi, value: l.price_internet ? `${formatPriceNumber(l.price_internet)} đ/tháng` : '' },
+        { label: 'Tiện ích', icon: IconSparkles, value: l.amenities?.length ? l.amenities.map((a) => AMENITY_LABELS[a] ?? a).join(', ') : '' },
     ];
 });
 </script>

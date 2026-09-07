@@ -48,6 +48,7 @@ type IRealEstateService interface {
 	GetFeaturedProjects(limit int) ([]model.RealEstateProject, error)
 	GetProjectByID(id uint64) (*model.RealEstateProject, error)
 	GetRecommendations(userID uint64, sessionID string, limit int) ([]dto.RealEstateResponse, error)
+	GetRealEstateListingsByProjectID(projectID uint64) ([]dto.RealEstateResponse, error)
 
 	// ── Bất động sản yêu thích (favorite) ──
 	ToggleFavorite(userID, realEstateID uint64) (bool, error)
@@ -439,4 +440,14 @@ func (s *RealEstateService) ListFavorites(userID uint64, page, size int) ([]dto.
 	}
 	offset := (page - 1) * size
 	return s.repo.ListFavoriteRealEstates(userID, size, offset)
+}
+
+func (s *RealEstateService) GetRealEstateListingsByProjectID(projectID uint64) ([]dto.RealEstateResponse, error) {
+	// Kiểm tra xem dự án có tồn tại không
+	_, err := s.repo.GetProjectByID(projectID)
+	if err != nil {
+		return nil, fmt.Errorf("không tìm thấy dự án với ID: %d", projectID)
+	}
+	// Lấy danh sách bất động sản theo ID dự án
+	return s.repo.GetRealEstateListingsByProjectID(projectID)
 }

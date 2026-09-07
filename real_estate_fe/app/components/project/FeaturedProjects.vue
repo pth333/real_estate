@@ -32,7 +32,7 @@
                     <NuxtLink v-for="item in visibleItems" :key="item.id" :to="`${item.slug}-pj${item.id}`"
                         class="bg-white border border-gray-100 rounded-lg shadow-sm hover:shadow-md overflow-hidden cursor-pointer group flex flex-col no-underline">
                         <!-- Ảnh -->
-                        <div class="relative aspect-[4/3] overflow-hidden bg-gray-100 rounded-t-lg">
+                        <div class="relative aspect-4/3 overflow-hidden bg-gray-100 rounded-t-lg">
                             <img :src="item.thumbnail" :alt="item.name"
                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                             <div
@@ -43,7 +43,7 @@
                         </div>
 
                         <!-- Nội dung -->
-                        <div class="p-4 flex flex-col gap-1.5 flex-grow">
+                        <div class="p-4 flex flex-col gap-1.5 grow">
                             <div class="flex items-center gap-2 flex-wrap">
                                 <span class="text-[10px] font-semibold px-2 py-0.5 border rounded"
                                     :class="statusClass(item.status)">

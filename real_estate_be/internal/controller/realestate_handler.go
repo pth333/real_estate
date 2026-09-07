@@ -493,6 +493,27 @@ func (h *RealEstateHandler) GetProjectDetail(c *fiber.Ctx) error {
 	})
 }
 
+func (h *RealEstateHandler) GetRealEstateListingsByProjectID(c *fiber.Ctx) error {
+	raw := c.Params("id")
+	id, err := strconv.ParseUint(raw, 10, 64)
+	if err != nil || id == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid project id",
+		})
+	}
+
+	listings, err := h.service.GetRealEstateListingsByProjectID(id)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Failed to fetch listings: " + err.Error(),
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"data": listings,
+	})
+}
+
 // helper trích xuất UserID từ Authorization Header nếu có cho API recommend
 func (h *RealEstateHandler) getUserIDFromHeader(c *fiber.Ctx) uint64 {
 	return jwt.ExtractUserIDFromHeader(c.Get("Authorization"))
