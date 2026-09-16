@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"real_estate_be/internal/global"
 	model "real_estate_be/internal/models"
+	"time"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -18,10 +19,24 @@ func InitMysql() {
 		m.Port,
 		m.DBName,
 	)
-	// DisableForeignKeyConstraintWhenMigrating: giữ relationship field để dùng Preload,
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
-		DisableForeignKeyConstraintWhenMigrating: true,
-	})
+
+	var db *gorm.DB
+	var err error
+
+	for i := 0; i < 5; i++ {
+		db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{
+			DisableForeignKeyConstraintWhenMigrating: true,
+		})
+		if err == nil {
+			break
+		}
+		fmt.Printf("⏳ [MySQL] Waiting for DB... attempt %d/5\n", i+1)
+		time.Sleep(3 * time.Second)
+	}
+
+	if err != nil {
+		panic(fmt.Sprintf("❌ [MySQL] Cannot connect after 5 attempts: %v", err))
+	}
 
 	db.AutoMigrate(&model.User{})
 	db.AutoMigrate(&model.Category{})
@@ -35,8 +50,6 @@ func InitMysql() {
 	db.AutoMigrate(&model.Favorite{})
 	db.AutoMigrate(&model.ImageProject{})
 
-	// Xoá cột cũ province_id/ward_id (đã thay bằng province_code/ward_code string
-	// để giữ số 0 đầu của mã vị trí). AutoMigrate không tự xoá cột.
 	if db.Migrator().HasColumn(&model.RealEstateProject{}, "province_id") {
 		_ = db.Migrator().DropColumn(&model.RealEstateProject{}, "province_id")
 	}
@@ -44,12 +57,6 @@ func InitMysql() {
 		_ = db.Migrator().DropColumn(&model.RealEstateProject{}, "ward_id")
 	}
 
-	if err != nil {
-		panic(err)
-	}
-
-	// Seed filter_ranges nếu bảng rỗng — menu giá/diện tích cho slug SEO.
-	// FE build URL theo đúng slug này (server-driven), slug phải khớp 1-1.
 	seedFilterRanges(db)
 
 	global.DB = db

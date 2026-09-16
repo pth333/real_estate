@@ -46,3 +46,7 @@ CLAUDE.md
 .nuxt
 .output
 temp_protoc
+
+# Editor / AI
+.vscode/
+.claude/
