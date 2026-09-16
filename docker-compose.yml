@@ -74,7 +74,7 @@ services:
     depends_on:
       - real-estate-backend
     environment:
-      NUXT_PUBLIC_API_BASE_URL: http://localhost:8000/api/2026
+      NUXT_PUBLIC_API_BASE_URL: http://api.soihieuland.io.vn/api/2026
     ports:
       - "3000:3000"
 
