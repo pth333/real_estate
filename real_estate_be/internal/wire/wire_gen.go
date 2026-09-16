@@ -17,7 +17,9 @@ import (
 
 func InitializeAIHandler() (*controller.AIHandler, error) {
 	iaiRepository := repo.NewAIRepository()
-	iaiService := usecase.NewAIService(iaiRepository)
+	db := providerDB()
+	realEstateRepository := repo.NewRealEstateRepository(db)
+	iaiService := usecase.NewAIService(iaiRepository, realEstateRepository)
 	aiHandler := controller.NewAIHandler(iaiService)
 	return aiHandler, nil
 }

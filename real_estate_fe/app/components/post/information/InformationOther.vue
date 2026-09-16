@@ -104,28 +104,28 @@ const collapsed = ref(false)
 
 // Giấy tờ pháp lý
 const legalDocOptions = ref<SelectOption[]>([
-    { label: 'Sổ đỏ/ Sổ hồng', value: 'so_do' },
-    { label: 'Hợp đồng mua bán', value: 'hop_dong_mua_ban' },
-    { label: 'Đang chờ sổ', value: 'dang_cho_so' },
+    { label: 'Sổ đỏ/ Sổ hồng', value: 'Sổ đỏ/ Sổ hồng' },
+    { label: 'Hợp đồng mua bán', value: 'Hợp đồng mua bán' },
+    { label: 'Đang chờ sổ', value: 'Đang chờ sổ' },
 ])
 
 // Nội thất
 const interiorOptions = ref<SelectOption[]>([
-    { label: 'Đầy đủ nội thất', value: 'day_du' },
-    { label: 'Cơ bản', value: 'co_ban' },
-    { label: 'Chưa có nội thất', value: 'chua_co' },
+    { label: 'Đầy đủ nội thất', value: 'Đầy đủ nội thất' },
+    { label: 'Cơ bản', value: 'Cơ bản' },
+    { label: 'Chưa có nội thất', value: 'Chưa có nội thất' },
 ])
 
 // Hướng nhà / ban công
 const directionOptions = ref<SelectOption[]>([
-    { label: 'Đông', value: 'dong' },
-    { label: 'Tây', value: 'tay' },
-    { label: 'Nam', value: 'nam' },
-    { label: 'Bắc', value: 'bac' },
-    { label: 'Đông Bắc', value: 'dong_bac' },
-    { label: 'Tây Bắc', value: 'tay_bac' },
-    { label: 'Đông Nam', value: 'dong_nam' },
-    { label: 'Tây Nam', value: 'tay_nam' },
+    { label: 'Đông', value: 'Đông' },
+    { label: 'Tây', value: 'Tây' },
+    { label: 'Nam', value: 'Nam' },
+    { label: 'Bắc', value: 'Bắc' },
+    { label: 'Đông Bắc', value: 'Đông Bắc' },
+    { label: 'Tây Bắc', value: 'Tây Bắc' },
+    { label: 'Đông Nam', value: 'Đông Nam' },
+    { label: 'Tây Nam', value: 'Tây Nam' },
 ])
 
 // Thời gian vào ở

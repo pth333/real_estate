@@ -34,8 +34,11 @@ func LoadConfig() {
 		v.AddConfigPath(filepath.Join(exeDir, "..", "..", "config"))
 	}
 
-	v.SetConfigName("config_local")
-	v.SetConfigType("yaml")
+	configName := os.Getenv("CONFIG_NAME")
+	if configName == "" {
+		configName = "config_local" // mặc định local dev
+	}
+	v.SetConfigName(configName)
 
 	err := v.ReadInConfig()
 	if err != nil {
@@ -52,6 +55,7 @@ func LoadConfig() {
 	// BindEnv cho các key KHÔNG có trong file yaml (chỉ có trong .env / env hệ thống),
 	// nếu không AutomaticEnv sẽ bỏ qua chúng.
 	v.BindEnv("ai.api_key", "RE_AI_API_KEY")
+	v.BindEnv("ai.model", "RE_AI_MODEL")
 	v.BindEnv("r2.endpoint", "RE_R2_ENDPOINT")
 	v.BindEnv("r2.access_key_id", "RE_R2_ACCESS_KEY_ID")
 	v.BindEnv("r2.secret_access_key", "RE_R2_SECRET_ACCESS_KEY")

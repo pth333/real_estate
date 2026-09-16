@@ -13,7 +13,9 @@ import (
 
 func InitializeAIHandler() (*controller.AIHandler, error) {
 	wire.Build(
+		providerDB,
 		repo.NewAIRepository,
+		repo.NewRealEstateRepository,
 		usecase.NewAIService,
 		controller.NewAIHandler,
 	)

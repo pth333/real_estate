@@ -10,19 +10,30 @@ import (
 )
 
 type AIService struct {
-	repo repo.IAIRepository
+	repo           repo.IAIRepository
+	realEstateRepo repo.RealEstateRepository
 }
 
 type IAIService interface {
 	GenerateContent(req dto.AIRequest) (dto.AIContentResponse, error)
 }
 
-func NewAIService(aiRepo repo.IAIRepository) IAIService {
-	return &AIService{repo: aiRepo}
+func NewAIService(aiRepo repo.IAIRepository, realEstateRepo repo.RealEstateRepository) IAIService {
+	return &AIService{repo: aiRepo, realEstateRepo: realEstateRepo}
 }
 
 // GenerateContent dựng prompt từ thông tin BĐS theo văn phong rồi gọi AI qua repo
 func (s *AIService) GenerateContent(req dto.AIRequest) (dto.AIContentResponse, error) {
+	provinceName, err := s.realEstateRepo.GetProvinceNameByCode(req.Province)
+	if err != nil {
+		return dto.AIContentResponse{}, fmt.Errorf("lấy tên tỉnh/thành phố: %w", err)
+	}
+	wardName, err := s.realEstateRepo.GetWardNameByCode(req.Ward)
+	if err != nil {
+		return dto.AIContentResponse{}, fmt.Errorf("lấy tên phường/xã: %w", err)
+	}
+
+	req.Address = strings.TrimSpace(fmt.Sprintf("%s, %s, %s", req.Address, wardName, provinceName))
 	prompt, err := buildPrompt(req)
 	if err != nil {
 		return dto.AIContentResponse{}, err
@@ -49,6 +60,8 @@ func buildPrompt(req dto.AIRequest) (string, error) {
 		listingVerb = "Cho thuê"
 	}
 
+	priceVND := req.PricePerM2 * req.Area
+
 	var sb strings.Builder
 	fmt.Fprintf(&sb, "Bạn là chuyên gia viết tin đăng bất động sản tiếng Việt.\n")
 	fmt.Fprintf(&sb, "Viết tin đăng %s bất động sản với văn phong %s.\n", strings.ToLower(listingVerb), tone)
@@ -66,7 +79,7 @@ func buildPrompt(req dto.AIRequest) (string, error) {
 	addField("Dự án", req.ProjectName)
 	addField("Địa chỉ", req.Address)
 	addField("Diện tích", fmt.Sprintf("%.0f m²", req.Area))
-	addField("Giá", formatPrice(req.Price, req.Unit))
+	addField("Giá", formatPrice(priceVND, req.Unit))
 	addField("Số phòng ngủ", formatQuantity(req.Bedrooms, "PN"))
 	addField("Số phòng tắm", formatQuantity(req.Bathrooms, "WC"))
 	addField("Giấy tờ pháp lý", req.LegalDocs)

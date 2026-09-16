@@ -54,7 +54,6 @@ func (r *AIRepository) GenerateContent(ctx context.Context, prompt string) (dto.
 		return dto.AIContentResponse{}, fmt.Errorf("marshal request: %w", err)
 	}
 
-	// Endpoint Gemini (free tier), API key truyền qua query param ?key=
 	endpoint := fmt.Sprintf(
 		"https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s",
 		global.Config.AI.Model, global.Config.AI.APIKey,
@@ -100,9 +99,9 @@ func (r *AIRepository) GenerateContent(ctx context.Context, prompt string) (dto.
 
 // parseAIContent tách nội dung AI trả về thành title + description riêng biệt.
 // Xử lý các trường hợp AI trả về:
-//   1. JSON thuần:  {"title": "...", "description": "..."}
-//   2. JSON bọc trong markdown code block: ```json ... ```
-//   3. Văn bản thường (không JSON): title = dòng đầu, description = phần còn lại
+//  1. JSON thuần:  {"title": "...", "description": "..."}
+//  2. JSON bọc trong markdown code block: ```json ... ```
+//  3. Văn bản thường (không JSON): title = dòng đầu, description = phần còn lại
 func parseAIContent(content string) (dto.AIContentResponse, error) {
 	trimmed := strings.TrimSpace(content)
 

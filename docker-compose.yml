@@ -1,0 +1,84 @@
+services:
+  mariadb:
+    image: "mariadb:10.4"
+    container_name: "mariadb"
+    restart: always
+    ports:
+      - "3307:3306"
+    environment:
+      - MYSQL_DATABASE=real_estate_db
+      - MYSQL_ROOT_PASSWORD=1111
+    command:
+      # - --server-id=223344
+      # - --log-bin=mysql-bin
+      # - --binlog-format=ROW
+      # - --binlog-row-image=FULL
+      # - --gtid_strict_mode=ON
+      # - --gtid_domain_id=1
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+
+    volumes:
+      - mariadb_data:/var/lib/mysql
+
+  redis:
+    image: redis:7-alpine
+    container_name: "re_redis"
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  kafka:
+    image: apache/kafka:4.0.0
+    ports:
+      - "9092:9092"
+    container_name: "kafka_1"
+    restart: always
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,INTERNAL://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://127.0.0.1:9092,INTERNAL://kafka:29092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_NUM_PARTITIONS: 1
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+
+  real-estate-backend:
+    build:
+      context: ./real_estate_be
+      dockerfile: Dockerfiles/Dockerfile
+    container_name: real-estate-backend
+    restart: always
+    depends_on:
+      - mariadb
+      - redis
+      - kafka
+    environment:
+      CONFIG_NAME: config_production
+    ports:
+      - "8000:8000"
+
+  real-estate-frontend:
+    build:
+      context: ./real_estate_fe
+      dockerfile: Dockerfile
+    container_name: real-estate-frontend
+    restart: always
+    depends_on:
+      - real-estate-backend
+    environment:
+      NUXT_PUBLIC_API_BASE_URL: http://localhost:8000/api/2026
+    ports:
+      - "3000:3000"
+
+volumes:
+  mariadb_data:
+  redis_data:
+  kafka_data:
