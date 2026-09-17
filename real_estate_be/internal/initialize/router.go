@@ -12,7 +12,7 @@ func InitRouter() *fiber.App {
 	app := fiber.New()
 
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:3000,http://136.85.81.118,http://api.soihieuland.io.vn",
+		AllowOrigins:     "http://localhost:3000,http://136.85.81.118,http://soihieuland.io.vn",
 		AllowMethods:     "GET,POST,PUT,DELETE,PATCH,OPTIONS",
 		AllowHeaders:     "Origin,Content-Type,Accept,Authorization",
 		AllowCredentials: true,
