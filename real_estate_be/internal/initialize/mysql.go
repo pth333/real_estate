@@ -38,17 +38,17 @@ func InitMysql() {
 		panic(fmt.Sprintf("❌ [MySQL] Cannot connect after 5 attempts: %v", err))
 	}
 
-	db.AutoMigrate(&model.User{})
-	db.AutoMigrate(&model.Category{})
-	db.AutoMigrate(&model.Image{})
-	db.AutoMigrate(&model.RealEstate{})
-	db.AutoMigrate(&model.Province{})
-	db.AutoMigrate(&model.SearchHistory{})
-	db.AutoMigrate(&model.ViewHistory{})
-	db.AutoMigrate(&model.RealEstateProject{})
-	db.AutoMigrate(&model.FilterRange{})
-	db.AutoMigrate(&model.Favorite{})
-	db.AutoMigrate(&model.ImageProject{})
+	// db.AutoMigrate(&model.User{})
+	// db.AutoMigrate(&model.Category{})
+	// db.AutoMigrate(&model.Image{})
+	// db.AutoMigrate(&model.RealEstate{})
+	// db.AutoMigrate(&model.Province{})
+	// db.AutoMigrate(&model.SearchHistory{})
+	// db.AutoMigrate(&model.ViewHistory{})
+	// db.AutoMigrate(&model.RealEstateProject{})
+	// db.AutoMigrate(&model.FilterRange{})
+	// db.AutoMigrate(&model.Favorite{})
+	// db.AutoMigrate(&model.ImageProject{})
 
 	if db.Migrator().HasColumn(&model.RealEstateProject{}, "province_id") {
 		_ = db.Migrator().DropColumn(&model.RealEstateProject{}, "province_id")

@@ -2,54 +2,39 @@ import { defineNuxtConfig } from "nuxt/config";
 import tailwindcss from "@tailwindcss/vite";
 import Components from "unplugin-vue-components/vite";
 import { NaiveUiResolver } from "unplugin-vue-components/resolvers";
-
 export default defineNuxtConfig({
   compatibilityDate: "2026-07-21",
   devtools: { enabled: true },
-  app: {
-    head: {
-      charset: "utf-8",
-      viewport: "width=device-width, initial-scale=1",
-      title: "Phan Hieu Land",
-      titleTemplate: "%s - Phan Hieu Land",
-    },
-  },
 
-  // Modules
-  modules: ["@pinia/nuxt"],
+  modules: ["@pinia/nuxt", "nuxtjs-naive-ui"],
+
+  ssr: false,
 
   css: ["~/assets/css/main.css"],
 
-  // Runtime config cho API URL — có thể override bằng biến môi trường
+  imports: {
+    autoImport: true,
+  },
+
   runtimeConfig: {
     public: {
       apiBaseUrl:
         process.env.NUXT_PUBLIC_API_BASE_URL ||
         "http://localhost:8000/api/2026",
       // Geoapify API key — dùng cho bản đồ + geocoding + places (NUXT_PUBLIC_GEOAPIFY_API_KEY)
-      geoapifyApiKey:
-        process.env.NUXT_PUBLIC_GEOAPIFY_API_KEY || "",
+      geoapifyApiKey: process.env.NUXT_PUBLIC_GEOAPIFY_API_KEY || "",
     },
   },
 
-  // Nuxt auto-imports: Vue, Vue Router, Pinia composables
-  imports: {
-    autoImport: true,
-  },
-
-  ssr: true,
-
-  // Components auto-import
   components: [
     { path: "~/components", pathPrefix: false },
     { path: "~/icons", pathPrefix: false },
   ],
 
   build: {
-    transpile: ["naive-ui", "vueuc"],
+    transpile: ["vueuc", "naive-ui"],
   },
 
-  // Vite config (Nuxt dùng Vite bên trong)
   vite: {
     plugins: [
       tailwindcss(),
@@ -60,11 +45,6 @@ export default defineNuxtConfig({
     ],
     optimizeDeps: {
       include: ["vueuc"],
-    },
-    vue: {
-      script: {
-        propsDestructure: true,
-      },
     },
   },
 });

@@ -1,6 +1,13 @@
 <template>
   <header class="sticky top-0 z-50 bg-white shadow-sm">
     <div class="container mx-auto flex justify-between items-center p-2 gap-4">
+      <NuxtLink to="/" class="flex items-center gap-2 shrink-0">
+        <img src="/logo.svg" class="h-9 w-9"
+          style="filter: invert(48%) sepia(79%) saturate(476%) hue-rotate(114deg) brightness(95%) contrast(95%)" />
+        <span class="text-lg font-bold tracking-tight text-gray-800">
+          Nhà<span class="text-emerald-600">Việt</span>
+        </span>
+      </NuxtLink>
       <CategoryMenu />
       <nav class="flex items-center gap-6 text-gray-700 whitespace-nowrap">
         <template v-if="auth.isAuthenticated">

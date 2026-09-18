@@ -5,14 +5,7 @@
         <div class="flex justify-between items-center px-6 py-3.5 border-b border-gray-200">
             <span class="text-lg font-semibold text-gray-900">Tạo tin đăng</span>
             <div class="flex items-center gap-2.5">
-                <n-button text>
-                    <template #icon>
-                        <n-icon>
-                            <IconEyeOutline />
-                        </n-icon>
-                    </template>
-                    Xem trước
-                </n-button>
+             
                 <n-button @click="handleExit">Thoát</n-button>
             </div>
         </div>
@@ -38,7 +31,7 @@
                 <!-- Section: Thông tin khác -->
                 <InformationOther />
                 <!-- Section: Thông tin liên hệ -->
-                <ContactInformationSection />
+                <ContactInformationSection v-model:showOTPModal="showOTPModal" />
                 <!-- Section: Tiêu đề & mô tả -->
                 <DescriptionSection />
             </div>
@@ -61,7 +54,7 @@
             </n-button>
         </div>
 
-        <ModalOTPAuthentication />
+        <ModalOTPAuthentication v-model:showOTPModal="showOTPModal" />
 
         <!-- Modal hỏi tiếp tục bản nháp cũ -->
         <DraftModal v-model:show="showDraftModal" />
@@ -80,13 +73,13 @@ useHead({
     title: "Đăng tin bất động sản",
 })
 
-const { phoneVerified, verifiedPhone, showOTPModal } = usePhoneVerification()
+const { phoneVerified, verifiedPhone } = usePhoneVerification()
 const { $api } = useNuxtApp()
 const managerStore = useManagerStore()
 
 const route = useRoute()
 const isEdit = computed(() => route.query.id)
-
+const showOTPModal = ref(false)
 const postStore = useCreatePost()
 const uploadComponent = ref()
 
@@ -153,7 +146,6 @@ const submitCreatePost = async () => {
     }
 };
 
-// Tải thông tin chi tiết bài đăng cũ và đưa vào form store bằng Class Object
 const loadingPostDetail = async () => {
     try {
         const res = await $api.get<{ data: RealEstateResponse }>(`/real-estate/detail/${isEdit.value}`)
@@ -174,6 +166,16 @@ const loadingPostDetail = async () => {
     }
 }
 
+onMounted(() => {
+    if (!isEdit.value && !phoneVerified.value) {
+        showOTPModal.value = true
+        return
+    }
+    if (!isEdit.value) {
+        postStore.form.contact_phone = verifiedPhone.value || ""
+    }
+})
+
 watch(() => isEdit.value, (newId) => {
     if (newId) {
         postStore.resetForm()
@@ -184,11 +186,6 @@ watch(() => isEdit.value, (newId) => {
         if (postStore.loadCurrentDraft()) {
             showDraftModal.value = true
         }
-        if (!phoneVerified.value) {
-            showOTPModal.value = true
-            return
-        }
-        postStore.form.contact_phone = verifiedPhone.value || ""
     }
 }, { immediate: true })
 </script>

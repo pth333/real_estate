@@ -73,7 +73,7 @@ func NewRealEstateService(
 	}
 }
 
-func MapRealEstateResponse(data []dto.RealEstateResponse) {
+func (s *RealEstateService) MapRealEstateResponse(data []dto.RealEstateResponse) {
 	for i := range data {
 		m := &data[i]
 
@@ -141,15 +141,12 @@ func (s *RealEstateService) ListRealEstateByCategory(req dto.RealEstateSearchReq
 	if req.Slug != "" {
 		if id, errCat := s.categoryRepo.GetCategoryIdBySlug(req.Slug); errCat == nil && id > 0 {
 			data, total, err = s.repo.GetListByCategory(offset, req, limit)
-
-			// jsonData, _ := json.MarshalIndent(data, " ", " ")
-			// fmt.Println("JSON DATA: ", string(jsonData))
 		}
 	} else {
 		data, total, err = s.repo.GetList(req, offset, limit)
 	}
 
-	MapRealEstateResponse(data)
+	s.MapRealEstateResponse(data)
 
 	if err != nil {
 		return nil, 0, err
@@ -283,7 +280,7 @@ func (s *RealEstateService) GetRecommendations(userID uint64, sessionID string, 
 			if err := json.Unmarshal([]byte(cachedData), &cachedIDs); err == nil && len(cachedIDs) > 0 {
 				// Query DB lấy chi tiết tin từ danh sách ID đã cache (đảm bảo tính chất ranking)
 				props, err := s.repo.GetByIDs(cachedIDs)
-				MapRealEstateResponse(props)
+				s.MapRealEstateResponse(props)
 				if err == nil && len(props) > 0 {
 					s.flagFavorites(props, userID)
 					return props, nil
@@ -298,7 +295,6 @@ func (s *RealEstateService) GetRecommendations(userID uint64, sessionID string, 
 	var strategyUsed = "db_fallback"
 
 	if global.RecommendationClient != nil {
-		fmt.Println(123)
 		var ids []uint64
 		ids, strategyUsed, err = global.RecommendationClient.GetRecommendations(
 			ctx,
@@ -312,7 +308,7 @@ func (s *RealEstateService) GetRecommendations(userID uint64, sessionID string, 
 		if err == nil && len(ids) > 0 {
 			// Query DB lấy chi tiết các BĐS theo thứ tự xếp hạng từ gRPC
 			props, err = s.repo.GetByIDs(ids)
-			MapRealEstateResponse(props)
+			s.MapRealEstateResponse(props)
 
 			if err != nil {
 				log.Printf("[Recommendation] Lỗi khi lấy chi tiết BĐS từ database: %v", err)
@@ -324,8 +320,9 @@ func (s *RealEstateService) GetRecommendations(userID uint64, sessionID string, 
 
 	// Fallback về cơ chế DB thuần nếu không lấy được kết quả từ gRPC
 	if len(props) == 0 {
+		fmt.Println("[Recommendation] Fallback sang DB thuần để lấy danh sách gợi ý")
 		props, err = s.repo.GetRecommendationsBasic(userID, sessionID, limit)
-		MapRealEstateResponse(props)
+		s.MapRealEstateResponse(props)
 
 		if err != nil {
 			return nil, err

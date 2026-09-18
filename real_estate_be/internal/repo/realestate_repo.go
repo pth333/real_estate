@@ -60,6 +60,7 @@ type RealEstateRepository interface {
 	CreateProject(project *model.RealEstateProject) error
 	UpdateProject(project *model.RealEstateProject) error
 	ListProjects(limit, offset int, search string) ([]model.RealEstateProject, int64, error)
+	SaveProject(project *model.RealEstateProject) error
 	GetRealEstateListingsByProjectID(projectID uint64) ([]dto.RealEstateResponse, error)
 }
 
@@ -190,7 +191,7 @@ func (r *realEstateRepo) GetListByCategory(offset int, req dto.RealEstateSearchR
 		items []dto.RealEstateResponse
 		total int64
 	)
-
+	fmt.Println(req.Filter.City)
 	// điều kiện lọc chung (dùng cho COUNT và query con)
 	where := "WHERE c.slug = ?"
 	args := []interface{}{req.Slug}
@@ -252,6 +253,8 @@ func (r *realEstateRepo) GetListByCategory(offset int, req dto.RealEstateSearchR
 		args = append(args, req.Filter.Interior)
 	}
 
+	fmt.Println("GetListByCategory - where clause:", where)
+
 	// đếm tổng số bản ghi (không cần join ảnh/user)
 	if err := r.db.Raw(
 		"SELECT COUNT(*) FROM real_estates re JOIN categories c ON c.id = re.category_id "+where,
@@ -263,10 +266,7 @@ func (r *realEstateRepo) GetListByCategory(offset int, req dto.RealEstateSearchR
 	// deferred join: subquery lấy id trang hiện tại, rồi LEFT JOIN users + gom ảnh
 	listArgs := append(append([]interface{}{}, args...), limit, offset)
 	err := r.db.Raw(
-		"SELECT re.id, re.title, re.slug, re.price_vnd, re.address, re.district, re.city, "+
-			"re.acreage, re.price_per_m2, re.bedrooms, re.bathrooms, re.description, re.created_at, "+
-			"re.house_direction, re.balcony_direction, re.floors, re.legal_docs, re.interior, "+
-			"re.price_electricity, re.price_water, re.price_internet, re.amenities, re.latitude, re.longitude, "+
+		"SELECT re.*, "+
 			"COALESCE(GROUP_CONCAT(DISTINCT img.url ORDER BY img.id SEPARATOR '|'), '') AS image_urls, "+
 			"COALESCE(u.name, '') AS agent_name, "+
 			"COALESCE(u.phone, '') AS agent_phone "+
@@ -278,14 +278,11 @@ func (r *realEstateRepo) GetListByCategory(offset int, req dto.RealEstateSearchR
 			"GROUP BY re.id "+
 			"ORDER BY re.created_at DESC, re.id DESC",
 		listArgs...,
-	).Scan(&items).Error
+	).Debug().Scan(&items).Error
 	if err != nil {
 		return nil, 0, err
 	}
 
-	// for i := range items {
-	// 	toResponse(&items[i])
-	// }
 	return items, total, nil
 }
 
@@ -469,7 +466,7 @@ func (r *realEstateRepo) GetProvinceBySlug(city string) (string, error) {
 
 	if err := r.db.Debug().
 		Model(&model.Province{}).
-		Where("code_name = ?", city).
+		Where("slug = ?", city).
 		Pluck("name", &name).Error; err != nil {
 		return "", err
 	}
@@ -519,16 +516,16 @@ func (r *realEstateRepo) GetProjectByID(id uint64) (*model.RealEstateProject, er
 
 // GetTrending lấy danh sách BĐS nổi bật (nhiều lượt xem nhất hoặc mới nhất)
 func (r *realEstateRepo) GetTrending(limit int) ([]dto.RealEstateResponse, error) {
-	var items []dto.RealEstateResponse
 
 	// Query lấy top real_estate_id được xem nhiều nhất từ view_history
 	var trendingIDs []uint64
-	r.db.Model(&model.ViewHistory{}).
-		Select("real_estate_id, SUM(duration_seconds) as total_duration").
-		Group("real_estate_id").
-		Order("total_duration DESC, real_estate_id DESC").
-		Limit(limit).
-		Pluck("real_estate_id", &trendingIDs)
+	r.db.Raw(
+		"SELECT real_estate_id FROM view_history "+
+			"GROUP BY real_estate_id "+
+			"ORDER BY SUM(duration_seconds) DESC, real_estate_id DESC "+
+			"LIMIT ?",
+		limit,
+	).Pluck("real_estate_id", &trendingIDs)
 
 	if len(trendingIDs) > 0 {
 		items, err := r.GetByIDs(trendingIDs)
@@ -537,6 +534,7 @@ func (r *realEstateRepo) GetTrending(limit int) ([]dto.RealEstateResponse, error
 		}
 	}
 
+	var items []dto.RealEstateResponse
 	// Fallback nếu chưa có lượt xem nào: Lấy danh sách tin mới đăng nhất
 	err := r.db.Raw(
 		"SELECT re.id, re.title, re.slug, re.price_vnd, re.address, re.district, re.city, "+
@@ -604,8 +602,6 @@ func (r *realEstateRepo) GetByIDs(ids []uint64) ([]dto.RealEstateResponse, error
 			sortedItems = append(sortedItems, item)
 		}
 	}
-
-	fmt.Printf("GetByIDs: Items=%v\n", sortedItems)
 
 	return items, nil
 }
@@ -767,4 +763,7 @@ func (r *realEstateRepo) GetRealEstateListingsByProjectID(projectID uint64) ([]d
 		return nil, err
 	}
 	return items, nil
+}
+func (r *realEstateRepo) SaveProject(project *model.RealEstateProject) error {
+	return r.db.Save(project).Error
 }

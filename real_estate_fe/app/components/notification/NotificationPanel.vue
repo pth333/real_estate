@@ -7,23 +7,11 @@
         <n-badge v-if="store.unreadCount > 0" dot type="error" />
       </h3>
       <div class="flex items-center gap-2">
-        <n-button
-          v-if="store.unreadCount > 0"
-          type="primary"
-          text
-          size="tiny"
-          class="text-xs text-emerald-600 hover:text-emerald-700 font-medium"
-          @click="store.markAllAsRead"
-        >
+        <n-button v-if="store.unreadCount > 0" type="primary" text size="tiny"
+          class="text-xs text-emerald-600 hover:text-emerald-700 font-medium" @click="store.markAllAsRead">
           Đọc tất cả
         </n-button>
-        <n-button
-          circle
-          quaternary
-          size="small"
-          class="text-gray-400 hover:text-gray-600"
-          @click="$emit('close')"
-        >
+        <n-button circle quaternary size="small" class="text-gray-400 hover:text-gray-600" @click="$emit('close')">
           <template #icon>
             <span class="text-xs">✕</span>
           </template>
@@ -47,33 +35,25 @@
       <!-- Notification list -->
       <n-scrollbar v-else style="max-height: 360px">
         <n-list hoverable clickable class="divide-y divide-gray-50">
-          <n-list-item
-            v-for="notif in store.items"
-            :key="notif.id"
-            class="transition-colors duration-200 hover:bg-gray-50 cursor-pointer"
-            @click="handleClick(notif)"
-          >
-            <n-thing>
+          <n-list-item v-for="notif in store.items" :key="notif.id"
+            class="transition-colors duration-200 hover:bg-gray-50 cursor-pointer" @click="handleClick(notif)">
+            <div class="flex flex-col gap-1 px-1">
               <!-- Title -->
-              <template #title>
-                <div class="flex items-start justify-between gap-2">
-                  <span class="text-sm font-semibold text-gray-800 line-clamp-2 leading-snug">
-                    {{ notif.payload?.title || "Bất động sản mới" }}
-                  </span>
-                  <!-- Badge for unread notification. Let's say if we can track specific read status, else we assume all currently loaded are highlighted depending on timestamp -->
-                  <span v-if="isUnread(notif)" class="flex h-2 w-2 translate-y-1.5 rounded-full bg-emerald-500 shrink-0" />
-                </div>
-              </template>
-
-              <!-- Description / Address -->
-              <template #description>
-                <span class="text-xs text-gray-500 line-clamp-1 mt-0.5">
-                  {{ notif.payload?.address }}
+              <div class="flex items-start justify-between gap-2">
+                <span class="text-sm font-semibold text-gray-800 line-clamp-2 leading-snug">
+                  {{ notif.payload?.title || "Bất động sản mới" }}
                 </span>
-              </template>
+                <span v-if="isUnread(notif)"
+                  class="flex h-2 w-2 translate-y-1.5 rounded-full bg-emerald-500 shrink-0" />
+              </div>
 
-              <!-- Custom price & time info at the bottom -->
-              <div class="mt-2 flex items-center justify-between">
+              <!-- Address -->
+              <span class="text-xs text-gray-500 line-clamp-1">
+                {{ notif.payload?.address }}
+              </span>
+
+              <!-- Price + Time -->
+              <div class="flex items-center justify-between mt-1">
                 <span class="text-xs font-bold text-red-500">
                   {{ formatPrice(notif.payload?.price || 0) }}
                 </span>
@@ -81,7 +61,7 @@
                   {{ fromNow(notif.created_at) }}
                 </span>
               </div>
-            </n-thing>
+            </div>
           </n-list-item>
         </n-list>
       </n-scrollbar>
@@ -101,7 +81,6 @@ const store = useNotificationStore();
 onMounted(() => {
   store.fetchList();
 });
-
 function isUnread(notif: NotificationItem): boolean {
   if (typeof window !== "undefined") {
     const lastRead = localStorage.getItem("last_notif_read_at") || "0";
@@ -121,6 +100,7 @@ function isUnread(notif: NotificationItem): boolean {
 }
 
 function handleClick(notif: NotificationItem) {
+
   // Đánh dấu đã đọc trên client tab hiện tại ngay lập tức
   store.markAsRead(notif.id);
 

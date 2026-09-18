@@ -1,7 +1,7 @@
 <template>
     <section class="py-8">
         <div class="container mx-auto px-24">
-            <h1 class="text-lg font-bold text-gray-600 mb-4">Bất động sản theo địa điểm</h1>
+            <h2 class="text-xl font-bold text-gray-900 mb-5">Bất động sản theo địa điểm</h2>
 
             <SkeletonCard v-if="loading" type="area" />
 

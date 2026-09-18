@@ -2,7 +2,7 @@ server:
   port: 8080
 mysql:
   host: localhost
-  port: 3307
+  port: 3308
   username: root
   password: 1111
   database: real_estate_db
@@ -16,7 +16,10 @@ kafka:
     real_estate_enriched: real_estate.enriched.v1
     real_estate_notified: real_estate.notified.v1
 redis:
-  addr: localhost:6379
+  addr: localhost:6380
   db: 0
+r2:
+  region: auto
+  bucket: real-estate-files
 recommendation:
   addr: localhost:50051

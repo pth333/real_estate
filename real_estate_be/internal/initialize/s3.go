@@ -31,4 +31,5 @@ func InitS3() {
 	})
 
 	global.S3Client = client
+
 }

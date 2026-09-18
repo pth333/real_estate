@@ -62,6 +62,14 @@ services:
       - kafka
     environment:
       CONFIG_NAME: config_production
+      RE_AI_API_KEY: ${RE_AI_API_KEY}
+      RE_AI_MODEL: ${RE_AI_MODEL}
+      RE_R2_ENDPOINT: ${RE_R2_ENDPOINT}
+      RE_R2_REGION: ${RE_R2_REGION}
+      RE_R2_ACCESS_KEY_ID: ${RE_R2_ACCESS_KEY_ID}
+      RE_R2_SECRET_ACCESS_KEY: ${RE_R2_SECRET_ACCESS_KEY}
+      RE_R2_BUCKET: ${RE_R2_BUCKET}
+      RE_R2_PUBLIC_URL: ${RE_R2_PUBLIC_URL}
     ports:
       - "8000:8000"
 
@@ -74,7 +82,8 @@ services:
     depends_on:
       - real-estate-backend
     environment:
-      NUXT_PUBLIC_API_BASE_URL: http://api.soihieuland.io.vn/api/2026
+      NUXT_PUBLIC_API_BASE_URL: ${NUXT_PUBLIC_API_BASE_URL}
+      NUXT_PUBLIC_GEOAPIFY_API_KEY: ${NUXT_PUBLIC_GEOAPIFY_API_KEY}
     ports:
       - "3000:3000"
 

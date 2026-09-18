@@ -55,8 +55,10 @@ import { usePhoneVerification } from '~/composables/usePhoneVerification'
 
 const postStore = useCreatePost()
 const collapsed = ref(false)
-const { verifiedPhones, showOTPModal } = usePhoneVerification()
-
+const { verifiedPhones } = usePhoneVerification()
+const emit = defineEmits<{
+    'update:showOTPModal': [value: boolean]
+}>()
 // Định nghĩa danh sách option bao gồm các số đã xác thực và lựa chọn thêm mới
 const phoneOptions = computed(() => {
     const list = verifiedPhones.value.map(phone => ({
@@ -74,7 +76,7 @@ const phoneOptions = computed(() => {
 const handlePhoneSelect = (value: string) => {
     if (value === 'add_new_phone') {
         // Mở modal OTP để nhập số điện thoại mới và OTP
-        showOTPModal.value = true
+        emit('update:showOTPModal', true)
 
         // Khôi phục lại giá trị hiển thị cũ để không hiển thị chữ 'add_new_phone' trên ô select
         nextTick(() => {

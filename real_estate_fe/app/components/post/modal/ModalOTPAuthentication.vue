@@ -1,5 +1,5 @@
 <template>
-    <n-modal v-show="showOTPModal" :style="{ maxWidth: '440px' }" :mask-closable="phoneVerified" preset="card"
+    <n-modal :show="showOTPModal" @update:show="emit('update:showOTPModal', $event)" :style="{ maxWidth: '440px' }" :mask-closable="phoneVerified" preset="card"
         :title="step === 'phone' ? 'Xác thực số điện thoại' : 'Nhập mã OTP'" :closable="phoneVerified">
 
         <div class="flex flex-col gap-5">
@@ -71,13 +71,17 @@ interface VerifyOTPResponse {
     success: boolean
     message?: string
 }
+const props = defineProps<{
+    showOTPModal: boolean
+}>()
 
 const emit = defineEmits<{
     close: []
+    'update:showOTPModal': [value: boolean]
 }>()
 
 const { $api } = useNuxtApp()
-const { setPhoneVerified, phoneVerified, showOTPModal } = usePhoneVerification()
+const { setPhoneVerified, phoneVerified } = usePhoneVerification()
 const step = ref<'phone' | 'otp'>('phone')
 const phone = ref('')
 const otp = ref('')
@@ -125,7 +129,7 @@ const handleVerifyOTP = async () => {
             if (countdownTimer) clearInterval(countdownTimer)
             errorText.value = ''
             setPhoneVerified(phone.value.trim())
-            showOTPModal.value = false
+            emit('update:showOTPModal', false)
             // Reset state
             step.value = 'phone'
             phone.value = ''

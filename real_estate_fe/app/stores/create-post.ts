@@ -64,9 +64,9 @@ export const useCreatePost = defineStore("create-post", () => {
   };
 
   const stepProgress: Record<string, number> = {
-    information: 33,
-    upload: 66,
-    review: 100,
+    information: 50,
+    upload: 50,
+    // review: 100,
   };
 
   const currentStepLabel = computed(() => stepLabels[form.value.tab]);

@@ -5,7 +5,7 @@ export interface ImageResponse {
   file_name: string;
   file_type: string;
   file_size: number;
-  status?: string
+  status?: string;
 }
 
 export interface RealEstateResponse {
@@ -96,7 +96,7 @@ export interface NotificationItem {
   id: number;
   listing_id?: number;
   type: string;
-  payload: unknown;
+  payload: NotificationSSEPayload;
   created_at: string;
 }
 
@@ -105,7 +105,7 @@ export interface NotificationSSEPayload {
   address: string;
   price: number;
   acreage: number;
-  url: string;
+  slug: string;
 }
 
 export interface OptionTypeRealestate {
@@ -256,7 +256,7 @@ export class InformationRealestate {
         thumnail_url: img.thumbnail_url,
         file_type: img.file_type,
         file_name: img.file_name,
-        file_size: img.file_size
+        file_size: img.file_size,
       }));
     }
 
@@ -290,7 +290,7 @@ export interface UploadedMediaItem {
   file_type: string;
   file_name: string;
   file_size: number;
-  status?: string
+  status?: string;
 }
 
 export interface ProjectOption {

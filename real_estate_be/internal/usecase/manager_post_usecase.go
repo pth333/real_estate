@@ -14,6 +14,8 @@ import (
 	model "real_estate_be/internal/models"
 	"real_estate_be/internal/repo"
 	"real_estate_be/pkg/kafka"
+
+	"github.com/gosimple/slug"
 )
 
 type IManagerPostUseCase interface {
@@ -45,9 +47,15 @@ func NewManagerPostUseCase(managerRepo repo.ManagerPostRepository, realEstateRep
 }
 
 func (u *managerPostUseCase) GenerateListingSlug(title string, id uint64) string {
-	slug := strings.ToLower(strings.ReplaceAll(title, " ", "-"))
-	return fmt.Sprintf("%s-rs%d", slug, id)
+	s := slug.MakeLang(title, "vi")
+	return fmt.Sprintf("%s-rs%d", s, id)
 }
+
+func (u *managerPostUseCase) GenerateProjectSlug(title string, id uint64) string {
+	s := slug.MakeLang(title, "vi")
+	return fmt.Sprintf("%s-pj%d", s, id)
+}
+
 func (u *managerPostUseCase) GetManagerPostsList(userID uint64, search string, page, size int) ([]dto.ManagerPostListResponse, int64, error) {
 	if page < 1 {
 		page = 1
@@ -99,7 +107,6 @@ func (u *managerPostUseCase) GetManagerPostsList(userID uint64, search string, p
 
 func (s *managerPostUseCase) CreateRealEstate(req dto.CreateRealEstateRequest, userID uint64) (uint64, error) {
 	var categoryID *int64
-	fmt.Println("type", req.RealEstateType)
 	if req.RealEstateType != "" {
 		if id, err := strconv.ParseInt(req.RealEstateType, 10, 64); err == nil {
 			categoryID = &id
@@ -269,9 +276,9 @@ func (s *managerPostUseCase) UpdateRealEstate(id uint64, req dto.CreateRealEstat
 	if err := s.realEstateRepo.Save(&rawEstate); err != nil {
 		return err
 	}
-	jsonData, err := json.MarshalIndent(req.Images, " ", " ")
+	// jsonData, err := json.MarshalIndent(req.Images, " ", " ")
 
-	fmt.Println("Image: ", string(jsonData))
+	// fmt.Println("Image: ", string(jsonData))
 
 	imageIDs := make([]uint64, 0, len(req.Images))
 	for _, image := range req.Images {
@@ -302,24 +309,11 @@ func (u *managerPostUseCase) DeleteManagerPost(postID uint64) error {
 // CreateProject tạo dự án mới. province/ward là MÃ tỉnh/phường (VD "000331"),
 // lưu dạng string để giữ số 0 đầu và map đúng với bảng provinces/wards.
 func (u *managerPostUseCase) CreateProject(req dto.CreateProjectRequest) (uint64, error) {
-	name := strings.TrimSpace(req.Name)
-	if name == "" {
-		return 0, fmt.Errorf("tên dự án không được để trống")
-	}
-	if req.ProvinceCode == "" {
-		return 0, fmt.Errorf("vui lòng chọn tỉnh/thành phố")
-	}
-
-	status := req.Status
-	if status == "" {
-		status = "active"
-	}
 
 	project := &model.RealEstateProject{
-		Name:            name,
+		Name:            req.Name,
 		AlternativeName: req.AlternativeName,
-		Slug:            slugify(name),
-		Status:          status,
+		Status:          req.Status,
 		FullAddress:     req.FullAddress,
 		ProvinceCode:    req.ProvinceCode,
 		WardCode:        req.WardCode,
@@ -344,6 +338,14 @@ func (u *managerPostUseCase) CreateProject(req dto.CreateProjectRequest) (uint64
 
 	if err := u.realEstateRepo.CreateProject(project); err != nil {
 		return 0, err
+	}
+
+	if req.Name != "" {
+		project.Slug = u.GenerateProjectSlug(req.Name, project.ID)
+		fmt.Println("Generated project slug:", project.Slug)
+		if err := u.realEstateRepo.SaveProject(project); err != nil {
+			return 0, err
+		}
 	}
 
 	// Liên kết ảnh dự án đã upload với dự án vừa tạo

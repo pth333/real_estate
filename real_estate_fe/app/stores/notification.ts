@@ -14,6 +14,7 @@ export const useNotificationStore = defineStore("notification", () => {
       const { $api } = useNuxtApp();
       const res = await $api.get<{ data: NotificationItem[] }>("/notifications");
       items.value = res.data;
+      console.log("Fetched notifications:", items.value);
 
       if (import.meta.client) {
         // Load trạng thái đọc từ localStorage để tính unread

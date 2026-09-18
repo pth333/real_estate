@@ -29,26 +29,22 @@
                 <!-- Cards -->
                 <div class="grid grid-cols-4 gap-4 overflow-hidden">
 
-                    <NuxtLink v-for="item in visibleItems" :key="item.id" :to="`${item.slug}-pj${item.id}`"
+                    <NuxtLink v-for="item in visibleItems" :key="item.id" :to="`${item.slug}`"
                         class="bg-white border border-gray-100 rounded-lg shadow-sm hover:shadow-md overflow-hidden cursor-pointer group flex flex-col no-underline">
                         <!-- Ảnh -->
                         <div class="relative aspect-4/3 overflow-hidden bg-gray-100 rounded-t-lg">
                             <img :src="item.thumbnail" :alt="item.name"
                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                            <div
-                                class="absolute bottom-2 right-2 flex items-center gap-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded">
-                                <IconImage class="h-3 w-3" />
-                                5
-                            </div>
+                            
                         </div>
 
                         <!-- Nội dung -->
-                        <div class="p-4 flex flex-col gap-1.5 grow">
-                            <div class="flex items-center gap-2 flex-wrap">
-                                <span class="text-[10px] font-semibold px-2 py-0.5 border rounded"
-                                    :class="statusClass(item.status)">
+                        <div class="p-3 flex flex-col gap-1.5 grow">
+                            <div class="flex items-center flex-wrap">
+                                <n-tag :type="statusTagType(item.status)" size="small" 
+                                    class="shadow-sm font-semibold">
                                     {{ formatStatus(item.status) }}
-                                </span>
+                                </n-tag>
                             </div>
                             <div
                                 class="font-semibold text-gray-900 text-sm truncate group-hover:text-emerald-600 transition-colors">
@@ -100,17 +96,17 @@ const menuStore = useMenuStore();
 const thirdCategorySlug = computed(() => {
     return menuStore.menu?.categories?.[2]?.Slug;
 });
-const formatStatus = (status?: string | boolean): string => {
-    if (!status) return 'Chưa cập nhật'
-    const s = String(status).toLowerCase().trim()
-    if (s === 'active') {
-        return 'Đang mở bán'
-    }
-    if (s === 'inactive') {
-        return 'Sắp mở bán'
-    }
-    return status as string
-}
+// const formatStatus = (status?: string | boolean): string => {
+//     if (!status) return 'Chưa cập nhật'
+//     const s = String(status).toLowerCase().trim()
+//     if (s === 'active') {
+//         return 'Đang mở bán'
+//     }
+//     if (s === 'inactive') {
+//         return 'Sắp mở bán'
+//     }
+//     return status as string
+// }
 
 function statusClass(status?: string) {
     const formatted = formatStatus(status)

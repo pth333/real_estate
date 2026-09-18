@@ -39,7 +39,7 @@
 
                 <!-- Ảnh -->
                 <div class="relative aspect-4/3 overflow-hidden bg-gray-100">
-                    <img :src="item.image_urls?.[0] ?? '/placeholder.jpg'" :alt="item.title"
+                    <img :src="item.images?.[0]?.url ?? '/placeholder.jpg'" :alt="item.title"
                         class="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
                 </div>
 

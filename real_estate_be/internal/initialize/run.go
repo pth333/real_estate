@@ -6,6 +6,7 @@ import (
 )
 
 func Run() {
+
 	LoadConfig()
 	InitMysql()
 	InitRedis()

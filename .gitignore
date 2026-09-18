@@ -50,3 +50,5 @@ temp_protoc
 # Editor / AI
 .vscode/
 .claude/
+
+docker-compose.dev.yml

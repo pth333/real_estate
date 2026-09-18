@@ -17,6 +17,7 @@ export function useFavorite() {
       const res = await $api.post<{ data: { is_favorite: boolean } }>(
         `/real-estate/favorite/${id}`,
       )
+      console.log("API response for toggle favorite:", res?.data?.is_favorite)
       return res?.data?.is_favorite ?? null
     } catch (e) {
       return null

@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -74,7 +75,6 @@ func (h *RealEstateHandler) ListBySEOURL(c *fiber.Ctx) error {
 	catParam := c.Params("category") // "nha-dat-ban-ha-noi"
 
 	if catParam != "" {
-		// Lấy tất cả categories từ DB (nên cache)
 		categories, err := h.repo.GetCategory()
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -107,6 +107,7 @@ func (h *RealEstateHandler) ListBySEOURL(c *fiber.Ctx) error {
 					break
 				}
 				req.Filter.City = province
+				fmt.Println("Matched category:", req.Slug, "with location:", req.Filter.City)
 			}
 			break
 		}
@@ -507,6 +508,16 @@ func (h *RealEstateHandler) GetRealEstateListingsByProjectID(c *fiber.Ctx) error
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "Failed to fetch listings: " + err.Error(),
 		})
+	}
+
+	for i := range listings {
+		images, err := h.imgRepo.GetImagesByRealEstateID(listings[i].ID)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"message": "Failed to fetch images: " + err.Error(),
+			})
+		}
+		listings[i].Images = images
 	}
 
 	return c.JSON(fiber.Map{
