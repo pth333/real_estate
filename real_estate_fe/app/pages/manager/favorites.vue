@@ -37,7 +37,6 @@ definePageMeta({
   ],
 })
 
-const { $api } = useNuxtApp()
 const favorite = useFavorite()
 const managerStore = useManagerStore()
 const loading = ref(false)
@@ -67,7 +66,9 @@ function goToPage(page: number) {
   fetchFavoritesData()
 }
 
-onMounted(fetchFavoritesData)
+onMounted(() => {
+  fetchFavoritesData()
+})
 
 // Xem chi tiết tin đăng
 const handleView = (row: RealEstateResponse) => {

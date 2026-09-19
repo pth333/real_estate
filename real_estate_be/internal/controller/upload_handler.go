@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"io"
 	"real_estate_be/internal/dto"
 	"real_estate_be/internal/response"
 	"real_estate_be/internal/usecase"
@@ -10,6 +11,36 @@ import (
 
 type UploadHandler struct {
 	service usecase.UploadServiceInterface
+}
+
+func (h *UploadHandler) UploadImage(c *fiber.Ctx) error {
+	file, err := c.FormFile("file")
+	if err != nil {
+		return response.BadRequest(c, "file ảnh là bắt buộc", err.Error())
+	}
+
+	source, err := file.Open()
+	if err != nil {
+		return response.BadRequest(c, "không thể đọc file ảnh", err.Error())
+	}
+	defer source.Close()
+
+	payload, err := io.ReadAll(source)
+	if err != nil {
+		return response.BadRequest(c, "không thể đọc nội dung ảnh", err.Error())
+	}
+
+	result, err := h.service.UploadImage(
+		file.Filename,
+		file.Header.Get("Content-Type"),
+		payload,
+		c.FormValue("kind"),
+	)
+	if err != nil {
+		return response.BadRequest(c, err.Error(), nil)
+	}
+
+	return response.Created(c, "Upload image successful", result)
 }
 
 func NewUploadHandler(service usecase.UploadServiceInterface) *UploadHandler {

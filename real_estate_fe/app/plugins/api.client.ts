@@ -41,8 +41,10 @@ function buildHeaders(
   config: RequestConfig,
   token?: string | null,
 ): Record<string, string> {
+  const isFormData =
+    typeof FormData !== "undefined" && config.body instanceof FormData;
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    ...(isFormData ? {} : { "Content-Type": "application/json" }),
     ...config.headers,
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;

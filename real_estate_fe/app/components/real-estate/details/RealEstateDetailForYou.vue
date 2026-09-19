@@ -10,8 +10,9 @@
 
         <!-- Grid 3 cột -->
         <div v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            <div v-for="item in visibleItems" :key="item.id"
-                class="cursor-pointer rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200 bg-white">
+            <NuxtLink v-for="item in visibleItems" :key="item.id" :to="`/${item.slug}`" class="block h-full">
+                <div
+                    class="flex h-full cursor-pointer flex-col overflow-hidden rounded-sm border border-gray-100 bg-white shadow-sm transition-shadow duration-200 hover:shadow-md">
 
                 <!-- Ảnh + Badge -->
                 <div class="relative aspect-4/3 overflow-hidden bg-gray-100">
@@ -26,7 +27,7 @@
                 </div>
 
                 <!-- Nội dung -->
-                <div class="p-3 flex flex-col gap-2">
+                <div class="flex flex-1 flex-col gap-2 p-3">
 
                     <!-- Tiêu đề -->
                     <div class="text-sm font-semibold text-gray-800 leading-snug line-clamp-2">
@@ -68,7 +69,7 @@
                     </div>
 
                     <!-- Footer: ngày đăng + yêu thích -->
-                    <div class="flex items-center justify-between pt-1 border-t border-gray-100">
+                    <div class="mt-auto flex items-center justify-between border-t border-gray-100 pt-1">
                         <span class="text-xs text-gray-400">{{ formatDate(item.created_at) }}</span>
                         <button class="flex h-8 w-8 items-center justify-center rounded-full border transition-colors"
                             :class="item.is_favorite
@@ -79,7 +80,8 @@
                         </button>
                     </div>
                 </div>
-            </div>
+                </div>
+            </NuxtLink>
         </div>
 
         <!-- Mở rộng / Thu gọn -->

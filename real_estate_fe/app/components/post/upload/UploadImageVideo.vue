@@ -201,7 +201,7 @@ function triggerVideoInput() {
     videoInputRef.value?.click()
 }
 
-function addFiles(fileList: FileList, type: 'image' | 'video') {
+async function addFiles(fileList: FileList, type: 'image' | 'video') {
 
     const currentVideos = files.value.filter(f => f.fileType === 'video').length
     const remainingTotal = MAX_FILES - totalCount.value
@@ -218,7 +218,25 @@ function addFiles(fileList: FileList, type: 'image' | 'video') {
         ? Math.min(remainingTotal, remainingVideo)
         : remainingTotal
 
-    const newItems: FileItem[] = Array.from(fileList).slice(0, limit).map((file) => ({
+    const validFiles: File[] = []
+    for (const file of Array.from(fileList).slice(0, limit)) {
+        if (type === 'image') {
+            const result = await validateImage(file)
+            if (!result.valid) {
+                window.message?.warning(`Ảnh "${file.name}": ${result.message}`)
+                continue
+            }
+        } else {
+            const result = validateVideo(file)
+            if (!result.valid) {
+                window.message?.warning(`Video "${file.name}": ${result.message}`)
+                continue
+            }
+        }
+        validFiles.push(file)
+    }
+
+    const newItems: FileItem[] = validFiles.map((file) => ({
         id: generateId(),
         file,
         fileType: type,
@@ -292,20 +310,7 @@ function onDrop(e: DragEvent) {
 function onImageInputChange(e: Event) {
     const target = e.target as HTMLInputElement
     if (target.files && target.files.length > 0) {
-        const validFiles: File[] = []
-        for (const file of Array.from(target.files)) {
-            const result = validateImage(file)
-            if (!result.valid) {
-                window.message?.warning(`Ảnh "${file.name}": ${result.message}`)
-                continue
-            }
-            validFiles.push(file)
-        }
-        if (validFiles.length > 0) {
-            const dt = new DataTransfer()
-            validFiles.forEach(f => dt.items.add(f))
-            addFiles(dt.files, 'image')
-        }
+        addFiles(target.files, 'image')
     }
     target.value = ''
 }

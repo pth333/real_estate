@@ -92,7 +92,7 @@ function onInputChange(e: Event) {
   input.value = ''
 }
 
-function addFiles(list: FileList) {
+async function addFiles(list: FileList) {
   const remaining = MAX_IMAGES - totalCount.value
   if (remaining <= 0) {
     window.message?.warning(`Chỉ được tải lên tối đa ${MAX_IMAGES} ảnh`)
@@ -100,11 +100,11 @@ function addFiles(list: FileList) {
   }
 
   const items: FileItem[] = []
-  Array.from(list).slice(0, remaining).forEach((file) => {
-    const v = validateImage(file)
+  for (const file of Array.from(list).slice(0, remaining)) {
+    const v = await validateImage(file)
     if (!v.valid) {
       window.message?.warning(v.message)
-      return
+      continue
     }
     items.push({
       id: `file_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -114,7 +114,7 @@ function addFiles(list: FileList) {
       status: 'pending',
       progress: 0,
     })
-  })
+  }
 
   newFiles.value.push(...items)
   items.forEach((item) => {

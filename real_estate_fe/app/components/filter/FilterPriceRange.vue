@@ -109,6 +109,7 @@ function handleApply() {
     filterStore.filters,
     filterStore.cityOptions,
   );
+  console.log(url)
   navigateTo(url);
 }
 </script>

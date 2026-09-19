@@ -7,33 +7,24 @@
         <n-breadcrumb-item>{{ project?.name || 'Chi tiết dự án' }}</n-breadcrumb-item>
       </n-breadcrumb>
 
-      <n-spin :show="loading" size="large">
-        <template #description>
-          Đang tải thông tin dự án...
-        </template>
+      <!-- Khi lỗi/không tìm thấy -->
+      <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        <SkeletonCard :count="6" type="project" />
+      </div>
 
-        <!-- Khi lỗi/không tìm thấy -->
-        <n-empty v-if="!loading && !project" description="Không tìm thấy thông tin dự án này hoặc đã xảy ra lỗi."
-          class="py-20">
-          <template #extra>
-            <n-button type="primary" @click="navigateTo('/')">Quay lại trang chủ</n-button>
-          </template>
-        </n-empty>
+      <!-- Layout chính chia cột - Chỉ hiển thị khi project đã load thành công (khác null) -->
+      <n-grid v-else-if="project" :cols="4" :x-gap="24" :y-gap="24" item-responsive>
+        <!-- Cột trái: Thông tin chính (Chiếm 3/4) -->
+        <n-grid-item :span="3" class="min-w-0">
+          <ProjectMainInfo :project="project"/>
+          <ProjectListings :project="project" />
+        </n-grid-item>
 
-        <!-- Layout chính chia cột - Chỉ hiển thị khi project đã load thành công (khác null) -->
-        <n-grid v-else-if="project" :cols="4" :x-gap="24" :y-gap="24" item-responsive>
-          <!-- Cột trái: Thông tin chính (Chiếm 3/4) -->
-          <n-grid-item :span="3" class="min-w-0">
-            <ProjectMainInfo />
-            <ProjectListings :project-id="id" :project-name="project.name" />
-          </n-grid-item>
-
-          <!-- Cột phải: Khung liên hệ tư vấn (Chiếm 1/4) -->
-          <n-grid-item :span="1" class="relative">
-            <ProjectContactSidebar />
-          </n-grid-item>
-        </n-grid>
-      </n-spin>
+        <!-- Cột phải: Khung liên hệ tư vấn (Chiếm 1/4) -->
+        <n-grid-item :span="1" class="relative">
+          <ProjectContactSidebar />
+        </n-grid-item>
+      </n-grid>
     </n-layout-content>
   </n-layout>
 </template>

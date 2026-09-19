@@ -8,7 +8,7 @@ interface ValidationResult {
   message: string;
 }
 export function useValidate() {
-  function validateImage(file: File): ValidationResult {
+  async function validateImage(file: File): Promise<ValidationResult> {
     const allowedFormats = [
       "image/png",
       "image/jpeg",
@@ -25,7 +25,47 @@ export function useValidate() {
     if (file.size > maxSize) {
       return { valid: false, message: `Dung lượng tối đa 10MB` };
     }
-    return { valid: true, message: "" };
+
+    const imageUrl = URL.createObjectURL(file);
+    try {
+      const dimensions = await new Promise<{ width: number; height: number }>(
+        (resolve, reject) => {
+          const image = new Image();
+          image.onload = () =>
+            resolve({
+              width: image.naturalWidth,
+              height: image.naturalHeight,
+            });
+          image.onerror = () => reject(new Error("Không thể đọc ảnh"));
+          image.src = imageUrl;
+        },
+      );
+
+      if (dimensions.width < 1400 || dimensions.height < 1050) {
+        return {
+          valid: false,
+          message: `Kích thước tối thiểu 1600x1200px, ảnh hiện tại ${dimensions.width}x${dimensions.height}px`,
+        };
+      }
+
+      const ratio = dimensions.width / dimensions.height;
+      const isSquare = dimensions.width === dimensions.height;
+      const isFourByThree = Math.abs(ratio - 4 / 3) <= 0.02;
+      console.log(dimensions.width, dimensions.height);
+      console.log(isFourByThree);
+      if (!isSquare && !isFourByThree) {
+        return {
+          valid: false,
+          message: `Tỷ lệ ảnh chỉ được là 4:3 hoặc hình vuông, ảnh hiện tại ${dimensions.width}x${dimensions.height}px`,
+        };
+      }
+
+      return { valid: true, message: "" };
+    } catch {
+      return { valid: false, message: "File không phải ảnh hợp lệ" };
+    } finally {
+      URL.revokeObjectURL(imageUrl);
+    }
   }
 
   function validateVideo(file: File): ValidationResult {
@@ -61,6 +101,27 @@ export async function getPresignedUrl(
 
   if (!res.success || !res.data) {
     throw new Error(res.message || "Không thể lấy presigned URL");
+  }
+
+  return res.data;
+}
+
+export async function uploadImageToBackend(
+  file: File,
+  kind: "project" | undefined,
+  onProgress?: (pct: number) => void,
+): Promise<{ image_id: number; public_url: string; thumbnail_url?: string }> {
+  const { $api } = useNuxtApp();
+  const formData = new FormData();
+  formData.append("file", file);
+  if (kind) formData.append("kind", kind);
+  onProgress?.(10);
+
+  const res = await $api.post<ConfirmResponse>("/upload/image", formData);
+  onProgress?.(100);
+
+  if (!res.success || !res.data) {
+    throw new Error(res.message || "Upload ảnh thất bại");
   }
 
   return res.data;
@@ -125,8 +186,27 @@ export async function confirmUpload(
  * Upload hoàn chỉnh: presign → R2 → confirm, cập nhật status & progress vào item
  * @param kind "project" → confirm lưu vào bảng image_projects
  */
-export async function uploadFile(item: FileItem, kind?: "project"): Promise<void> {
+export async function uploadFile(
+  item: FileItem,
+  kind?: "project",
+): Promise<void> {
   try {
+    if (item.fileType === "image") {
+      item.status = "uploading";
+      const result = await uploadImageToBackend(item.file, kind, (pct) => {
+        item.progress = pct;
+      });
+
+      Object.assign(item, {
+        imageId: result.image_id,
+        publicUrl: result.public_url,
+        thumbnailUrl: result.thumbnail_url,
+        status: "done",
+        progress: 100,
+      });
+      return;
+    }
+
     item.status = "gettingPresign";
     const { upload_url, key, expires_at } = await getPresignedUrl(
       item.file.name,

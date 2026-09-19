@@ -1,19 +1,5 @@
 import { defineStore } from "pinia";
-
-export interface ProjectDetail {
-  id: number;
-  name: string;
-  slug: string;
-  status: string;
-  full_address: string;
-  total_area_ha?: number;
-  total_units?: number;
-  price_min?: number;
-  price_max?: number;
-  view_count?: number;
-  thumbnail?: string;
-  description?: string;
-}
+import type { ProjectDetail } from "~/types/project";
 
 export const useProjectDetail = defineStore("project_detail", () => {
   const loading = ref(false);
@@ -27,12 +13,7 @@ export const useProjectDetail = defineStore("project_detail", () => {
         `/real-estate/project/detail/${id}`,
       );
       if (res.data) {
-        project.value = {
-          ...res.data,
-          thumbnail:
-            res.data.thumbnail ||
-            "https://placehold.co/600x400/e2e8f0/94a3b8?text=Project",
-        };
+        project.value = res.data;
       }
     } catch (err) {
       console.error("Lỗi khi tải thông tin dự án:", err);

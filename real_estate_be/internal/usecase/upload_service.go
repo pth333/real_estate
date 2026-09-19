@@ -1,17 +1,18 @@
 package usecase
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"path/filepath"
 	"real_estate_be/internal/dto"
-	"strings"
 	"real_estate_be/internal/global"
 	"real_estate_be/internal/helpers"
 	model "real_estate_be/internal/models"
 	"real_estate_be/internal/repo"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -22,6 +23,7 @@ import (
 type UploadServiceInterface interface {
 	CreatePresignURL(req dto.PresignRequest) (*dto.PresignResponse, error)
 	ConfirmUpload(req dto.ConfirmUploadRequest) (*dto.ConfirmUploadResponse, error)
+	UploadImage(filename string, contentType string, payload []byte, kind string) (*dto.ConfirmUploadResponse, error)
 }
 
 type uploadService struct {
@@ -45,6 +47,53 @@ func generateObjectKey(filename string) string {
 	id := hex.EncodeToString(raw)
 	ext := filepath.Ext(filename)
 	return fmt.Sprintf("uploads/%s%s", id, ext)
+}
+
+func (s *uploadService) UploadImage(filename string, contentType string, payload []byte, kind string) (*dto.ConfirmUploadResponse, error) {
+	if err := helpers.ValidateImage(filename, contentType, int64(len(payload)), payload); err != nil {
+		return nil, fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	key := generateObjectKey(filename)
+	_, err := s.s3Client.PutObject(context.Background(), &s3.PutObjectInput{
+		Bucket:      aws.String(global.Config.R2.Bucket),
+		Key:         aws.String(key),
+		Body:        bytes.NewReader(payload),
+		ContentType: aws.String(contentType),
+	})
+	if err != nil {
+		return nil, fiber.NewError(fiber.StatusInternalServerError, "Upload ảnh lên storage thất bại")
+	}
+
+	imageURL := global.Config.R2.PublicURL + "/" + key
+	deleteUploadedObject := func() {
+		_, _ = s.s3Client.DeleteObject(context.Background(), &s3.DeleteObjectInput{
+			Bucket: aws.String(global.Config.R2.Bucket),
+			Key:    aws.String(key),
+		})
+	}
+
+	if kind == "project" {
+		projectImage := &model.ImageProject{
+			Key: key, Filename: filename, FileType: contentType,
+			FileSize: int64(len(payload)), URL: imageURL,
+		}
+		if err := s.imageRepo.CreateProjectImage(projectImage); err != nil {
+			deleteUploadedObject()
+			return nil, fiber.NewError(fiber.StatusInternalServerError, "Lưu thông tin ảnh dự án thất bại")
+		}
+		return &dto.ConfirmUploadResponse{ImageID: projectImage.ID, PublicURL: imageURL, Key: key}, nil
+	}
+
+	image := &model.Image{
+		Key: key, Filename: filename, FileType: contentType,
+		FileSize: int64(len(payload)), URL: imageURL,
+	}
+	if err := s.imageRepo.Create(image); err != nil {
+		deleteUploadedObject()
+		return nil, fiber.NewError(fiber.StatusInternalServerError, "Lưu thông tin ảnh thất bại")
+	}
+	return &dto.ConfirmUploadResponse{ImageID: image.ID, PublicURL: imageURL, Key: key}, nil
 }
 
 func (s *uploadService) CreatePresignURL(req dto.PresignRequest) (*dto.PresignResponse, error) {

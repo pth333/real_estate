@@ -65,7 +65,7 @@ export const useCreatePost = defineStore("create-post", () => {
 
   const stepProgress: Record<string, number> = {
     information: 50,
-    upload: 50,
+    upload: 100,
     // review: 100,
   };
 

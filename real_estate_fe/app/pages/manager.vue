@@ -76,10 +76,10 @@ const activeKey = computed<"projects" | "posts" | "customers" | "favorites">(() 
   if (route.path.includes("tao-du-an")) {
     return "projects";
   }
-  if (route.path.includes("quan-ly-khach-hang") || route.path.includes("customers")) {
+  if (route.path.includes("quan-ly-khach-hang") ) {
     return "customers";
   }
-  if (route.path.includes("quan-ly-yeu-thich") || route.path.includes("favorites")) {
+  if (route.path.includes("quan-ly-yeu-thich")) {
     return "favorites";
   }
   return "posts";

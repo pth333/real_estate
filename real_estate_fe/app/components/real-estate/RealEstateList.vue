@@ -21,8 +21,7 @@
 
     <!-- Data grid -->
     <div v-else class="mb-8 flex flex-col gap-4">
-      <RealEstateCard v-for="estate in realEstates" :key="estate.id" :estate="estate" @call="handleCall"
-        @toggle-favorite="handleToggleFavorite" />
+      <RealEstateCard :realEstates="realEstates" />
     </div>
 
     <!-- Pagination -->
@@ -117,22 +116,11 @@ watch(
     realEstateStore.currentPage = Number.isNaN(pageNumber) ? 1 : pageNumber;
 
     fetchDataRealEstate();
-    // console.log(realEstateStore.currentPage);
-
   },
   { immediate: true },
 );
 
-function handleCall(phone: string) {
-  window.open(`tel:${phone}`, "_self");
-}
 
-function handleToggleFavorite(id: number, isFavorite: boolean) {
-  const estate = realEstates.value.find((e: RealEstateResponse) => e.id === id);
-  if (estate) {
-    estate.is_favorite = isFavorite;
-  }
-}
 
 const handleSearch = async () => {
   // Server-driven: đưa keyword vào query để server chạy FULLTEXT

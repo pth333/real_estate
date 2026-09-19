@@ -56,7 +56,7 @@ const loading = ref(false)
 
 // Data + phân trang được cache trong managerStore
 const projects = computed(() => managerStore.projects)
-const total = computed(() => managerStore.projectsTotal)
+// const total = computed(() => managerStore.projectsTotal)
 const totalPages = computed(() => Math.ceil(managerStore.projectsTotal / managerStore.projectsSize) || 1)
 const searchQuery = computed({
   get: () => managerStore.projectsSearch,

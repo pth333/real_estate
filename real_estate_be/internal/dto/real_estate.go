@@ -81,17 +81,18 @@ type ProvinceResponse struct {
 }
 
 type ProjectResponse struct {
-	ID          uint64   `json:"id"`
-	Name        string   `json:"name"`
-	Slug        string   `json:"slug,omitempty"`
-	Status      string   `json:"status,omitempty"`
-	FullAddress string   `json:"full_address,omitempty"`
-	TotalAreaHA *float64 `json:"total_area_ha,omitempty"`
-	TotalUnits  *uint32  `json:"total_units,omitempty"`
-	PriceMin    *float64 `json:"price_min,omitempty"`
-	PriceMax    *float64 `json:"price_max,omitempty"`
-	ViewCount   uint32   `json:"view_count"`
-	Thumbnail   string   `json:"thumbnail,omitempty"`
+	ID          uint64          `json:"id"`
+	Name        string          `json:"name"`
+	Slug        string          `json:"slug,omitempty"`
+	Status      string          `json:"status,omitempty"`
+	FullAddress string          `json:"full_address,omitempty"`
+	TotalAreaHA *float64        `json:"total_area_ha,omitempty"`
+	TotalUnits  *uint32         `json:"total_units,omitempty"`
+	PriceMin    *float64        `json:"price_min,omitempty"`
+	PriceMax    *float64        `json:"price_max,omitempty"`
+	ViewCount   uint32          `json:"view_count"`
+	Thumbnail   string          `json:"thumbnail,omitempty"`
+	Images      []ImageResponse `json:"images,omitempty"`
 }
 
 type ListProjectRequest struct {

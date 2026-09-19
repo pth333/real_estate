@@ -16,6 +16,7 @@ func InitUploadRoutes(Router fiber.Router, s3Client *s3.Client) {
 
 	uploadRouter := Router.Group("/upload", middleware.AuthMiddleware)
 	{
+		uploadRouter.Post("/image", uploadController.UploadImage)
 		uploadRouter.Post("/presign", uploadController.Presign)
 		uploadRouter.Post("/confirm", uploadController.Confirm)
 	}

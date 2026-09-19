@@ -86,9 +86,9 @@ export const useManagerStore = defineStore('manager', () => {
   const favoritesLoaded = ref(false)
 
   async function fetchFavorites(opts: { page: number; size: number }) {
-    if (favoritesLoaded.value && favoritesPage.value === opts.page) {
-      return
-    }
+    // if (favoritesLoaded.value && favoritesPage.value === opts.page) {
+    //   return
+    // }
     favoritesPage.value = opts.page
     favoritesSize.value = opts.size
     try {

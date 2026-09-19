@@ -1,91 +1,207 @@
 <template>
-  <n-space v-if="project" vertical :size="24">
-    <!-- Gallery ảnh -->
-    <n-card content-style="padding: 0;" class="overflow-hidden rounded-xl border border-gray-100 shadow-sm relative h-[450px]">
-      <img :src="project.thumbnail" :alt="project.name" class="w-full h-full object-cover" />
-      <div class="absolute bottom-4 right-4">
-        <n-button secondary strong round type="tertiary" size="small" class="bg-black/60! text-white! flex items-center gap-1">
-          <IconImage class="h-3.5 w-3.5" />
-          Xem tất cả hình ảnh
+  <div v-if="project" class="flex flex-col gap-6">
+    <!-- Gallery -->
+    <div class="relative h-90 cursor-pointer overflow-hidden rounded-xl" @click="openLightbox(0)">
+      <div class="grid h-full gap-1" :style="gridStyle">
+        <!-- Ảnh lớn đầu tiên -->
+        <div class="row-span-2 overflow-hidden">
+          <img :src="images[0]?.url" :alt="images[0]?.file_name" class="h-full w-full object-cover" />
+        </div>
+
+        <!-- Các ảnh còn lại dynamic -->
+        <div v-for="(img, idx) in previewImages" :key="img.id" class="relative overflow-hidden">
+          <img :src="img.thumbnail_url || img.url" :alt="img.file_name" class="h-full w-full object-cover" />
+
+          <!-- Badge +N ở ảnh cuối -->
+          <div
+            v-if="idx === previewImages.length - 1 && remainingCount > 0"
+            class="absolute inset-0 flex items-center justify-center bg-black/50 text-lg font-semibold text-white"
+          >
+            +{{ remainingCount }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Nút xem tất cả -->
+      <div class="absolute bottom-3 right-3">
+        <n-button size="small" round secondary @click.stop="openLightbox(0)">
+          <template #icon>
+            <IconImage />
+          </template>
+          Xem tất cả {{ images.length }} ảnh
         </n-button>
       </div>
-    </n-card>
+    </div>
 
-    <!-- Tiêu đề, địa chỉ và trạng thái -->
-    <n-space vertical :size="8">
-      <n-space align="center" :size="12">
+    <!-- Title block -->
+    <div class="flex flex-col gap-2">
+      <div class="flex items-center gap-3">
         <n-tag :type="statusTagType(project.status)" size="small" round class="font-semibold shadow-sm">
           {{ formatStatus(project.status) }}
         </n-tag>
-        <n-text depth="3" class="text-xs flex items-center gap-1">
-          <IconEye class="h-3.5 w-3.5 text-gray-400" />
+        <span class="flex items-center gap-1 text-xs text-gray-400">
+          <IconEye class="h-3.5 w-3.5" />
           Lượt xem: {{ project.view_count || 0 }}
-        </n-text>
-      </n-space>
+        </span>
+      </div>
 
-      <n-h1 class="text-2xl! font-bold! m-0! text-gray-900! leading-snug">{{ project.name }}</n-h1>
-      <n-text depth="3" class="text-sm flex items-start gap-1">
-        <IconMapPin class="h-4 w-4 text-gray-400 mt-0.5 shrink-0" />
+      <h1 class="m-0 text-2xl font-bold leading-snug text-gray-900">{{ project.name }}</h1>
+      <span class="flex items-start gap-1 text-sm text-gray-400">
+        <IconMapPin class="mt-0.5 h-4 w-4 shrink-0" />
         {{ project.full_address || 'Địa chỉ đang cập nhật' }}
-      </n-text>
-    </n-space>
+      </span>
+    </div>
 
-    <!-- Thông tin cơ bản dạng Grid/Cards Naive UI -->
-    <n-grid :cols="3" :x-gap="16" :y-gap="16" item-responsive class="w-full">
-      <n-grid-item>
-        <n-card size="small" class="bg-gray-50/50 border border-gray-100/50 rounded-xl">
-          <n-space vertical :size="4">
-            <n-text depth="3" class="text-[10px] font-bold tracking-wider uppercase">QUY MÔ</n-text>
-            <n-text class="text-base font-bold text-gray-800">
-              {{ project.total_area_ha ? project.total_area_ha + ' ha' : 'Đang cập nhật' }}
-            </n-text>
-          </n-space>
-        </n-card>
-      </n-grid-item>
+    <!-- Stats grid -->
+    <div class="grid grid-cols-3 gap-4">
+      <div class="rounded-xl border border-gray-100/50 bg-gray-50/50 p-3">
+        <div class="flex flex-col gap-1">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">QUY MÔ</span>
+          <span class="text-base font-bold text-gray-800">
+            {{ project.total_area_ha ? `${project.total_area_ha} ha` : 'Đang cập nhật' }}
+          </span>
+        </div>
+      </div>
 
-      <n-grid-item>
-        <n-card size="small" class="bg-gray-50/50 border border-gray-100/50 rounded-xl">
-          <n-space vertical :size="4">
-            <n-text depth="3" class="text-[10px] font-bold tracking-wider uppercase">SỐ CĂN HỘ / NỀN</n-text>
-            <n-text class="text-base font-bold text-gray-800">
-              {{ project.total_units ? project.total_units + ' căn' : 'Đang cập nhật' }}
-            </n-text>
-          </n-space>
-        </n-card>
-      </n-grid-item>
+      <div class="rounded-xl border border-gray-100/50 bg-gray-50/50 p-3">
+        <div class="flex flex-col gap-1">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">SỐ CĂN HỘ / NỀN</span>
+          <span class="text-base font-bold text-gray-800">
+            {{ project.total_units ? `${project.total_units} căn` : 'Đang cập nhật' }}
+          </span>
+        </div>
+      </div>
 
-      <n-grid-item>
-        <n-card size="small" class="bg-gray-50/50 border border-gray-100/50 rounded-xl">
-          <n-space vertical :size="4">
-            <n-text depth="3" class="text-[10px] font-bold tracking-wider uppercase">KHOẢNG GIÁ</n-text>
-            <n-text type="success" class="text-base font-bold text-emerald-600">
-              {{ formatPriceRange(project.price_min, project.price_max) }}
-            </n-text>
-          </n-space>
-        </n-card>
-      </n-grid-item>
-    </n-grid>
+      <div class="rounded-xl border border-gray-100/50 bg-gray-50/50 p-3">
+        <div class="flex flex-col gap-1">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">KHOẢNG GIÁ</span>
+          <span class="text-base font-bold text-emerald-600">
+            {{ formatPriceRange(project.price_min, project.price_max) }}
+          </span>
+        </div>
+      </div>
+    </div>
 
-    <!-- Giới thiệu dự án -->
-    <n-card title="Thông tin chi tiết" header-style="border-bottom: 1px solid #f3f4f6; padding: 12px 16px;" class="rounded-xl border border-gray-100 shadow-sm">
-      <n-space vertical :size="12" class="text-sm text-gray-600 leading-relaxed">
-        <n-text>
+    <!-- Detail card -->
+    <div class="rounded-xl border border-gray-100 shadow-sm">
+      <div class="border-b border-gray-100 px-4 py-3 font-semibold text-gray-800">Thông tin chi tiết</div>
+      <div class="flex flex-col gap-3 p-4 text-sm leading-relaxed text-gray-600">
+        <p class="m-0">
           Dự án <strong>{{ project.name }}</strong> tọa lạc tại vị trí đắc địa thuộc khu vực {{ project.full_address }}.
-          Với tổng quy mô đầu tư phát triển lên đến {{ project.total_area_ha ? project.total_area_ha + ' ha' : 'nhiều ha' }},
+          Với tổng quy mô đầu tư phát triển lên đến {{ project.total_area_ha ? `${project.total_area_ha} ha` : 'nhiều ha' }},
           dự án hứa hẹn sẽ mang đến không gian sống đẳng cấp, tiện nghi cùng cơ hội đầu tư sinh lời vượt trội cho quý khách hàng.
-        </n-text>
-        <n-text>
-          Được quy hoạch bài bản đồng bộ với tổng số lượng sản phẩm khoảng {{ project.total_units ? project.total_units + ' căn hộ/nhà phố' : 'nhiều sản phẩm đa dạng' }},
+        </p>
+        <p class="m-0">
+          Được quy hoạch bài bản đồng bộ với tổng số lượng sản phẩm khoảng {{ project.total_units ? `${project.total_units} căn hộ/nhà phố` : 'nhiều sản phẩm đa dạng' }},
           thiết kế hiện đại chuẩn xanh, tối ưu hóa công năng và ánh sáng tự nhiên.
-        </n-text>
-      </n-space>
-    </n-card>
-  </n-space>
+        </p>
+      </div>
+    </div>
+
+    <n-modal
+      v-model:show="showLightbox"
+      :mask-closable="true"
+      :closable="true"
+      preset="card"
+      class="!m-0 !max-w-[100vw] !rounded-none !border-0 !p-0"
+      style="width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.9);"
+    >
+      <div
+        class="flex h-full flex-col bg-black/90"
+        tabindex="0"
+        @keydown.left.prevent="prev"
+        @keydown.right.prevent="next"
+      >
+        <!-- Header -->
+        <div class="flex items-center justify-between px-6 py-4 text-white">
+          <span class="text-sm text-white/70">{{ currentIndex + 1 }} / {{ images.length }}</span>
+          <button
+            class="rounded-full p-2 text-white/70 transition hover:bg-white/10 hover:text-white"
+            @click="showLightbox = false"
+          >
+            <IconX class="h-5 w-5" />
+          </button>
+        </div>
+
+        <!-- Main image -->
+        <div class="relative flex flex-1 items-center justify-center px-10 py-2">
+          <button
+            class="absolute left-4 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
+            @click="prev"
+          >
+            <IconChevronLeft class="h-6 w-6" />
+          </button>
+
+          <img
+            :src="images[currentIndex]?.url"
+            class="max-h-[72vh] max-w-[78vw] rounded-lg object-contain shadow-2xl"
+          />
+
+          <button
+            class="absolute right-4 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
+            @click="next"
+          >
+            <IconChevronRight class="h-6 w-6" />
+          </button>
+        </div>
+
+        <!-- Thumbnail strip -->
+        <div class="thumbnail-strip flex justify-center gap-2 overflow-x-auto px-4 pb-5 pt-2">
+          <div
+            v-for="(img, idx) in images"
+            :key="img.id"
+            class="h-16 w-16 shrink-0 cursor-pointer overflow-hidden rounded-md border border-white/10 transition-all"
+            :class="idx === currentIndex ? 'scale-105 border-white ring-2 ring-white' : 'opacity-60 hover:opacity-90'"
+            @click="currentIndex = idx"
+          >
+            <img :src="img.thumbnail_url || img.url" class="h-full w-full object-cover" />
+          </div>
+        </div>
+      </div>
+    </n-modal>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { useProjectDetail } from '~/stores/detail/project_detail';
+import type { ProjectDetail } from '~/types/project';
+import { formatPriceRange, formatStatus, statusTagType } from '~/utils/format';
 
-const store = useProjectDetail();
-const { project } = storeToRefs(store);
+const MAX_PREVIEW = 5
+
+const props = defineProps<{
+  project: ProjectDetail;
+}>();
+
+const images = computed(() => props.project.images ?? [])
+const previewImages = computed(() => images.value.slice(1, MAX_PREVIEW))
+const remainingCount = computed(() => Math.max(0, images.value.length - MAX_PREVIEW))
+const gridStyle = computed(() => {
+  const cols = Math.min(Math.ceil(previewImages.value.length / 2), 2)
+  return {
+    gridTemplateColumns: `2fr ${Array(cols).fill('1fr').join(' ')}`,
+  }
+})
+
+const showLightbox = ref(false)
+const currentIndex = ref(0)
+const lightboxRef = ref<HTMLElement | null>(null)
+
+
+
+function openLightbox(idx: number) {
+  if (!images.value.length) return
+  currentIndex.value = idx
+  showLightbox.value = true
+}
+
+function prev() {
+  if (!images.value.length) return
+  currentIndex.value = (currentIndex.value - 1 + images.value.length) % images.value.length
+}
+
+function next() {
+  if (!images.value.length) return
+  currentIndex.value = (currentIndex.value + 1) % images.value.length
+}
 </script>
+

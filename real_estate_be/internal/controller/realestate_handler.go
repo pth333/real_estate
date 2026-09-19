@@ -473,6 +473,13 @@ func (h *RealEstateHandler) GetProjectDetail(c *fiber.Ctx) error {
 		})
 	}
 
+	images, err := h.service.GetImagesByProjectID(id)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"message": "Images not found",
+		})
+	}
+
 	res := dto.ProjectResponse{
 		ID:          project.ID,
 		Name:        project.Name,
@@ -484,10 +491,12 @@ func (h *RealEstateHandler) GetProjectDetail(c *fiber.Ctx) error {
 		PriceMin:    project.PriceMin,
 		PriceMax:    project.PriceMax,
 		ViewCount:   uint32(project.ViewCount),
+		Images:      images,
 	}
-	resList := []dto.ProjectResponse{res}
-	h.populateProjectThumbnails(resList)
-	res = resList[0]
+
+	// resList := []dto.ProjectResponse{res}
+	// h.populateProjectThumbnails(resList)
+	// res = resList[0]
 
 	return c.JSON(fiber.Map{
 		"data": res,

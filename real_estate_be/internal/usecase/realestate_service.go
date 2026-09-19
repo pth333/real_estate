@@ -49,6 +49,7 @@ type IRealEstateService interface {
 	GetProjectByID(id uint64) (*model.RealEstateProject, error)
 	GetRecommendations(userID uint64, sessionID string, limit int) ([]dto.RealEstateResponse, error)
 	GetRealEstateListingsByProjectID(projectID uint64) ([]dto.RealEstateResponse, error)
+	GetImagesByProjectID(projectID uint64) ([]dto.ImageResponse, error)
 
 	// ── Bất động sản yêu thích (favorite) ──
 	ToggleFavorite(userID, realEstateID uint64) (bool, error)
@@ -146,11 +147,13 @@ func (s *RealEstateService) ListRealEstateByCategory(req dto.RealEstateSearchReq
 		data, total, err = s.repo.GetList(req, offset, limit)
 	}
 
-	s.MapRealEstateResponse(data)
-
 	if err != nil {
 		return nil, 0, err
 	}
+
+	s.MapRealEstateResponse(data)
+
+	s.flagFavorites(data, userID)
 
 	// Tự động lưu lịch sử tìm kiếm tối giản nếu tìm thấy kết quả
 	if req.Search != "" && len(data) > 0 {
@@ -447,4 +450,9 @@ func (s *RealEstateService) GetRealEstateListingsByProjectID(projectID uint64) (
 	}
 	// Lấy danh sách bất động sản theo ID dự án
 	return s.repo.GetRealEstateListingsByProjectID(projectID)
+}
+
+func (s *RealEstateService) GetImagesByProjectID(projectID uint64) ([]dto.ImageResponse, error) {
+	// Lấy danh sách hình ảnh theo ID dự án
+	return s.imageRepo.GetImagesByProjectID(projectID)
 }

@@ -5,7 +5,7 @@
         <div class="flex items-center justify-between mb-4">
             <div class="flex items-center gap-2">
                 <h3 class="text-lg font-semibold text-gray-800">
-                    Tin mua bán tại {{ projectName }}
+                    Tin mua bán tại {{ project.name }}
                 </h3>
             </div>
 
@@ -81,11 +81,11 @@
 </template>
 
 <script setup lang="ts">
+import type { ProjectDetail } from '~/types/project';
 import type { RealEstateResponse } from '~/types/real_estate';
 
 const props = defineProps<{
-    projectId: number
-    projectName: string
+    project: ProjectDetail
 }>()
 
 const { $api } = useNuxtApp()
@@ -104,7 +104,7 @@ const fetchListings = async () => {
     loading.value = true
     try {
         const res = await $api.get<{ data: RealEstateResponse[] }>(
-            `/real-estate/project/${props.projectId}/listings`
+            `/real-estate/project/${props.project.id}/listings`
         )
         items.value = res.data || []
     } catch (err) {
