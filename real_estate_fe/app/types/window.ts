@@ -54,10 +54,16 @@ export class UserMenu {
   constructor(role?: string) {
     this.role = role;
     this.options = [
+      // Mục dành cho khách hàng
+      new UserMenuOption("my-deposits", "Đơn đặt cọc của tôi", "/tai-khoan/dat-coc"),
+      // Mục dành cho môi giới
       new UserMenuOption("manage-projects", "Quản lý dự án", "/nguoi-ban/quan-ly-du-an"),
       new UserMenuOption("manage-posts", "Quản lý bài viết", "/nguoi-ban/quan-ly-tin-dang"),
+      new UserMenuOption("manage-deposits", "Đơn đặt cọc xem nhà", "/nguoi-ban/quan-ly-dat-coc"),
       new UserMenuOption("manage-customers", "Quản lý khách hàng", "/nguoi-ban/quan-ly-khach-hang"),
       new UserMenuOption("manage-favorites", "Quản lý yêu thích", "/nguoi-ban/quan-ly-yeu-thich"),
+      // Mục chỉ admin thấy
+      new UserMenuOption("admin-escrow", "Quản trị escrow", "/admin", ["ADMIN"]),
       new UserMenuOption("logout", "Đăng xuất")
     ];
   }

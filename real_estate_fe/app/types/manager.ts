@@ -25,6 +25,8 @@ export interface ManagerProject {
   thumbnail: string;
   total_area_ha: number | null;
   total_units: number | null;
+  /** Số căn đã chốt bán — chỉ tăng khi admin duyệt tài liệu mua nhà */
+  sold_units: number;
   price_min: number | null;
   price_max: number | null;
   created_at: string;

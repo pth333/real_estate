@@ -45,6 +45,8 @@ type ManagerProjectResponse struct {
 	Thumbnail       string   `json:"thumbnail"`
 	TotalAreaHA     *float64 `json:"total_area_ha"`
 	TotalUnits      *uint32  `json:"total_units"`
+	// Số căn đã chốt bán — chỉ tăng khi admin duyệt tài liệu mua nhà
+	SoldUnits       uint32   `json:"sold_units"`
 	PriceMin        *float64 `json:"price_min"`
 	PriceMax        *float64 `json:"price_max"`
 	CreatedAt       string   `json:"created_at"`
@@ -63,6 +65,7 @@ type ManagerProjectDetailResponse struct {
 	WardCode              string   `json:"ward"`
 	TotalAreaHA           *float64 `json:"total_area_ha"`
 	TotalUnits            *uint32  `json:"total_units"`
+	SoldUnits             uint32   `json:"sold_units"`
 	PriceMin              *float64 `json:"price_min"`
 	PriceMax              *float64 `json:"price_max"`
 	ConstructionStartDate string   `json:"construction_start_date"` // format "2006-01-02"

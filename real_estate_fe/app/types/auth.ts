@@ -23,4 +23,7 @@ export interface UserInfo {
   id: number
   email: string
   name: string
+  phone?: string
+  /** Vai trò: CUSTOMER / BROKER / ADMIN — dùng để điều hướng giao diện */
+  role?: 'CUSTOMER' | 'BROKER' | 'ADMIN'
 }

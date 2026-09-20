@@ -49,6 +49,7 @@ func (h *AuthService) Register(req dto.CreateUserRequest) error {
 		Email:    req.Email,
 		Password: string(hash),
 		Name:     req.Name,
+		Role:     model.RoleCustomer,
 	}
 	return h.repo.Register(user)
 }
@@ -77,6 +78,8 @@ func (h *AuthService) Login(req dto.LoginRequest) (string, string, *dto.UserResp
 		ID:    user.ID,
 		Name:  user.Name,
 		Email: user.Email,
+		Phone: user.Phone,
+		Role:  user.Role,
 	}
 
 	return accessToken, refreshToken, userRes, nil

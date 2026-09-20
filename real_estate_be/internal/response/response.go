@@ -43,6 +43,10 @@ func Unauthorized(c *fiber.Ctx, message string, err interface{}) error {
 	return Error(c, fiber.StatusUnauthorized, message, err)
 }
 
+func Forbidden(c *fiber.Ctx, message string, err interface{}) error {
+	return Error(c, fiber.StatusForbidden, message, err)
+}
+
 func InternalServerError(c *fiber.Ctx, message string, err interface{}) error {
 	return Error(c, fiber.StatusInternalServerError, message, err)
 }

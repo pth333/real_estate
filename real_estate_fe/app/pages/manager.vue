@@ -69,12 +69,15 @@ definePageMeta({
 const route = useRoute();
 
 // Tự động suy ra activeKey dựa trên URL hiện tại
-const activeKey = computed<"projects" | "posts" | "customers" | "favorites">(() => {
+const activeKey = computed<"projects" | "posts" | "customers" | "favorites" | "deposits">(() => {
   if (route.path.includes("quan-ly-du-an") || route.path.includes("projects")) {
     return "projects";
   }
   if (route.path.includes("tao-du-an")) {
     return "projects";
+  }
+  if (route.path.includes("quan-ly-dat-coc") || route.path.includes("deposits")) {
+    return "deposits";
   }
   if (route.path.includes("quan-ly-khach-hang") ) {
     return "customers";
@@ -87,6 +90,7 @@ const activeKey = computed<"projects" | "posts" | "customers" | "favorites">(() 
 
 const currentTitle = computed(() => {
   if (activeKey.value === "projects") return "Danh sách dự án";
+  if (activeKey.value === "deposits") return "Đơn đặt cọc xem nhà";
   if (activeKey.value === "posts") return "Danh sách bài đăng của bạn";
   if (activeKey.value === "customers") return "Danh sách khách hàng đăng ký";
   return "Danh mục bất động sản yêu thích";

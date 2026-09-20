@@ -24,3 +24,29 @@ redis:
 
 recommendation:
   addr: recommendation:50051
+
+# ── Luồng đặt cọc escrow ─────────────────────────────
+payment:
+  return_url: http://soihieuland.io.vn/thanh-toan/ket-qua
+  ipn_url: http://136.85.81.118/api/2026/deposits/payment/ipn
+  vnpay:
+    tmn_code: ""
+    hash_secret: ""
+    payment_url: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+    locale: vn
+    expire_minutes: 15
+
+deposit:
+  # Mức cọc/phí dự phòng khi BĐS chưa có giá (bình thường tra bảng deposit_policies)
+  default_amount: 5000000
+  default_broker_fee: 200000
+  broker_confirm_hours: 24
+  otp_valid_minutes: 10
+  checkin_grace_hours: 2
+  report_window_hours: 24
+  dispute_evidence_hours: 48
+  payment_timeout_minutes: 30
+  cron_interval_seconds: 60
+
+admin:
+  email: ""

@@ -23,4 +23,7 @@ type UserResponse struct {
 	ID    uint64 `json:"id"`
 	Name  string `json:"name"`
 	Email string `json:"email"`
+	Phone string `json:"phone"`
+	// Vai trò dùng để FE điều hướng: CUSTOMER / BROKER / ADMIN
+	Role string `json:"role"`
 }

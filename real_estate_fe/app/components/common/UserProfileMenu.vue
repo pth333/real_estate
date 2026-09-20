@@ -22,7 +22,8 @@ import { UserMenu } from "~/types/window";
 
 // Khởi tạo các store và class quản lý menu người dùng
 const auth = useAuthStore();
-const userMenu = new UserMenu();
+// Truyền role để menu lọc đúng mục theo vai trò (khách / môi giới / admin)
+const userMenu = new UserMenu(auth.user?.role);
 
 // Map danh sách tùy chọn từ class sang cấu trúc của Naive UI dropdown dựa trên role, kèm icon và divider
 const dropdownOptions = computed(() => {
@@ -51,6 +52,10 @@ const dropdownOptions = computed(() => {
           iconComp = resolveComponent("IconPhone");
         } else if (option.key === "manage-favorites") {
           iconComp = resolveComponent("IconHeart");
+        } else if (option.key === "my-deposits" || option.key === "manage-deposits") {
+          iconComp = resolveComponent("IconWallet");
+        } else if (option.key === "admin-escrow") {
+          iconComp = resolveComponent("IconShieldCheck");
         } else if (option.key === "logout") {
           iconComp = resolveComponent("IconLock");
         }

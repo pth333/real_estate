@@ -14,9 +14,11 @@ type IUserRepository interface {
 	Register(item *model.User) error
 	FindByEmail(email string) (*model.User, error)
 	FindByPhone(phone string) (*model.User, error)
+	FindByID(id uint64) (*model.User, error)
 	CreateUserByPhone(phone string) (*model.User, error)
 	MarkPhoneVerified(phone string) error
 	UpdatePhoneByEmail(email string, phone string) error
+	UpdateFields(id uint64, fields map[string]interface{}) error
 }
 
 func NewUserRepository(db *gorm.DB) IUserRepository {
@@ -41,6 +43,19 @@ func (r *UserRepository) FindByPhone(phone string) (*model.User, error) {
 		return nil, err
 	}
 	return &user, nil
+}
+
+func (r *UserRepository) FindByID(id uint64) (*model.User, error) {
+	var user model.User
+	if err := r.db.First(&user, id).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+// UpdateFields cập nhật một phần cột của user (role, rating, bảo lãnh...).
+func (r *UserRepository) UpdateFields(id uint64, fields map[string]interface{}) error {
+	return r.db.Model(&model.User{}).Where("id = ?", id).Updates(fields).Error
 }
 
 func (r *UserRepository) CreateUserByPhone(phone string) (*model.User, error) {

@@ -36,6 +36,8 @@ func InitRouter() *fiber.App {
 		routers.InitAIRoutes(MainGroup)
 		// Manager Routes (Sử dụng Google Wire chuẩn quy hoạch)
 		routers.InitManagerRoutes(MainGroup)
+		// Đặt cọc escrow (khách / môi giới / admin)
+		routers.InitDepositRoutes(MainGroup)
 	}
 
 	return app

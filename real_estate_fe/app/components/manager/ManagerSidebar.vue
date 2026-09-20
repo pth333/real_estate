@@ -46,9 +46,10 @@ import IconCreateOutline from "~/icons/IconCreateOutline.vue";
 import IconUser from "~/icons/IconUser.vue";
 import IconHeart from "~/icons/IconHeart.vue";
 import IconAddOutline from "~/icons/IconAddOutline.vue";
+import IconWallet from "~/icons/IconWallet.vue";
 
 const props = defineProps<{
-  activeKey: "projects" | "posts" | "customers" | "favorites";
+  activeKey: "projects" | "posts" | "customers" | "favorites" | "deposits";
 }>();
 
 const activeKey = ref<string>(props.activeKey);
@@ -69,6 +70,11 @@ const menuOptions: MenuOption[] = [
     label: "Quản lý bài viết",
     key: "posts",
     icon: renderIcon(IconCreateOutline),
+  },
+  {
+    label: "Đơn đặt cọc",
+    key: "deposits",
+    icon: renderIcon(IconWallet),
   },
   {
     label: "Quản lý khách hàng",
@@ -96,6 +102,8 @@ const handleMenuSelect = (key: string) => {
     navigateTo("/nguoi-ban/quan-ly-tin-dang");
   } else if (key === "customers") {
     navigateTo("/nguoi-ban/quan-ly-khach-hang");
+  } else if (key === "deposits") {
+    navigateTo("/nguoi-ban/quan-ly-dat-coc");
   } else if (key === "favorites") {
     navigateTo("/nguoi-ban/quan-ly-yeu-thich");
   }

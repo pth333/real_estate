@@ -88,6 +88,8 @@ type ProjectResponse struct {
 	FullAddress string          `json:"full_address,omitempty"`
 	TotalAreaHA *float64        `json:"total_area_ha,omitempty"`
 	TotalUnits  *uint32         `json:"total_units,omitempty"`
+	// SoldUnits số căn đã chốt bán (chỉ tăng khi admin duyệt tài liệu mua nhà)
+	SoldUnits   uint32          `json:"sold_units"`
 	PriceMin    *float64        `json:"price_min,omitempty"`
 	PriceMax    *float64        `json:"price_max,omitempty"`
 	ViewCount   uint32          `json:"view_count"`

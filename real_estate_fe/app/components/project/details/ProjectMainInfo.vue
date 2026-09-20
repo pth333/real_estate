@@ -69,6 +69,11 @@
           <span class="text-base font-bold text-gray-800">
             {{ project.total_units ? `${project.total_units} căn` : 'Đang cập nhật' }}
           </span>
+          <!-- Tồn kho: chỉ trừ khi admin duyệt tài liệu mua nhà của khách -->
+          <span v-if="remainingUnits !== null"
+            :class="remainingUnits === 0 ? 'text-xs font-semibold text-red-500' : 'text-xs font-medium text-emerald-600'">
+            {{ remainingUnits === 0 ? 'Đã hết căn' : `Còn ${remainingUnits} căn` }}
+          </span>
         </div>
       </div>
 
@@ -173,6 +178,11 @@ const props = defineProps<{
 }>();
 
 const images = computed(() => props.project.images ?? [])
+// Tồn kho còn lại = total_units - sold_units; null khi dự án không giới hạn số căn
+const remainingUnits = computed(() => {
+  if (props.project.total_units == null) return null
+  return Math.max(0, props.project.total_units - (props.project.sold_units ?? 0))
+})
 const previewImages = computed(() => images.value.slice(1, MAX_PREVIEW))
 const remainingCount = computed(() => Math.max(0, images.value.length - MAX_PREVIEW))
 const gridStyle = computed(() => {

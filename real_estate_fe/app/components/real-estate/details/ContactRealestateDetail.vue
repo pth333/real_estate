@@ -34,7 +34,13 @@
 
             <!-- Action buttons -->
             <n-space vertical>
-                <n-button v-if="realEstateDetailStore.listing?.agent_phone" type="primary" block @click="handleCall">
+                <n-button type="primary" block @click="showBookingModal = true">
+                    <template #icon>
+                        <IconWallet />
+                    </template>
+                    Đặt cọc giữ lịch xem nhà
+                </n-button>
+                <n-button v-if="realEstateDetailStore.listing?.agent_phone" block ghost @click="handleCall">
                     <template #icon>
                         <IconPhone />
                     </template>
@@ -44,13 +50,26 @@
                     Chia sẻ tin đăng này
                 </n-button>
             </n-space>
+
+            <!-- Modal đặt cọc: mức cọc do hệ thống tính theo giá BĐS, tiền platform giữ -->
+            <DepositBookingModal v-if="listingId" v-model:show="showBookingModal" :real-estate-id="listingId"
+                :estate-title="realEstateDetailStore.listing?.title" />
         </div>
     </div>
 </template>
 <script setup lang="ts">
+import { ref } from 'vue';
 import { useRealEstateDetail } from '~/stores/detail/real_estate_detail';
+import IconWallet from '~/icons/IconWallet.vue';
+import DepositBookingModal from '~/components/deposit/DepositBookingModal.vue';
+
 const realEstateDetailStore = useRealEstateDetail()
 
+// Trạng thái mở modal đặt cọc
+const showBookingModal = ref(false);
+
+// ID BĐS đang xem — bắt buộc phải có mới đặt cọc được
+const listingId = computed(() => realEstateDetailStore.listing?.id ?? 0);
 
 const agentInitial = computed(() => {
     const name = realEstateDetailStore.listing?.agent_name || 'Q';

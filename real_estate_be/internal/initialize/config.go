@@ -64,6 +64,10 @@ func LoadConfig() {
 	// v.BindEnv("vonage.vonage_api_key", "RE_VONAGE_API_KEY")
 	// v.BindEnv("vonage.vonage_api_secret", "RE_VONAGE_API_SECRET")
 	v.BindEnv("infobip.api_key", "RE_INFOBIP_API_KEY")
+	// Cổng thanh toán + admin (chỉ có trong .env / env hệ thống)
+	v.BindEnv("payment.vnpay.tmn_code", "RE_PAYMENT_VNPAY_TMN_CODE")
+	v.BindEnv("payment.vnpay.hash_secret", "RE_PAYMENT_VNPAY_HASH_SECRET")
+	v.BindEnv("admin.email", "RE_ADMIN_EMAIL")
 
 	if err := v.Unmarshal(&global.Config); err != nil {
 		panic(err)

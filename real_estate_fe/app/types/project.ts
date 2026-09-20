@@ -8,6 +8,8 @@ export interface ProjectDetail {
   full_address: string;
   total_area_ha?: number;
   total_units?: number;
+  /** Số căn đã chốt bán — tồn kho còn lại = total_units - sold_units */
+  sold_units?: number;
   price_min?: number;
   price_max?: number;
   view_count?: number;

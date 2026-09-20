@@ -46,6 +46,16 @@ func NewManagerPostUseCase(managerRepo repo.ManagerPostRepository, realEstateRep
 	}
 }
 
+// promoteToBroker nâng vai trò người đăng tin thành BROKER (chỉ khi đang là khách).
+// Nhờ đó môi giới mới có quyền xác nhận đơn đặt cọc xem nhà.
+func (u *managerPostUseCase) promoteToBroker(userID uint64) {
+	if err := global.DB.Model(&model.User{}).
+		Where("id = ? AND role = ?", userID, model.RoleCustomer).
+		Update("role", model.RoleBroker).Error; err != nil {
+		log.Printf("⚠️ [Broker] nâng vai trò môi giới cho user %d thất bại: %v", userID, err)
+	}
+}
+
 func (u *managerPostUseCase) GenerateListingSlug(title string, id uint64) string {
 	s := slug.MakeLang(title, "vi")
 	return fmt.Sprintf("%s-rs%d", s, id)
@@ -170,6 +180,9 @@ func (s *managerPostUseCase) CreateRealEstate(req dto.CreateRealEstateRequest, u
 	if err := s.realEstateRepo.Create(estate); err != nil {
 		return 0, err
 	}
+
+	// Người đăng tin trở thành môi giới → mở quyền nhận đơn đặt cọc xem nhà.
+	s.promoteToBroker(userID)
 
 	if estate.Slug == "" {
 		estate.Slug = s.GenerateListingSlug(estate.Title, estate.ID)
@@ -382,6 +395,7 @@ func (u *managerPostUseCase) ListProjects(search string, page, size int) ([]dto.
 			FullAddress:     p.FullAddress,
 			TotalAreaHA:     p.TotalAreaHA,
 			TotalUnits:      p.TotalUnits,
+			SoldUnits:       p.SoldUnits,
 			PriceMin:        p.PriceMin,
 			PriceMax:        p.PriceMax,
 			CreatedAt:       p.CreatedAt.Format("02-01-2006"),
@@ -425,6 +439,7 @@ func (u *managerPostUseCase) GetProjectDetail(id uint64) (*dto.ManagerProjectDet
 		CategoryID:      project.CategoryID,
 		TotalAreaHA:     project.TotalAreaHA,
 		TotalUnits:      project.TotalUnits,
+		SoldUnits:       project.SoldUnits,
 		PriceMin:        project.PriceMin,
 		PriceMax:        project.PriceMax,
 	}

@@ -38,6 +38,8 @@ type RealEstateRepository interface {
 	GetFilterRanges() ([]model.FilterRange, error)
 	// Lấy 1 tin đăng theo ID (trang chi tiết -rs), kèm gom ảnh.
 	GetByID(id uint64) (*dto.RealEstateResponse, error)
+	// Lấy bản ghi model thô (cần user_id để xác định môi giới phụ trách khi đặt cọc).
+	GetModelByID(id uint64) (*model.RealEstate, error)
 
 	GetCategory() ([]model.Category, error)
 	GetProvinceBySlug(city string) (string, error)
@@ -62,6 +64,9 @@ type RealEstateRepository interface {
 	ListProjects(limit, offset int, search string) ([]model.RealEstateProject, int64, error)
 	SaveProject(project *model.RealEstateProject) error
 	GetRealEstateListingsByProjectID(projectID uint64) ([]dto.RealEstateResponse, error)
+	// IncrementProjectSoldUnits tăng số căn đã bán lên 1, trả về false nếu dự án đã hết căn.
+	// Điều kiện "còn căn" nằm ngay trong câu UPDATE để nhiều request đồng thời không bán quá số lượng.
+	IncrementProjectSoldUnits(projectID uint64) (bool, error)
 }
 
 func NewRealEstateRepository(db *gorm.DB) RealEstateRepository {
@@ -432,6 +437,16 @@ func (r *realEstateRepo) GetByID(id uint64) (*dto.RealEstateResponse, error) {
 	return &item, nil
 }
 
+// GetModelByID lấy bản ghi RealEstate thô theo ID (cần user_id của môi giới
+// đăng tin để gắn vào deposit khi khách đặt cọc).
+func (r *realEstateRepo) GetModelByID(id uint64) (*model.RealEstate, error) {
+	var item model.RealEstate
+	if err := r.db.First(&item, id).Error; err != nil {
+		return nil, err
+	}
+	return &item, nil
+}
+
 func (r *realEstateRepo) GetTopCityByCount(limit int) ([]model.CityStat, error) {
 	var cities []model.CityStat
 	// Subquery đếm top N thành phố trước, rồi LEFT JOIN provinces để lấy ảnh
@@ -766,4 +781,20 @@ func (r *realEstateRepo) GetRealEstateListingsByProjectID(projectID uint64) ([]d
 }
 func (r *realEstateRepo) SaveProject(project *model.RealEstateProject) error {
 	return r.db.Save(project).Error
+}
+
+// IncrementProjectSoldUnits tăng sold_units lên 1 cho dự án còn căn.
+// Điều kiện "còn căn" đặt ngay trong câu UPDATE: total_units NULL = không giới hạn,
+// ngược lại chỉ tăng khi sold_units < total_units. Nhờ vậy 2 admin duyệt cùng lúc
+// cũng không thể bán vượt số căn (chỉ 1 câu UPDATE thắng, câu kia trả về 0 dòng).
+func (r *realEstateRepo) IncrementProjectSoldUnits(projectID uint64) (bool, error) {
+	result := r.db.Model(&model.RealEstateProject{}).
+		Where("id = ?", projectID).
+		Where("total_units IS NULL OR sold_units < total_units").
+		UpdateColumn("sold_units", gorm.Expr("sold_units + 1"))
+
+	if result.Error != nil {
+		return false, result.Error
+	}
+	return result.RowsAffected > 0, nil
 }

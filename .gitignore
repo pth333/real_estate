@@ -46,6 +46,8 @@ CLAUDE.md
 .nuxt
 .output
 temp_protoc
+# Cache build Go (dùng khi sandbox không cho ghi cache ngoài workspace)
+.gocache
 
 # Editor / AI
 .vscode/

@@ -8,7 +8,6 @@ import (
 
 	"real_estate_be/internal/global"
 	kafkaconsumer "real_estate_be/internal/kafka"
-	model "real_estate_be/internal/models"
 	"real_estate_be/internal/repo"
 	"real_estate_be/internal/sse"
 	"real_estate_be/pkg/kafka"
@@ -111,16 +110,4 @@ func ensureTopicExists(brokers []string, topic string, numPartitions int, replic
 	}
 
 	log.Printf("🎉 [Kafka-Admin] Topic '%s' created successfully with %d partitions", topic, numPartitions)
-}
-
-// MigrateDb tự động migrate các bảng.
-func MigrateDb(db *gorm.DB) {
-	if err := db.AutoMigrate(
-		&model.User{},
-		&model.RealEstate{},
-		&model.Notification{},
-	); err != nil {
-		log.Fatalf("❌ DB migration failed: %v", err)
-	}
-	log.Println("✅ DB migration completed")
 }

@@ -175,6 +175,31 @@ const columns: DataTableColumns<ManagerProject> = [
     },
   },
   {
+    // Tồn kho: số căn còn lại = total_units - sold_units (chỉ tăng khi admin duyệt tài liệu mua)
+    title: 'Còn lại',
+    key: 'stock',
+    width: 130,
+    render(row) {
+      if (row.total_units == null) {
+        return h('span', { class: 'text-gray-400 text-sm' }, 'Không giới hạn')
+      }
+      const remaining = Math.max(row.total_units - (row.sold_units ?? 0), 0)
+      const soldOut = remaining === 0
+      return h(
+        'div',
+        { class: 'flex flex-col gap-0.5' },
+        [
+          h(
+            'span',
+            { class: soldOut ? 'text-red-500 text-sm font-semibold' : 'text-emerald-600 text-sm font-semibold' },
+            soldOut ? 'Hết căn' : `Còn ${remaining} căn`,
+          ),
+          h('span', { class: 'text-xs text-gray-400' }, `Đã bán ${row.sold_units ?? 0}/${row.total_units}`),
+        ],
+      )
+    },
+  },
+  {
     title: 'Giá',
     key: 'price',
     width: 130,

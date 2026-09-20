@@ -23,3 +23,34 @@ r2:
   bucket: real-estate-files
 recommendation:
   addr: localhost:50051
+
+# ── Luồng đặt cọc escrow ─────────────────────────────
+payment:
+  # FE nhận kết quả thanh toán (return URL)
+  return_url: http://localhost:3000/thanh-toan/ket-qua
+  # Backend nhận IPN từ cổng thanh toán
+  ipn_url: http://localhost:8000/api/2026/deposits/payment/ipn
+  vnpay:
+    # Bỏ trống tmn_code/hash_secret → hệ thống tự dùng cổng MOCK để test luồng
+    tmn_code: ""
+    hash_secret: ""
+    payment_url: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+    locale: vn
+    expire_minutes: 15
+
+deposit:
+  # Mức cọc/phí dự phòng khi BĐS chưa có giá. Bình thường hệ thống tra bảng
+  # deposit_policies theo giá BĐS (seed sẵn 5 phân khúc khi khởi động).
+  default_amount: 5000000
+  default_broker_fee: 200000
+  broker_confirm_hours: 24
+  otp_valid_minutes: 10
+  checkin_grace_hours: 2
+  report_window_hours: 24
+  dispute_evidence_hours: 48
+  payment_timeout_minutes: 30
+  cron_interval_seconds: 60
+
+admin:
+  # Email được tự động nâng quyền ADMIN khi khởi động (để trống nếu chưa cần)
+  email: ""

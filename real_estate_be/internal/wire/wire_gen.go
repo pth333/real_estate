@@ -45,6 +45,58 @@ func InitializeCategoryHandler() (*controller.CategoryHandler, error) {
 	return categoryHandler, nil
 }
 
+// Injectors from deposit.wire.go:
+
+func InitializeDepositHandler() (*controller.DepositHandler, error) {
+	db := providerDB()
+	iDepositRepository := repo.NewDepositRepository(db)
+	iDisputeRepository := repo.NewDisputeRepository(db)
+	iTransactionRepository := repo.NewTransactionRepository(db)
+	iBrokerRatingRepository := repo.NewBrokerRatingRepository(db)
+	iNotificationLogRepository := repo.NewNotificationLogRepository(db)
+	iDepositPolicyRepository := repo.NewDepositPolicyRepository(db)
+	realEstateRepository := repo.NewRealEstateRepository(db)
+	iUserRepository := repo.NewUserRepository(db)
+	gateway := providerPaymentGateway()
+	mailerMailer := providerMailer()
+	iDepositService := usecase.NewDepositService(iDepositRepository, iDisputeRepository, iTransactionRepository, iBrokerRatingRepository, iNotificationLogRepository, iDepositPolicyRepository, realEstateRepository, iUserRepository, gateway, mailerMailer)
+	depositHandler := controller.NewDepositHandler(iDepositService)
+	return depositHandler, nil
+}
+
+func InitializeAdminDepositHandler() (*controller.AdminDepositHandler, error) {
+	db := providerDB()
+	iDepositRepository := repo.NewDepositRepository(db)
+	iDisputeRepository := repo.NewDisputeRepository(db)
+	iTransactionRepository := repo.NewTransactionRepository(db)
+	iBrokerRatingRepository := repo.NewBrokerRatingRepository(db)
+	iNotificationLogRepository := repo.NewNotificationLogRepository(db)
+	iDepositPolicyRepository := repo.NewDepositPolicyRepository(db)
+	realEstateRepository := repo.NewRealEstateRepository(db)
+	iUserRepository := repo.NewUserRepository(db)
+	gateway := providerPaymentGateway()
+	mailerMailer := providerMailer()
+	iDepositService := usecase.NewDepositService(iDepositRepository, iDisputeRepository, iTransactionRepository, iBrokerRatingRepository, iNotificationLogRepository, iDepositPolicyRepository, realEstateRepository, iUserRepository, gateway, mailerMailer)
+	adminDepositHandler := controller.NewAdminDepositHandler(iDepositService)
+	return adminDepositHandler, nil
+}
+
+func InitializeDepositService() (usecase.IDepositService, error) {
+	db := providerDB()
+	iDepositRepository := repo.NewDepositRepository(db)
+	iDisputeRepository := repo.NewDisputeRepository(db)
+	iTransactionRepository := repo.NewTransactionRepository(db)
+	iBrokerRatingRepository := repo.NewBrokerRatingRepository(db)
+	iNotificationLogRepository := repo.NewNotificationLogRepository(db)
+	iDepositPolicyRepository := repo.NewDepositPolicyRepository(db)
+	realEstateRepository := repo.NewRealEstateRepository(db)
+	iUserRepository := repo.NewUserRepository(db)
+	gateway := providerPaymentGateway()
+	mailerMailer := providerMailer()
+	iDepositService := usecase.NewDepositService(iDepositRepository, iDisputeRepository, iTransactionRepository, iBrokerRatingRepository, iNotificationLogRepository, iDepositPolicyRepository, realEstateRepository, iUserRepository, gateway, mailerMailer)
+	return iDepositService, nil
+}
+
 // Injectors from manager_post.wire.go:
 
 func InitializeManagerPostHandler() (*controller.ManagerPostHandler, error) {

@@ -33,7 +33,10 @@ type RealEstateProject struct {
 	TotalAreaHA         *float64 `gorm:"column:total_area_ha"`
 	ConstructionDensity *float64 `gorm:"column:construction_density"`
 	TotalUnits          *uint32  `gorm:"column:total_units"`
-	TotalFloors         *uint32  `gorm:"column:total_floors"`
+	// SoldUnits số căn đã chốt bán — CHỈ tăng khi admin duyệt tài liệu mua nhà của khách.
+	// Tồn kho còn lại = TotalUnits - SoldUnits (TotalUnits NULL = không giới hạn).
+	SoldUnits   uint32  `gorm:"column:sold_units;not null;default:0"`
+	TotalFloors *uint32 `gorm:"column:total_floors"`
 	TotalBlocks         *uint32  `gorm:"column:total_blocks"`
 	ExpectedPopulation  *uint32  `gorm:"column:expected_population"`
 
