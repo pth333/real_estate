@@ -29,10 +29,10 @@
             class="cursor-pointer overflow-hidden rounded-lg shadow-sm">
             <template #cover>
               <div class="relative h-48 overflow-hidden bg-gray-100 group">
-                <div v-if="item.image_urls?.length > 1"
+                <div v-if="(item.image_urls?.length ?? 0) > 1"
                   class="absolute bottom-2 left-2 z-10 flex items-center gap-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded">
                   <IconImage class="h-3 w-3" />
-                  <span>{{ item.image_urls.length }}</span>
+                  <span>{{ item.image_urls?.length }}</span>
                 </div>
                 <img :src="item.thumbnail" :alt="item.title" loading="lazy"
                   class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
@@ -104,11 +104,23 @@
 
 <script setup lang="ts">
 import type { RealEstateResponse } from '~/types/real_estate';
+import { useRealEstateService } from '~/services/real-estate.service';
+
+/**
+ * Item card gợi ý = dữ liệu BĐS từ API.
+ * Template cũ có đọc thêm `price` / `verified` — 2 field backend KHÔNG trả về
+ * (response là dto.RealEstateResponse: price_vnd, badge). Khai báo optional ở
+ * đây để thay cho `any`, giữ nguyên hành vi hiển thị của code cũ.
+ */
+interface RecommendCard extends RealEstateResponse {
+  price?: number;
+  verified?: boolean;
+}
 
 const expanded = ref(false);
 const loading = ref(true);
-const items = ref<any[]>([]);
-const { $api } = useNuxtApp();
+const items = ref<RecommendCard[]>([]);
+const realEstateService = useRealEstateService();
 const favorite = useFavorite();
 
 const menuStore = useMenuStore();
@@ -121,10 +133,8 @@ const realEstateNewest = computed(() => {
 const fetchRecommendations = async () => {
   loading.value = true;
   try {
-    const res = await $api.get<{ data: RealEstateResponse[] }>('/real-estate/recommend', {
-      params: { limit: 12 }
-    });
-    items.value = res.data || [];
+    const res = await realEstateService.getRecommendations({ limit: 12 });
+    items.value = res || [];
   } catch (err) {
     console.error("Lỗi khi tải gợi ý BĐS:", err);
   } finally {

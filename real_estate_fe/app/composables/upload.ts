@@ -1,8 +1,5 @@
-import type {
-  FileItem,
-  PresignResponse,
-  ConfirmResponse,
-} from "~/types/uploadmedia";
+import type { FileItem } from "~/types/uploadmedia";
+import { useUploadService } from "~/services/upload.service";
 interface ValidationResult {
   valid: boolean;
   message: string;
@@ -93,17 +90,8 @@ export async function getPresignedUrl(
   filename: string,
   contentType: string,
 ): Promise<{ upload_url: string; key: string; expires_at: string }> {
-  const { $api } = useNuxtApp();
-  const res = await $api.post<PresignResponse>("/upload/presign", {
-    filename,
-    content_type: contentType,
-  });
-
-  if (!res.success || !res.data) {
-    throw new Error(res.message || "Không thể lấy presigned URL");
-  }
-
-  return res.data;
+  const uploadService = useUploadService();
+  return uploadService.presign(filename, contentType);
 }
 
 export async function uploadImageToBackend(
@@ -111,20 +99,13 @@ export async function uploadImageToBackend(
   kind: "project" | undefined,
   onProgress?: (pct: number) => void,
 ): Promise<{ image_id: number; public_url: string; thumbnail_url?: string }> {
-  const { $api } = useNuxtApp();
-  const formData = new FormData();
-  formData.append("file", file);
-  if (kind) formData.append("kind", kind);
+  const uploadService = useUploadService();
   onProgress?.(10);
 
-  const res = await $api.post<ConfirmResponse>("/upload/image", formData);
+  const data = await uploadService.uploadImage(file, kind);
   onProgress?.(100);
 
-  if (!res.success || !res.data) {
-    throw new Error(res.message || "Upload ảnh thất bại");
-  }
-
-  return res.data;
+  return data;
 }
 
 /**
@@ -169,17 +150,8 @@ export async function confirmUpload(
   key: string,
   kind?: "project",
 ): Promise<{ image_id: number; public_url: string; thumbnail_url?: string }> {
-  const { $api } = useNuxtApp();
-  const res = await $api.post<ConfirmResponse>("/upload/confirm", {
-    key,
-    ...(kind ? { kind } : {}),
-  });
-
-  if (!res.success || !res.data) {
-    throw new Error(res.message || "Xác nhận upload thất bại");
-  }
-
-  return res.data;
+  const uploadService = useUploadService();
+  return uploadService.confirm(key, kind);
 }
 
 /**

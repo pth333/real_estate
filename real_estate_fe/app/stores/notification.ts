@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
 import type { NotificationItem, NotificationSSEPayload } from "~/types/real_estate";
+import { useNotificationService } from "~/services/notification.service";
 
 export const useNotificationStore = defineStore("notification", () => {
   const items = ref<NotificationItem[]>([]);
@@ -11,9 +12,8 @@ export const useNotificationStore = defineStore("notification", () => {
   async function fetchList() {
     loading.value = true;
     try {
-      const { $api } = useNuxtApp();
-      const res = await $api.get<{ data: NotificationItem[] }>("/notifications");
-      items.value = res.data;
+      const notificationService = useNotificationService();
+      items.value = await notificationService.getNotifications();
 
       if (import.meta.client) {
         // Load trạng thái đọc từ localStorage để tính unread

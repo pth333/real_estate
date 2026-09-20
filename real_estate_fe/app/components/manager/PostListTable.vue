@@ -69,12 +69,13 @@ import {
 } from "naive-ui";
 import type { IManagerPostItem } from "~/types/manager";
 import { useManagerStore } from "~/stores/manager";
+import { useManagerService } from "~/services/manager.service";
 import IconSearch from "~/icons/IconSearch.vue";
 import IconEyeOutline from "~/icons/IconEyeOutline.vue";
 import IconCreateOutline from "~/icons/IconCreateOutline.vue";
 import IconCloseOutline from "~/icons/IconCloseOutline.vue";
 
-const { $api } = useNuxtApp();
+const managerService = useManagerService();
 const managerStore = useManagerStore();
 
 // State loading của bảng (data được cache trong managerStore)
@@ -139,15 +140,15 @@ const confirmDelete = async () => {
   if (!pendingDeleteId.value) return;
   deleteLoading.value = true;
   try {
-    await $api.delete<{ message: string }>(`/manager/posts/${pendingDeleteId.value}`);
+    await managerService.deletePost(pendingDeleteId.value);
     window.message?.success("Đã xóa bài viết thành công!");
     showDeleteModal.value = false;
     pendingDeleteId.value = null;
     // Đánh dấu cache cũ → fetch lại
     managerStore.invalidatePosts();
     fetchPostsData();
-  } catch (error: any) {
-    window.message?.error("Lỗi khi xóa bài viết: " + (error?.message || "Lỗi máy chủ"));
+  } catch (error: unknown) {
+    window.message?.error("Lỗi khi xóa bài viết: " + (error instanceof Error ? error.message : "Lỗi máy chủ"));
   } finally {
     deleteLoading.value = false;
   }

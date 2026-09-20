@@ -39,9 +39,11 @@
 
 <script setup lang="ts">
 import type { SelectOption } from 'naive-ui'
-import type { CityOption, WardOption } from '~/types/real_estate'
 import type { ProjectFormData } from '~/types/manager'
+import type { CreateProjectResult, UpdateProjectResult } from '~/services/manager.service'
 import { useManagerStore } from '~/stores/manager'
+import { useManagerService } from '~/services/manager.service'
+import { useCatalogService } from '~/services/catalog.service'
 import ProjectInfoForm from '~/components/manager/ProjectInfoForm.vue'
 
 definePageMeta({
@@ -54,7 +56,8 @@ useHead({
   title: "Tạo dự án mới",
 })
 
-const { $api } = useNuxtApp()
+const managerService = useManagerService()
+const catalogService = useCatalogService()
 const managerStore = useManagerStore()
 const route = useRoute()
 
@@ -104,8 +107,8 @@ const loadingWard = ref(false)
 
 const fetchProvinces = async () => {
   try {
-    const res = await $api.get<{ data: CityOption[] }>('/real-estate/list/city')
-    provinceOptions.value = res.data.map((item: CityOption) => ({
+    const cities = await catalogService.getCities()
+    provinceOptions.value = cities.map((item) => ({
       label: item.name,
       value: item.code,
     }))
@@ -128,10 +131,8 @@ const loadWards = async (provinceCode: string | null) => {
   }
   loadingWard.value = true
   try {
-    const res = await $api.get<{ data: WardOption[] }>('/real-estate/list/ward', {
-      params: { code: provinceCode },
-    })
-    wardOptions.value = res.data.map((item: WardOption) => ({
+    const wards = await catalogService.getWards(provinceCode)
+    wardOptions.value = wards.map((item) => ({
       label: item.name,
       value: item.code,
     }))
@@ -146,8 +147,7 @@ const loadWards = async (provinceCode: string | null) => {
 const loadProjectDetail = async (id: number) => {
   loadingDetail.value = true
   try {
-    const res = await $api.get<{ data: any }>(`/manager/projects/${id}`)
-    const p = res?.data
+    const p = await managerService.getProject(id)
     if (!p) return
     form.value = {
       name: p.name || '',
@@ -163,14 +163,14 @@ const loadProjectDetail = async (id: number) => {
       price_max: p.price_max ?? null,
       construction_start_date: p.construction_start_date || null,
       handover_date: p.handover_date || null,
-      image_ids: (p.images || []).map((img: any) => img.id),
+      image_ids: (p.images || []).map((img) => img.id),
     }
-    existingImages.value = (p.images || []).map((img: any) => ({ id: img.id, url: img.url }))
+    existingImages.value = (p.images || []).map((img) => ({ id: img.id, url: img.url }))
     // Nạp phường/xã theo tỉnh đã lưu rồi mới set ward (để select hiển thị đúng)
     await loadWards(form.value.province)
     form.value.ward = p.ward || null
-  } catch (error: any) {
-    window.message?.error('Lỗi khi tải thông tin dự án: ' + (error?.message || 'Lỗi máy chủ'))
+  } catch (error: unknown) {
+    window.message?.error('Lỗi khi tải thông tin dự án: ' + (error instanceof Error ? error.message : 'Lỗi máy chủ'))
   } finally {
     loadingDetail.value = false
   }
@@ -211,11 +211,11 @@ const handleSubmit = async () => {
       construction_start_date: normalizeDate(form.value.construction_start_date),
       handover_date: normalizeDate(form.value.handover_date),
     }
-    let res: any
+    let res: CreateProjectResult | UpdateProjectResult
     if (isEdit.value && projectId.value) {
-      res = await $api.put<{ success: boolean }>(`/manager/update-project/${projectId.value}`, payload)
+      res = await managerService.updateProject(projectId.value, payload)
     } else {
-      res = await $api.post<{ success: boolean; data: { id: number } }>('/manager/create-project', payload)
+      res = await managerService.createProject(payload)
     }
     if (res?.success) {
       window.message?.success(isEdit.value ? 'Cập nhật dự án thành công' : 'Tạo dự án thành công')
@@ -223,8 +223,8 @@ const handleSubmit = async () => {
       managerStore.invalidateProjects()
       navigateTo('/nguoi-ban/quan-ly-du-an')
     }
-  } catch (error: any) {
-    window.message?.error((isEdit.value ? 'Lỗi khi cập nhật dự án: ' : 'Lỗi khi tạo dự án: ') + (error?.message || 'Lỗi máy chủ'))
+  } catch (error: unknown) {
+    window.message?.error((isEdit.value ? 'Lỗi khi cập nhật dự án: ' : 'Lỗi khi tạo dự án: ') + (error instanceof Error ? error.message : 'Lỗi máy chủ'))
   } finally {
     submitting.value = false
   }

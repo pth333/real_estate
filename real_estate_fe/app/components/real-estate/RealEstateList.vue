@@ -32,12 +32,13 @@
 <style scoped></style>
 
 <script setup lang="ts">
-import type { RealEstateResponse, PaginatedResponse } from "~/types/real_estate";
+import type { RealEstateResponse } from "~/types/real_estate";
 import { useFilterStore } from "~/stores/filter";
 import { useRealEstateStore } from "~/stores/real_estate";
+import { useRealEstateService } from "~/services/real-estate.service";
 
 const route = useRoute();
-const { $api } = useNuxtApp();
+const realEstateService = useRealEstateService();
 const filterStore = useFilterStore();
 const realEstateStore = useRealEstateStore()
 const realEstates = ref<RealEstateResponse[]>([]);
@@ -73,17 +74,12 @@ const totalPages = computed(() =>
 const fetchDataRealEstate = async () => {
   loading.value = true;
   try {
-    const res = await $api.get<PaginatedResponse<RealEstateResponse>>(
-      `/real-estate/${apiPath.value}`,
-      {
-        params: {
-          page: realEstateStore.currentPage,
-          size: pageSize.value,
-          search: query.value,
-          ...buildListParams(filterStore.filters)
-        },
-      },
-    );
+    const res = await realEstateService.getListByCategoryPath(apiPath.value, {
+      page: realEstateStore.currentPage,
+      size: pageSize.value,
+      search: query.value,
+      ...buildListParams(filterStore.filters),
+    });
     realEstates.value = res.data || [];
     totalRecords.value = res.total || 0;
   } catch (err) {

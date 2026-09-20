@@ -69,10 +69,11 @@
 <script setup lang="ts">
 import type { SelectOption } from 'naive-ui'
 import { useCreatePost } from '~/stores/create-post'
+import { useCatalogService } from '~/services/catalog.service'
 import type { OptionTypeRealestate } from '~/types/real_estate'
 
 const postStore = useCreatePost()
-const { $api } = useNuxtApp()
+const catalogService = useCatalogService()
 const collapsed = ref(false)
 const rawRealEstateTypes = ref<OptionTypeRealestate[]>([])
 
@@ -138,8 +139,7 @@ const clearError = (field: keyof typeof postStore.errorsMainInfo) => {
 
 const fetchRealEstateTypes = async () => {
     try {
-        const response = await $api.get<{ data: OptionTypeRealestate[] }>('/real-estate/list/types')
-        rawRealEstateTypes.value = response.data
+        rawRealEstateTypes.value = await catalogService.getRealEstateTypes()
 
     } catch (error) {
         console.error('Error fetching real estate types:', error)

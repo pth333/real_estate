@@ -83,12 +83,13 @@
 <script setup lang="ts">
 import type { ProjectDetail } from '~/types/project';
 import type { RealEstateResponse } from '~/types/real_estate';
+import { useProjectService } from '~/services/project.service';
 
 const props = defineProps<{
     project: ProjectDetail
 }>()
 
-const { $api } = useNuxtApp()
+const projectService = useProjectService()
 const favorite = useFavorite()
 
 const loading = ref(false)
@@ -103,10 +104,8 @@ const visibleItems = computed(() =>
 const fetchListings = async () => {
     loading.value = true
     try {
-        const res = await $api.get<{ data: RealEstateResponse[] }>(
-            `/real-estate/project/${props.project.id}/listings`
-        )
-        items.value = res.data || []
+        const res = await projectService.getListings(props.project.id)
+        items.value = res || []
     } catch (err) {
         console.error('Lỗi khi tải tin dự án:', err)
     } finally {

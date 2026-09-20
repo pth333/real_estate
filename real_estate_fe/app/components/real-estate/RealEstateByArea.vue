@@ -37,16 +37,10 @@
 </template>
 
 <script setup lang="ts">
-interface ListTopCity {
-    id: number;
-    name: string;
-    count: number;
-    image: string;
-    category_slug: string;
-    city_slug: string;
-}
+import type { TopCityOption } from '~/types/real_estate';
+import { useRealEstateService } from '~/services/real-estate.service';
 
-function goToCity(city?: ListTopCity | null) {
+function goToCity(city?: TopCityOption | null) {
     if (!city) return;
     navigateTo(`/${city.category_slug}-${city.city_slug}`);
 }
@@ -63,15 +57,14 @@ const featured = computed(() => {
 })
 
 
-const listTopCity = ref<ListTopCity[]>([])
+const listTopCity = ref<TopCityOption[]>([])
 const loading = ref(true)
 
-const { $api } = useNuxtApp()
+const realEstateService = useRealEstateService()
 const fetchListTopCity = async () => {
     loading.value = true
     try {
-        const result = await $api.get<{ data: ListTopCity[] }>('/real-estate/list/top-city')
-        listTopCity.value = result.data
+        listTopCity.value = await realEstateService.getTopCities()
     } catch (e) {
         console.log(e)
     } finally {

@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import { Menu } from "~/types/window";
 import type { MenuSettings } from "~/types/window";
+import { useCatalogService } from "~/services/catalog.service";
 
 export const useMenuStore = defineStore("menu", () => {
   const menu = ref<MenuSettings>();
@@ -8,9 +9,8 @@ export const useMenuStore = defineStore("menu", () => {
 
   const fetchMenuItems = async () => {
     try {
-      const { $api } = useNuxtApp();
-      const res = await $api.get<MenuSettings>("/category");
-      const data = (res as any).data;
+      const catalogService = useCatalogService();
+      const data = await catalogService.getMenu();
       if (data) {
         menu.value = data;
         // Khởi tạo Menu trong store rồi gán vào window — nơi khác đọc qua global (Chỉ chạy ở Client-side)

@@ -179,16 +179,6 @@ export interface EscrowSummary {
   open_disputes: number
 }
 
-export interface DepositListResult {
-  items: Deposit[]
-  total: number
-}
-
-export interface DisputeListResult {
-  items: DepositDispute[]
-  total: number
-}
-
 // Nhãn + màu tag Naive UI cho từng trạng thái đặt cọc
 export const DEPOSIT_STATUS_META: Record<
   DepositStatus,

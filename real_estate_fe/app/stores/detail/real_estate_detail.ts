@@ -1,4 +1,5 @@
 import { defineStore } from "pinia";
+import { useRealEstateService } from "~/services/real-estate.service";
 import type { RealEstateResponse } from "~/types/real_estate";
 
 export const useRealEstateDetail = defineStore("real_estate_detail", () => {
@@ -7,13 +8,11 @@ export const useRealEstateDetail = defineStore("real_estate_detail", () => {
   const showPhone = ref(false);
 
   async function fetchDetail(id: number) {
-    const { $api } = useNuxtApp();
+    const realEstateService = useRealEstateService();
     loading.value = true;
     try {
-      const res = await $api.get<{ data: RealEstateResponse }>(
-        `/real-estate/detail/${id}`,
-      );
-      listing.value = res?.data ?? null;
+      const res = await realEstateService.getDetail(id);
+      listing.value = res ?? null;
     } catch {
       listing.value = null;
     } finally {

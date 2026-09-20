@@ -1,10 +1,6 @@
 import { defineStore } from "pinia";
-import type {
-  DashboardSummary,
-  Filter,
-  PaginatedResponse,
-  RealEstateResponse,
-} from "@/types/real_estate";
+import { useRealEstateService } from "~/services/real-estate.service";
+import type { DashboardSummary, Filter, RealEstateResponse } from "@/types/real_estate";
 
 export const useRealEstateStore = defineStore("realEstate", () => {
   const items = ref<RealEstateResponse[]>([]);
@@ -32,11 +28,8 @@ export const useRealEstateStore = defineStore("realEstate", () => {
   async function fetchList() {
     loading.value = true;
     try {
-      const { $api } = useNuxtApp();
-      const res = await $api.post<PaginatedResponse<RealEstateResponse>>(
-        "/real-estate/list",
-        payload.value,
-      );
+      const realEstateService = useRealEstateService();
+      const res = await realEstateService.searchList(payload.value);
       items.value = res.data;
       total.value = res.total;
     } catch (e) {
@@ -49,12 +42,8 @@ export const useRealEstateStore = defineStore("realEstate", () => {
   async function fetchSummary(from?: string, to?: string) {
     summaryLoading.value = true;
     try {
-      const { $api } = useNuxtApp();
-      const res = await $api.get<{ data: DashboardSummary }>(
-        "/dashboard/summary",
-        { params: { from, to } },
-      );
-      summary.value = (res as any).data;
+      const realEstateService = useRealEstateService();
+      summary.value = await realEstateService.getSummary(from, to);
     } catch (e) {
       console.error("Lỗi tải summary:", e);
     } finally {

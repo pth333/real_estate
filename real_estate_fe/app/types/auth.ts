@@ -19,6 +19,18 @@ export interface AuthResponse {
   error?: string
 }
 
+/** Kết quả gửi OTP xác thực số điện thoại */
+export interface SendOtpResult {
+  success: boolean
+  message?: string
+}
+
+/** Kết quả xác thực OTP số điện thoại */
+export interface VerifyOtpResult {
+  success: boolean
+  message?: string
+}
+
 export interface UserInfo {
   id: number
   email: string

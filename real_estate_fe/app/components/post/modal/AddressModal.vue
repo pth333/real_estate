@@ -55,9 +55,9 @@
 </template>
 <script setup lang="ts">
 import type { SelectOption } from 'naive-ui'
-import type { CityOption, WardOption, ProjectOption } from '~/types/real_estate'
 import { useCreatePost } from '~/stores/create-post'
 import { useGeoapify } from '~/composables/useGeoapify'
+import { useCatalogService } from '~/services/catalog.service'
 
 const props = defineProps<{
     show: boolean
@@ -68,7 +68,7 @@ const emit = defineEmits<{
     'update:locationLabel': [value: string]
 }>()
 
-const { $api } = useNuxtApp()
+const catalogService = useCatalogService()
 // Form dùng chung qua store; options do chính modal load
 const postStore = useCreatePost()
 const { createMap, getLeaflet, geocode } = useGeoapify()
@@ -83,8 +83,8 @@ const loadingWard = ref(false)
 
 const fetchListProvice = async () => {
     try {
-        const res = await $api.get("/real-estate/list/city") as { data: CityOption[] }
-        provinceOptions.value = res.data.map((item: CityOption) => ({
+        const cities = await catalogService.getCities()
+        provinceOptions.value = cities.map(item => ({
             label: item.name,
             value: item.code
         }))
@@ -106,10 +106,8 @@ const loadWards = async (provinceCode: string | null) => {
 
     try {
         loadingWard.value = true
-        const res = await $api.get<{ data: WardOption[] }>(`/real-estate/list/ward`, {
-            params: { code: provinceCode }
-        })
-        wardOptions.value = res.data.map(item => ({
+        const wards = await catalogService.getWards(provinceCode)
+        wardOptions.value = wards.map(item => ({
             label: item.name,
             value: item.code
         }))
@@ -304,18 +302,11 @@ let geocodeTimeout: any = null;
 
 const fetchListProject = async () => {
     try {
-        const params: Record<string, string> = {}
-        if (postStore.form.province) {
-            params.province = postStore.form.province
-        }
-        if (postStore.form.ward) {
-            params.ward = postStore.form.ward
-        }
-
-        const res = await $api.get<{ data: ProjectOption[] }>("/real-estate/list/project", {
-            params
-        })
-        projectOptions.value = res.data.map((item: ProjectOption) => ({
+        const projects = await catalogService.getProjects(
+            postStore.form.province ?? undefined,
+            postStore.form.ward ?? undefined,
+        )
+        projectOptions.value = projects.map(item => ({
             label: item.name,
             value: item.id
         }))

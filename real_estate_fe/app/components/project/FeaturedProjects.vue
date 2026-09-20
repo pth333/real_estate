@@ -79,18 +79,9 @@
 
 <script setup lang="ts">
 import { useMenuStore } from '~/stores/menu';
-interface Project {
-    id: number
-    name: string
-    slug: string
-    status: string
-    full_address: string
-    total_area_ha?: number
-    total_units?: number
-    price_min?: number
-    price_max?: number
-    thumbnail?: string
-}
+import type { ProjectSummary } from '~/types/project';
+import { useProjectService } from '~/services/project.service';
+
 const menuStore = useMenuStore();
 
 const thirdCategorySlug = computed(() => {
@@ -119,19 +110,15 @@ function statusClass(status?: string) {
     return 'border-gray-300 text-gray-500 bg-gray-50'
 }
 
-const { $api } = useNuxtApp()
-const projects = ref<Project[]>([])
+const projectService = useProjectService()
+const projects = ref<ProjectSummary[]>([])
 const loading = ref(true)
 
 const fetchFeaturedProjects = async () => {
     loading.value = true
     try {
-        const res = await $api.get<{ data: Project[] }>("/real-estate/project/featured", {
-            params: {
-                limit: 12
-            }
-        })
-        projects.value = (res.data || []).map((p, index) => ({
+        const res = await projectService.getFeatured(12)
+        projects.value = (res || []).map((p, index) => ({
             ...p,
             // Ưu tiên ảnh từ API, fallback placeholder
             thumbnail: p.thumbnail
@@ -157,7 +144,7 @@ function next() {
     if (currentIndex.value + pageSize < projects.value.length) currentIndex.value += pageSize
 }
 
-const goToProject = (project: Project) => {
+const goToProject = (project: ProjectSummary) => {
     // Sinh SEO URL driven chuyển hướng chi tiết dự án có định dạng dạng `/slug-du-an-pj{id}`
     const slug = project.slug
     navigateTo(`/${slug}-pj${project.id}`)

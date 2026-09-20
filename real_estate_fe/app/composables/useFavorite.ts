@@ -2,9 +2,10 @@
  * Composable thao tác bất động sản yêu thích (favorite).
  * Gọi API backend POST /real-estate/favorite/:id (toggle thêm/bỏ).
  */
+import { useFavoriteService } from '~/services/favorite.service'
 
 export function useFavorite() {
-  const { $api } = useNuxtApp()
+  const favoriteService = useFavoriteService()
   const toggling = ref(false)
 
   /**
@@ -14,10 +15,7 @@ export function useFavorite() {
   const toggle = async (id: number): Promise<boolean | null> => {
     try {
       toggling.value = true
-      const res = await $api.post<{ data: { is_favorite: boolean } }>(
-        `/real-estate/favorite/${id}`,
-      )
-      return res?.data?.is_favorite ?? null
+      return await favoriteService.toggle(id)
     } catch (e) {
       return null
     } finally {

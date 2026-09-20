@@ -26,10 +26,10 @@
 </template>
 
 <script setup lang="ts">
-import type { CityOption, WardOption } from '~/types/real_estate'
 import { useFilterStore } from '~/stores/filter';
+import { useCatalogService } from '~/services/catalog.service';
 
-const { $api } = useNuxtApp();
+const catalogService = useCatalogService();
 const filterStore = useFilterStore()
 
 const loadingCity = ref(false)
@@ -38,8 +38,8 @@ const loadingWard = ref(false)
 const fetchListCity = async () => {
   try {
     loadingCity.value = true
-    const res = await $api.get<{ data: CityOption[] }>("/real-estate/list/city")
-    filterStore.cityOptions = res.data.map((item: CityOption) => ({
+    const cities = await catalogService.getCities()
+    filterStore.cityOptions = cities.map(item => ({
       label: item.name,
       value: item.code
     }))
@@ -58,10 +58,8 @@ const onDistrictChange = async (districtCode: string | null) => {
 
   try {
     loadingWard.value = true
-    const res = await $api.get<{ data: WardOption[] }>(`/real-estate/list/ward`, {
-      params: { code: districtCode }
-    })
-    filterStore.wardOptions = res.data.map(item => ({
+    const wards = await catalogService.getWards(districtCode)
+    filterStore.wardOptions = wards.map(item => ({
       label: item.name,
       value: item.code
     }))

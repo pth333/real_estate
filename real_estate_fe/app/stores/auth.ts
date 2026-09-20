@@ -2,10 +2,11 @@ import { defineStore } from "pinia";
 import type {
   LoginRequest,
   RegisterRequest,
-  AuthResponse,
   UserInfo,
 } from "~/types/auth";
 import { useSession } from "~/composables/useSession";
+import { useAuthService } from "~/services/auth.service";
+import { useTrackingService } from "~/services/tracking.service";
 
 export const useAuthStore = defineStore("auth", () => {
   const tokenCookie = useCookie<string | null>("auth_token", {
@@ -48,8 +49,8 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   async function login(payload: LoginRequest) {
-    const { $api } = useNuxtApp();
-    const res = await $api.post<AuthResponse>("/auth/login", payload);
+    const authService = useAuthService();
+    const res = await authService.login(payload);
     
     if (!res.success || !res.data?.token) {
       throw new Error(res.message || "Đăng nhập thất bại");
@@ -60,7 +61,7 @@ export const useAuthStore = defineStore("auth", () => {
     // Tích hợp Session Merging sau khi đăng nhập thành công
     try {
       if (sessionId) {
-        await $api.post("/tracking/merge", { session_id: sessionId });
+        await useTrackingService().mergeSession(sessionId.value);
       }
     } catch (err) {
       console.error("Failed to merge session on login", err);
@@ -70,8 +71,8 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   async function register(payload: RegisterRequest) {
-    const { $api } = useNuxtApp();
-    const res = await $api.post<AuthResponse>("/auth/register", payload);
+    const authService = useAuthService();
+    const res = await authService.register(payload);
 
     if (!res.success) {
       throw new Error(res.message || "Đăng ký thất bại");
@@ -81,9 +82,9 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   async function refreshToken() {
-    const { $api } = useNuxtApp();
+    const authService = useAuthService();
     try {
-      const res = await $api.post<AuthResponse>("/auth/refresh");
+      const res = await authService.refresh();
       if (!res.success) {
         throw new Error(res.message || "Refresh token failed");
       }
@@ -99,9 +100,9 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   async function logout() {
-    const { $api } = useNuxtApp();
+    const authService = useAuthService();
     try {
-      await $api.post("/auth/logout");
+      await authService.logout();
     } catch {
       // ignore
     }

@@ -1,19 +1,18 @@
 import { defineStore } from "pinia";
 import type { ProjectDetail } from "~/types/project";
+import { useProjectService } from "~/services/project.service";
 
 export const useProjectDetail = defineStore("project_detail", () => {
   const loading = ref(false);
   const project = ref<ProjectDetail>();
 
   async function fetchDetail(id: number) {
-    const { $api } = useNuxtApp();
+    const projectService = useProjectService();
     loading.value = true;
     try {
-      const res = await $api.get<{ data: ProjectDetail }>(
-        `/real-estate/project/detail/${id}`,
-      );
-      if (res.data) {
-        project.value = res.data;
+      const data = await projectService.getDetail(id);
+      if (data) {
+        project.value = data;
       }
     } catch (err) {
       console.error("Lỗi khi tải thông tin dự án:", err);
@@ -23,9 +22,9 @@ export const useProjectDetail = defineStore("project_detail", () => {
   }
 
   async function incrementView(id: number) {
-    const { $api } = useNuxtApp();
+    const projectService = useProjectService();
     try {
-      await $api.post(`/real-estate/project/view/${id}`);
+      await projectService.incrementView(id);
     } catch (err) {
       console.error("Lỗi khi tăng lượt xem dự án:", err);
     }

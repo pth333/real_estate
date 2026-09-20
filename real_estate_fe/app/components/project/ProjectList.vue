@@ -136,27 +136,15 @@
 </template>
 
 <script setup lang="ts">
-
-interface Project {
-  id: number
-  name: string
-  slug: string
-  status: string
-  full_address: string
-  description?: string
-  thumbnail?: string
-  total_area_ha?: number
-  total_units?: number
-  price_min?: number
-  price_max?: number
-}
+import type { ProjectSummary } from '~/types/project'
+import { useProjectService } from '~/services/project.service'
 
 const props = defineProps<{
   categorySlug: string
 }>()
 
-const { $api } = useNuxtApp()
-const projects = ref<Project[]>([])
+const projectService = useProjectService()
+const projects = ref<ProjectSummary[]>([])
 const loading = ref(false)
 const sortOrder = ref('newest')
 
@@ -226,8 +214,8 @@ const fetchProjects = async () => {
   if (!props.categorySlug) return
   loading.value = true
   try {
-    const res = await $api.get<{ data: Project[] }>(`/real-estate/project-category/${props.categorySlug}`)
-    projects.value = res.data || []
+    const res = await projectService.getByCategorySlug(props.categorySlug)
+    projects.value = res || []
   } catch (error) {
     console.error('Lỗi khi tải danh sách dự án:', error)
     projects.value = []
@@ -236,7 +224,7 @@ const fetchProjects = async () => {
   }
 }
 
-const goToProject = (project: Project) => {
+const goToProject = (project: ProjectSummary) => {
   navigateTo(`/${project.slug}-pj${project.id}`)
 }
 

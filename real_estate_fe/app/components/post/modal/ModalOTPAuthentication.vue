@@ -62,15 +62,8 @@
 </template>
 
 <script setup lang="ts">
-interface SendOTPResponse {
-    success: boolean
-    message?: string
-}
+import { useAuthService } from '~/services/auth.service'
 
-interface VerifyOTPResponse {
-    success: boolean
-    message?: string
-}
 const props = defineProps<{
     showOTPModal: boolean
 }>()
@@ -80,7 +73,7 @@ const emit = defineEmits<{
     'update:showOTPModal': [value: boolean]
 }>()
 
-const { $api } = useNuxtApp()
+const authService = useAuthService()
 const { setPhoneVerified, phoneVerified } = usePhoneVerification()
 const step = ref<'phone' | 'otp'>('phone')
 const phone = ref('')
@@ -97,9 +90,7 @@ const handleSendOTP = async () => {
 
     sending.value = true
     try {
-        const res = await $api.post<SendOTPResponse>('/auth/send-otp', {
-            phone: phone.value.trim()
-        })
+        const res = await authService.sendOtp(phone.value.trim())
 
         if (res.success) {
             errorText.value = ''
@@ -120,10 +111,7 @@ const handleVerifyOTP = async () => {
 
     verifying.value = true
     try {
-        const res = await $api.post<VerifyOTPResponse>('/auth/verify-otp', {
-            phone: phone.value.trim(),
-            otp: otp.value
-        })
+        const res = await authService.verifyOtp(phone.value.trim(), otp.value)
 
         if (res.success) {
             if (countdownTimer) clearInterval(countdownTimer)

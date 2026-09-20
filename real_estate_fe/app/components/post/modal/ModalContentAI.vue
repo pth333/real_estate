@@ -69,12 +69,9 @@
 
 <script setup lang="ts">
 import { useCreatePost } from '~/stores/create-post'
+import { useAiService, type AIContent } from '~/services/ai.service'
 
-interface AIContent {
-    title: string
-    description: string
-}
-const { $api } = useNuxtApp()
+const aiService = useAiService()
 const postStore = useCreatePost()
 const showModal = ref(false)
 const tone = ref<'lich_su' | 'tre_trung'>('lich_su')
@@ -118,8 +115,8 @@ const handleOpenModal = () => {
 const generateContent = async () => {
     generating.value = true
     try {
-        const response = await $api.post<{ data: AIContent }>('/ai/generate-content', payload.value)
-        contentAI.value = response.data
+        const response = await aiService.generateContent(payload.value)
+        contentAI.value = response
     } catch (error) {
         window.message?.error('Không thể tạo nội dung, vui lòng thử lại')
     } finally {

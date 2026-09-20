@@ -99,20 +99,19 @@
 
 <script setup lang="ts">
 import type { RealEstateResponse } from '~/types/real_estate';
+import { useRealEstateService } from '~/services/real-estate.service';
 
 const expanded = ref(false);
 const loading = ref(false);
 const items = ref<RealEstateResponse[]>([]);
-const { $api } = useNuxtApp();
+const realEstateService = useRealEstateService();
 const favorite = useFavorite();
 
 const fetchRecommendations = async () => {
     loading.value = true;
     try {
-        const res = await $api.get<{ data: RealEstateResponse[] }>('/real-estate/recommend', {
-            params: { limit: 12 }
-        });
-        items.value = res.data || [];
+        const res = await realEstateService.getRecommendations({ limit: 12 });
+        items.value = res || [];
     } catch (err) {
         console.error("Lỗi khi tải gợi ý BĐS:", err);
     } finally {

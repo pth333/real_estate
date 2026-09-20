@@ -7,11 +7,14 @@
  * Sau nghiệp vụ thêm/sửa/xóa → gọi invalidateXxx() để lần sau fetch lại.
  */
 
-import type { IManagerPostItem, IManagerPostListResponse, ManagerProject } from '~/types/manager'
+import type { IManagerPostItem, ManagerProject } from '~/types/manager'
 import type { RealEstateResponse } from '~/types/real_estate'
+import { useManagerService } from '~/services/manager.service'
+import { useRealEstateService } from '~/services/real-estate.service'
 
 export const useManagerStore = defineStore('manager', () => {
-  const { $api } = useNuxtApp()
+  const managerService = useManagerService()
+  const realEstateService = useRealEstateService()
 
   // ── Bài viết ──
   const posts = ref<IManagerPostItem[]>([])
@@ -30,14 +33,16 @@ export const useManagerStore = defineStore('manager', () => {
     postsSize.value = opts.size
     postsSearch.value = opts.search
     try {
-      const res = await $api.get<{ data: IManagerPostListResponse }>('/manager/posts', {
-        params: { search: opts.search, page: opts.page, size: opts.size },
+      const res = await managerService.getPosts({
+        search: opts.search,
+        page: opts.page,
+        size: opts.size,
       })
-      posts.value = res?.data?.posts || []
-      postsTotal.value = res?.data?.total || 0
+      posts.value = res?.posts || []
+      postsTotal.value = res?.total || 0
       postsLoaded.value = true
-    } catch (error: any) {
-      window.message?.error('Lỗi khi tải danh sách bài viết: ' + (error?.message || 'Lỗi máy chủ'))
+    } catch (error: unknown) {
+      window.message?.error('Lỗi khi tải danh sách bài viết: ' + (error instanceof Error ? error.message : 'Lỗi máy chủ'))
       throw error
     }
   }
@@ -62,14 +67,16 @@ export const useManagerStore = defineStore('manager', () => {
     projectsSize.value = opts.size
     projectsSearch.value = opts.search
     try {
-      const res = await $api.get<{ data: ManagerProject[]; total: number }>('/manager/projects', {
-        params: { search: opts.search, page: opts.page, size: opts.size },
+      const res = await managerService.getProjects({
+        search: opts.search,
+        page: opts.page,
+        size: opts.size,
       })
-      projects.value = res?.data || []
+      projects.value = res?.items || []
       projectsTotal.value = res?.total || 0
       projectsLoaded.value = true
-    } catch (error: any) {
-      window.message?.error('Lỗi khi tải danh sách dự án: ' + (error?.message || 'Lỗi máy chủ'))
+    } catch (error: unknown) {
+      window.message?.error('Lỗi khi tải danh sách dự án: ' + (error instanceof Error ? error.message : 'Lỗi máy chủ'))
       throw error
     }
   }
@@ -92,14 +99,12 @@ export const useManagerStore = defineStore('manager', () => {
     favoritesPage.value = opts.page
     favoritesSize.value = opts.size
     try {
-      const res = await $api.get<{ data: RealEstateResponse[]; total: number }>('/real-estate/favorites', {
-        params: { page: opts.page, size: opts.size },
-      })
-      favorites.value = res?.data || []
+      const res = await realEstateService.getFavorites({ page: opts.page, size: opts.size })
+      favorites.value = res?.items || []
       favoritesTotal.value = res?.total || 0
       favoritesLoaded.value = true
-    } catch (error: any) {
-      window.message?.error('Lỗi khi tải danh mục yêu thích: ' + (error?.message || 'Lỗi máy chủ'))
+    } catch (error: unknown) {
+      window.message?.error('Lỗi khi tải danh mục yêu thích: ' + (error instanceof Error ? error.message : 'Lỗi máy chủ'))
       throw error
     }
   }

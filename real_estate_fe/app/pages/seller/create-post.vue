@@ -64,7 +64,9 @@
 <script setup lang="ts">
 import { useCreatePost } from '~/stores/create-post'
 import { useManagerStore } from '~/stores/manager'
-import { InformationRealestate, type CreatePostResponse, type RealEstateResponse, type UpdatePostResponse } from '~/types/real_estate'
+import { InformationRealestate, type CreatePostResponse, type UpdatePostResponse } from '~/types/real_estate'
+import { useManagerService } from '~/services/manager.service'
+import { useRealEstateService } from '~/services/real-estate.service'
 definePageMeta({
     alias: "/nguoi-ban/dang-tin",
 })
@@ -74,7 +76,8 @@ useHead({
 })
 
 const { phoneVerified, verifiedPhone } = usePhoneVerification()
-const { $api } = useNuxtApp()
+const managerService = useManagerService()
+const realEstateService = useRealEstateService()
 const managerStore = useManagerStore()
 
 const route = useRoute()
@@ -118,16 +121,15 @@ const submitCreatePost = async () => {
     if (!uploadComponent.value.validateImageCount()) return
     isSubmitting.value = true
     try {
-        let res;
+        let res: CreatePostResponse | UpdatePostResponse;
 
         if (isEdit.value) {
-            res = await $api.put<UpdatePostResponse>(
-                `/manager/update-post/${isEdit.value}`,
+            res = await managerService.updatePost(
+                Number(isEdit.value),
                 postStore.payload
             )
         } else {
-            res = await $api.post<CreatePostResponse>(
-                '/manager/create-post',
+            res = await managerService.createPost(
                 postStore.payload,
             )
         }
@@ -148,9 +150,9 @@ const submitCreatePost = async () => {
 
 const loadingPostDetail = async () => {
     try {
-        const res = await $api.get<{ data: RealEstateResponse }>(`/real-estate/detail/${isEdit.value}`)
+        const res = await realEstateService.getDetail(Number(isEdit.value))
         if (res) {
-            const editForm = InformationRealestate.fromResponse(res.data)
+            const editForm = InformationRealestate.fromResponse(res)
             postStore.form = editForm
             // Đẩy danh sách ảnh vào upload component để hiển thị preview
             if (editForm.images && editForm.images.length > 0) {

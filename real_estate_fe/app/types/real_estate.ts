@@ -92,6 +92,18 @@ export interface PaginatedResponse<T> {
   data: T[];
 }
 
+// 1 thành phố trong khối "Bất động sản theo địa điểm" (/real-estate/list/top-city).
+// FE ghép category_slug + city_slug thành URL SEO của trang danh mục.
+export interface TopCityOption {
+  // Backend hiện chưa trả `id` → giữ optional để không phá `:key` khi render
+  id?: number;
+  name: string;
+  count: number;
+  image: string;
+  category_slug: string;
+  city_slug: string;
+}
+
 export interface NotificationItem {
   id: number;
   listing_id?: number;
