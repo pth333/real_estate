@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"strings"
 	"time"
 
 	"real_estate_be/internal/dto"
@@ -118,6 +119,10 @@ func (s *AuthService) SendOTP(req dto.SendOTPRequest) error {
 		return fmt.Errorf("failed to cache OTP: %w", err)
 	}
 
+	if strings.HasPrefix(req.Phone, "0") {
+		numberPhone := "+84" + req.Phone[1:]
+		req.Phone = numberPhone
+	}
 	// Gửi OTP qua SMS
 	if err := s.sms.Send(req.Phone, otp); err != nil {
 		return fmt.Errorf("failed to send OTP: %w", err)

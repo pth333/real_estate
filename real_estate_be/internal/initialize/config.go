@@ -17,6 +17,7 @@ import (
 func LoadConfig() {
 	// ── Load file .env ─────────────────────────────
 	// godotenv load .env vào os.Environ() thật, để viper.AutomaticEnv() đọc được
+	// _ = godotenv.Load()
 	loadEnvFiles()
 
 	v := viper.New()
@@ -60,6 +61,9 @@ func LoadConfig() {
 	v.BindEnv("r2.access_key_id", "RE_R2_ACCESS_KEY_ID")
 	v.BindEnv("r2.secret_access_key", "RE_R2_SECRET_ACCESS_KEY")
 	v.BindEnv("r2.public_url", "RE_R2_PUBLIC_URL")
+	// v.BindEnv("vonage.vonage_api_key", "RE_VONAGE_API_KEY")
+	// v.BindEnv("vonage.vonage_api_secret", "RE_VONAGE_API_SECRET")
+	v.BindEnv("infobip.api_key", "RE_INFOBIP_API_KEY")
 
 	if err := v.Unmarshal(&global.Config); err != nil {
 		panic(err)
@@ -99,4 +103,5 @@ func loadEnvFiles() {
 			_ = godotenv.Load(p)
 		}
 	}
+
 }

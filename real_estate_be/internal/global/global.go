@@ -27,6 +27,11 @@ type ConfigSettings struct {
 	R2             R2Config             `mapstructure:"r2"`
 	AI             AIConfig             `mapstructure:"ai"`
 	Recommendation RecommendationConfig `mapstructure:"recommendation"`
+	Infobip        InfobipConfig        `mapstructure:"infobip"`
+}
+
+type InfobipConfig struct {
+	ApiKey string `mapstructure:"api_key"`
 }
 
 type RecommendationConfig struct {
