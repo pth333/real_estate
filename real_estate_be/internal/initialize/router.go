@@ -20,6 +20,14 @@ func InitRouter() *fiber.App {
 
 	MainGroup := app.Group("/api/2026")
 	{
+		// ⚠️ Đặt cọc escrow đăng ký ĐẦU TIÊN.
+		// Fiber v2 `Group.Group(prefix, handlers...)` append handlers vào group cha, nên các
+		// nhóm bên dưới (category/upload/ai) sẽ làm MainGroup dính thêm AuthMiddleware.
+		// Nhóm đặt cọc cần endpoint webhook thanh toán KHÔNG cần token, nên phải tạo group
+		// lúc MainGroup còn sạch middleware.
+		routers.InitDepositRoutes(MainGroup)
+		// RBAC: quản trị role/permission + gán role cho user
+		routers.InitRbacRoutes(MainGroup)
 		// Auth
 		routers.InitAuthRoutes(MainGroup)
 		// Category
@@ -36,8 +44,6 @@ func InitRouter() *fiber.App {
 		routers.InitAIRoutes(MainGroup)
 		// Manager Routes (Sử dụng Google Wire chuẩn quy hoạch)
 		routers.InitManagerRoutes(MainGroup)
-		// Đặt cọc escrow (khách / môi giới / admin)
-		routers.InitDepositRoutes(MainGroup)
 	}
 
 	return app

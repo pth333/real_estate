@@ -38,6 +38,8 @@ import DepositDetailModal from '~/components/deposit/DepositDetailModal.vue'
 
 definePageMeta({
   alias: ['/nguoi-ban/quan-ly-dat-coc'],
+  // Chỉ user có quyền môi giới mới xem được danh sách đơn được giao
+  requiresPermission: ['broker.deposit.list'],
 })
 
 const depositService = useDepositService()

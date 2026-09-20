@@ -186,12 +186,13 @@ import DepositDetailModal from '~/components/deposit/DepositDetailModal.vue'
 
 definePageMeta({
   layout: 'admin',
+  requiresPermission: ['admin.dispute.list'],
 })
 
 const authStore = useAuthStore()
 const depositService = useDepositService()
 
-const isAdmin = computed(() => authStore.user?.role === 'ADMIN')
+const isAdmin = computed(() => authStore.user?.roles?.includes('ADMIN') ?? false)
 
 const disputes = ref<DepositDispute[]>([])
 const total = ref(0)

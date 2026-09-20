@@ -24,8 +24,9 @@ const (
 )
 
 type AuthService struct {
-	repo repo.IUserRepository
-	sms  sms.Provider
+	repo     repo.IUserRepository
+	sms      sms.Provider
+	rbacRepo repo.IRbacRepository
 }
 
 type AuthServiceInterface interface {
@@ -34,12 +35,16 @@ type AuthServiceInterface interface {
 	RefreshToken(refreshToken string) (string, string, error)
 	SendOTP(req dto.SendOTPRequest) error
 	VerifyOTP(req dto.VerifyOTPRequest, currentUserEmail string) error
+	// GetUserCurrentInfo trả thông tin user đang đăng nhập (role + permission)
+	// để FE ẩn/hiện UI và chặn ở tầng route.
+	GetUserCurrentInfo(userID uint64) (*dto.UserResponse, error)
 }
 
-func NewAuthService(repo repo.IUserRepository, smsProvider sms.Provider) AuthServiceInterface {
+func NewAuthService(repo repo.IUserRepository, smsProvider sms.Provider, rbacRepo repo.IRbacRepository) AuthServiceInterface {
 	return &AuthService{
-		repo: repo,
-		sms:  smsProvider,
+		repo:     repo,
+		sms:      smsProvider,
+		rbacRepo: rbacRepo,
 	}
 }
 
@@ -49,9 +54,13 @@ func (h *AuthService) Register(req dto.CreateUserRequest) error {
 		Email:    req.Email,
 		Password: string(hash),
 		Name:     req.Name,
-		Role:     model.RoleCustomer,
 	}
-	return h.repo.Register(user)
+	if err := h.repo.Register(user); err != nil {
+		return err
+	}
+
+	// Mặc định user mới là khách hàng.
+	return h.rbacRepo.AddRoleByCode(user.ID, model.RoleCustomer)
 }
 
 func (h *AuthService) Login(req dto.LoginRequest) (string, string, *dto.UserResponse, error) {
@@ -74,15 +83,43 @@ func (h *AuthService) Login(req dto.LoginRequest) (string, string, *dto.UserResp
 		return "", "", nil, err
 	}
 
-	userRes := &dto.UserResponse{
-		ID:    user.ID,
-		Name:  user.Name,
-		Email: user.Email,
-		Phone: user.Phone,
-		Role:  user.Role,
+	userRes, err := h.buildUserResponse(user)
+	if err != nil {
+		return "", "", nil, err
 	}
 
 	return accessToken, refreshToken, userRes, nil
+}
+
+// buildUserResponse gom role + permission của user để FE điều hướng giao diện.
+func (h *AuthService) buildUserResponse(user *model.User) (*dto.UserResponse, error) {
+	access, err := h.rbacRepo.GetUserAccess(user.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &dto.UserResponse{
+		ID:          user.ID,
+		Name:        user.Name,
+		Email:       user.Email,
+		Phone:       user.Phone,
+		Roles:       access.Roles,
+		Permissions: access.Permissions,
+	}, nil
+}
+
+// GetUserCurrentInfo đọc lại user + quyền từ DB theo user_id trong token.
+// Dùng cho GET /auth/user-current-info: FE gọi lúc khởi động để luôn có role/permission
+// mới nhất (sau khi admin đổi role không cần đăng nhập lại mới thấy đúng giao diện).
+func (h *AuthService) GetUserCurrentInfo(userID uint64) (*dto.UserResponse, error) {
+	user, err := h.repo.FindByID(userID)
+	if err != nil {
+		return nil, errors.New("không tìm thấy tài khoản")
+	}
+	if user.IsActive == 0 {
+		return nil, errors.New("tài khoản đã bị khoá")
+	}
+	return h.buildUserResponse(user)
 }
 
 func (h *AuthService) RefreshToken(refreshToken string) (string, string, error) {
@@ -161,17 +198,27 @@ func (s *AuthService) VerifyOTP(req dto.VerifyOTPRequest, currentUserEmail strin
 
 	// Trường hợp Public (Không đăng nhập, ví dụ đăng nhập trực tiếp qua SĐT)
 	// Kiểm tra user đã tồn tại chưa
-	_, findErr := s.repo.FindByPhone(req.Phone)
+	existing, findErr := s.repo.FindByPhone(req.Phone)
 	if findErr != nil {
 		// Chưa có → tạo mới
-		_, err = s.repo.CreateUserByPhone(req.Phone)
+		created, err := s.repo.CreateUserByPhone(req.Phone)
 		if err != nil {
 			return fmt.Errorf("không thể tạo tài khoản: %w", err)
+		}
+		// Tài khoản tạo qua SĐT mặc định là khách hàng
+		if err := s.rbacRepo.AddRoleByCode(created.ID, model.RoleCustomer); err != nil {
+			return fmt.Errorf("không thể gán role cho tài khoản: %w", err)
 		}
 	} else {
 		// Đã có → đánh dấu verified
 		if err := s.repo.MarkPhoneVerified(req.Phone); err != nil {
 			return fmt.Errorf("không thể xác thực số điện thoại: %w", err)
+		}
+		if existing != nil && existing.ID != 0 {
+			// Đảm bảo tài khoản cũ luôn có ít nhất role khách hàng
+			if err := s.rbacRepo.AddRoleByCode(existing.ID, model.RoleCustomer); err != nil {
+				return fmt.Errorf("không thể gán role cho tài khoản: %w", err)
+			}
 		}
 	}
 

@@ -48,11 +48,12 @@ type IDepositService interface {
 	GenerateCheckinOTP(depositID, brokerID uint64) (*dto.CheckinOTPResponse, error)
 
 	// ── Dùng chung 2 bên ──
-	GetDepositDetail(depositID, requesterID uint64, requesterRole string) (*dto.DepositResponse, error)
-	SubmitReport(depositID, userID uint64, role string, req dto.ReportResultRequest) (*dto.DepositResponse, error)
+	GetDepositDetail(depositID, requesterID uint64) (*dto.DepositResponse, error)
+	GetDepositForAdmin(depositID uint64) (*dto.DepositResponse, error)
+	SubmitReport(depositID, userID uint64, req dto.ReportResultRequest) (*dto.DepositResponse, error)
 
 	// ── Tranh chấp ──
-	OpenDispute(depositID, userID uint64, role string, req dto.CreateDisputeRequest) (*dto.DisputeResponse, error)
+	OpenDispute(depositID, userID uint64, req dto.CreateDisputeRequest) (*dto.DisputeResponse, error)
 	AddDisputeEvidence(disputeID, userID uint64, req dto.AddEvidenceRequest) (*dto.DisputeResponse, error)
 	ListDisputes(status string, page, size int) ([]dto.DisputeResponse, int64, error)
 	GetDisputeDetail(disputeID uint64) (*dto.DisputeResponse, error)
@@ -277,7 +278,7 @@ func (s *depositService) CreateDeposit(customerID uint64, req dto.CreateDepositR
 		return nil, err
 	}
 
-	detail, err := s.GetDepositDetail(deposit.ID, customerID, model.RoleCustomer)
+	detail, err := s.GetDepositDetail(deposit.ID, customerID)
 	if err != nil {
 		return nil, err
 	}
@@ -375,7 +376,7 @@ func (s *depositService) HandlePaymentCallback(params map[string]string) (*dto.P
 // ══════════════════════════════════════════════════════════
 
 func (s *depositService) ConfirmDeposit(depositID, brokerID uint64) (*dto.DepositResponse, error) {
-	deposit, err := s.getOwnedDeposit(depositID, brokerID, model.RoleBroker)
+	deposit, err := s.requireSide(depositID, brokerID, model.RoleBroker)
 	if err != nil {
 		return nil, err
 	}
@@ -399,11 +400,11 @@ func (s *depositService) ConfirmDeposit(depositID, brokerID uint64) (*dto.Deposi
 		fmt.Sprintf("Bạn đã xác nhận lịch xem nhà #%d. Hệ thống sẽ nhắc trước 24h.", deposit.ID),
 	)
 
-	return s.GetDepositDetail(deposit.ID, brokerID, model.RoleBroker)
+	return s.GetDepositDetail(deposit.ID, brokerID)
 }
 
 func (s *depositService) RejectDeposit(depositID, brokerID uint64, reason string) (*dto.DepositResponse, error) {
-	deposit, err := s.getOwnedDeposit(depositID, brokerID, model.RoleBroker)
+	deposit, err := s.requireSide(depositID, brokerID, model.RoleBroker)
 	if err != nil {
 		return nil, err
 	}
@@ -437,7 +438,7 @@ func (s *depositService) RejectDeposit(depositID, brokerID uint64, reason string
 		fmt.Sprintf("Bạn đã từ chối đơn #%d. Tiền cọc đã được hoàn cho khách.", deposit.ID),
 	)
 
-	return s.GetDepositDetail(deposit.ID, brokerID, model.RoleBroker)
+	return s.GetDepositDetail(deposit.ID, brokerID)
 }
 
 // ══════════════════════════════════════════════════════════
@@ -446,7 +447,7 @@ func (s *depositService) RejectDeposit(depositID, brokerID uint64, reason string
 
 // GenerateCheckinOTP — môi giới mở app sinh OTP 6 số (hiệu lực 10 phút, dùng 1 lần).
 func (s *depositService) GenerateCheckinOTP(depositID, brokerID uint64) (*dto.CheckinOTPResponse, error) {
-	deposit, err := s.getOwnedDeposit(depositID, brokerID, model.RoleBroker)
+	deposit, err := s.requireSide(depositID, brokerID, model.RoleBroker)
 	if err != nil {
 		return nil, err
 	}
@@ -481,7 +482,7 @@ func (s *depositService) GenerateCheckinOTP(depositID, brokerID uint64) (*dto.Ch
 
 // CustomerCheckin — khách nhập OTP môi giới hiển thị tại chỗ → CHECKED_IN.
 func (s *depositService) CustomerCheckin(depositID, customerID uint64, otp string) (*dto.DepositResponse, error) {
-	deposit, err := s.getOwnedDeposit(depositID, customerID, model.RoleCustomer)
+	deposit, err := s.requireSide(depositID, customerID, model.RoleCustomer)
 	if err != nil {
 		return nil, err
 	}
@@ -517,7 +518,7 @@ func (s *depositService) CustomerCheckin(depositID, customerID uint64, otp strin
 		fmt.Sprintf("Khách đã check-in tại buổi xem nhà #%d. Vui lòng báo cáo kết quả trong %d giờ tới.", deposit.ID, s.cfg.ReportWindowHours),
 	)
 
-	return s.GetDepositDetail(deposit.ID, customerID, model.RoleCustomer)
+	return s.GetDepositDetail(deposit.ID, customerID)
 }
 
 // ══════════════════════════════════════════════════════════
@@ -534,13 +535,14 @@ func (s *depositService) CustomerCheckin(depositID, customerID uint64, otp strin
 // - Báo mua/không mua (đã check-in) bắt buộc kèm ảnh bằng chứng.
 // - Riêng khách khai BOUGHT phải kèm tài liệu mua bán thật, vì khách là bên
 //   duy nhất hưởng lợi từ việc khai BOUGHT (hoàn 100% thay vì mất phí môi giới).
-func (s *depositService) SubmitReport(depositID, userID uint64, role string, req dto.ReportResultRequest) (*dto.DepositResponse, error) {
-	deposit, err := s.getOwnedDeposit(depositID, userID, role)
+func (s *depositService) SubmitReport(depositID, userID uint64, req dto.ReportResultRequest) (*dto.DepositResponse, error) {
+	// Phía báo cáo suy ra từ chính bản ghi đơn, không nhận từ client
+	deposit, side, err := s.getOwnedDeposit(depositID, userID)
 	if err != nil {
 		return nil, err
 	}
 
-	isBroker := role == model.RoleBroker
+	isBroker := side == model.RoleBroker
 	var allowed []string
 
 	switch deposit.Status {
@@ -615,7 +617,7 @@ func (s *depositService) SubmitReport(depositID, userID uint64, role string, req
 		return nil, err
 	}
 
-	return s.GetDepositDetail(deposit.ID, userID, role)
+	return s.GetDepositDetail(deposit.ID, userID)
 }
 
 // evaluateReports áp bảng quyết định của plan mục 3 khi đã có đủ báo cáo 2 bên.
@@ -715,7 +717,7 @@ func (s *depositService) DecidePurchase(depositID, adminID uint64, req dto.Purch
 		if err := s.openSystemDispute(deposit, "Admin từ chối tài liệu mua nhà: "+note); err != nil {
 			return nil, err
 		}
-		return s.GetDepositDetail(deposit.ID, adminID, model.RoleAdmin)
+		return s.GetDepositForAdmin(deposit.ID)
 	}
 
 	// Duyệt: trừ tồn kho dự án trước, hết căn thì không cho duyệt
@@ -747,7 +749,7 @@ func (s *depositService) DecidePurchase(depositID, adminID uint64, req dto.Purch
 	}
 	s.notifySettlement(deposit, model.DepositStatusVisitedBought)
 
-	return s.GetDepositDetail(deposit.ID, adminID, model.RoleAdmin)
+	return s.GetDepositForAdmin(deposit.ID)
 }
 
 // ══════════════════════════════════════════════════════════
@@ -755,7 +757,7 @@ func (s *depositService) DecidePurchase(depositID, adminID uint64, req dto.Purch
 // ══════════════════════════════════════════════════════════
 
 func (s *depositService) RateBroker(depositID, customerID uint64, req dto.RateBrokerRequest) error {
-	deposit, err := s.getOwnedDeposit(depositID, customerID, model.RoleCustomer)
+	deposit, err := s.requireSide(depositID, customerID, model.RoleCustomer)
 	if err != nil {
 		return err
 	}
@@ -823,17 +825,29 @@ func (s *depositService) ListAllDeposits(status string, page, size int) ([]dto.D
 	return s.mapList(items), total, nil
 }
 
-// GetDepositDetail trả chi tiết 1 deposit, chỉ cho phép khách/môi giới liên quan hoặc admin.
-func (s *depositService) GetDepositDetail(depositID, requesterID uint64, requesterRole string) (*dto.DepositResponse, error) {
+// GetDepositDetail trả chi tiết 1 deposit cho KHÁCH hoặc MÔI GIỚI của đơn.
+// Xác định vai trò theo chính bản ghi đơn (so user id), KHÔNG dựa vào role của user —
+// vì một user có thể giữ nhiều role (vừa là khách của đơn này, vừa là môi giới đơn khác).
+func (s *depositService) GetDepositDetail(depositID, requesterID uint64) (*dto.DepositResponse, error) {
+	deposit, _, err := s.getOwnedDeposit(depositID, requesterID)
+	if err != nil {
+		return nil, err
+	}
+	return s.buildDepositDetail(deposit)
+}
+
+// GetDepositForAdmin trả chi tiết đơn cho admin (bỏ qua kiểm tra sở hữu).
+// Route gọi hàm này đã được chặn bằng permission admin.deposit.view.
+func (s *depositService) GetDepositForAdmin(depositID uint64) (*dto.DepositResponse, error) {
 	deposit, err := s.depositRepo.GetByID(depositID)
 	if err != nil {
 		return nil, errors.New("không tìm thấy đơn đặt cọc")
 	}
+	return s.buildDepositDetail(deposit)
+}
 
-	if requesterRole != model.RoleAdmin && deposit.CustomerID != requesterID && deposit.BrokerID != requesterID {
-		return nil, errors.New("bạn không có quyền xem đơn đặt cọc này")
-	}
-
+// buildDepositDetail dựng response chi tiết kèm tranh chấp đang mở và đánh giá.
+func (s *depositService) buildDepositDetail(deposit *model.Deposit) (*dto.DepositResponse, error) {
 	resp := s.toDepositResponse(deposit)
 
 	// Kèm tranh chấp đang mở (nếu có)
@@ -852,16 +866,34 @@ func (s *depositService) GetDepositDetail(depositID, requesterID uint64, request
 	return &resp, nil
 }
 
-// getOwnedDeposit lấy deposit và kiểm tra quyền của bên đang thao tác.
-func (s *depositService) getOwnedDeposit(depositID, userID uint64, role string) (*model.Deposit, error) {
+// getOwnedDeposit lấy deposit và xác định user đang ở phía nào của đơn.
+// Trả về side = CUSTOMER hoặc BROKER. Không nhận role từ client để tránh việc
+// user nhiều role bị nhận sai phía (và không thể giả mạo vai trò).
+func (s *depositService) getOwnedDeposit(depositID, userID uint64) (*model.Deposit, string, error) {
 	deposit, err := s.depositRepo.GetByID(depositID)
 	if err != nil {
-		return nil, errors.New("không tìm thấy đơn đặt cọc")
+		return nil, "", errors.New("không tìm thấy đơn đặt cọc")
 	}
-	if role == model.RoleBroker && deposit.BrokerID != userID {
-		return nil, errors.New("bạn không phụ trách đơn đặt cọc này")
+
+	if deposit.CustomerID == userID {
+		return deposit, model.RoleCustomer, nil
 	}
-	if role == model.RoleCustomer && deposit.CustomerID != userID {
+	if deposit.BrokerID == userID {
+		return deposit, model.RoleBroker, nil
+	}
+	return nil, "", errors.New("bạn không phải khách hàng hoặc môi giới của đơn đặt cọc này")
+}
+
+// requireSide kiểm tra user có đúng vai trò yêu cầu ở đơn hay không (VD môi giới để xác nhận lịch).
+func (s *depositService) requireSide(depositID, userID uint64, wantSide string) (*model.Deposit, error) {
+	deposit, side, err := s.getOwnedDeposit(depositID, userID)
+	if err != nil {
+		return nil, err
+	}
+	if side != wantSide {
+		if wantSide == model.RoleBroker {
+			return nil, errors.New("bạn không phụ trách đơn đặt cọc này")
+		}
 		return nil, errors.New("đơn đặt cọc không thuộc tài khoản của bạn")
 	}
 	return deposit, nil

@@ -45,6 +45,13 @@ import { formatVnd } from '~/utils/deposit'
 import DepositTable from '~/components/deposit/DepositTable.vue'
 import DepositDetailModal from '~/components/deposit/DepositDetailModal.vue'
 
+// Chặn ở tầng route: chỉ user có quyền xem đơn của mình mới vào được.
+// Tên file đặt tiếng Anh; giữ alias tiếng Việt cho URL người dùng đã quen.
+definePageMeta({
+  requiresPermission: ['deposit.view.own'],
+  alias: ['/tai-khoan/dat-coc'],
+})
+
 const depositService = useDepositService()
 
 const deposits = ref<Deposit[]>([])

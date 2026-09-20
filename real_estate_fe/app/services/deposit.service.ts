@@ -69,6 +69,14 @@ export class DepositService extends BaseService {
   }
 
   /**
+   * Chi tiết đơn dành cho admin.
+   * Dùng route riêng vì `GET /deposits/:id` chỉ mở cho khách và môi giới của đơn.
+   */
+  getDepositAsAdmin(depositId: number): Promise<Deposit> {
+    return this.getData<Deposit>(`/admin/deposits/${depositId}`)
+  }
+
+  /**
    * Báo cáo kết quả buổi xem (mỗi bên chỉ gửi được 1 lần).
    * - Đã check-in: BOUGHT / NOT_BUY — bắt buộc kèm ảnh bằng chứng;
    *   khách khai BOUGHT còn phải kèm purchaseProof (loại tài liệu mua bán).

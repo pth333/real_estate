@@ -50,6 +50,7 @@ definePageMeta({
   alias: [
     '/nguoi-ban/tao-du-an'
   ],
+  requiresAuth: true,
 })
 
 useHead({

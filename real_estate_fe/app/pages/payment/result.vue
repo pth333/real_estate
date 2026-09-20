@@ -43,8 +43,14 @@ import DepositStatusTag from '~/components/deposit/DepositStatusTag.vue'
 import IconCheck from '~/icons/IconCheck.vue'
 import IconXCircle from '~/icons/IconXCircle.vue'
 
+// Tên file đặt tiếng Anh; giữ alias tiếng Việt vì URL này nằm trong
+// payment.return_url của backend (cổng thanh toán redirect về) — đổi URL sẽ
+// làm hỏng cấu hình đang chạy.
 definePageMeta({
   layout: 'empty',
+  alias: ['/thanh-toan/ket-qua'],
+  // Trang kết quả thanh toán thuộc phiên của khách đã đăng nhập
+  requiresAuth: true,
 })
 
 const route = useRoute()
@@ -90,6 +96,6 @@ function goHome() {
 }
 
 function goToMyDeposits() {
-  navigateTo('/tai-khoan/dat-coc')
+  navigateTo('/account/deposits')
 }
 </script>

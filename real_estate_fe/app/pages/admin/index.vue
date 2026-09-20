@@ -86,12 +86,14 @@ import IconXCircle from '~/icons/IconXCircle.vue'
 
 definePageMeta({
   layout: 'admin',
+  // Chặn ở tầng route: gõ tay /admin cũng không vào được nếu không phải ADMIN
+  requiresRole: ['ADMIN'],
 })
 
 const authStore = useAuthStore()
 const depositService = useDepositService()
 
-const isAdmin = computed(() => authStore.user?.role === 'ADMIN')
+const isAdmin = computed(() => authStore.user?.roles?.includes('ADMIN') ?? false)
 
 const summary = ref<EscrowSummary | null>(null)
 const deposits = ref<Deposit[]>([])

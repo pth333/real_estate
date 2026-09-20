@@ -36,6 +36,8 @@ export interface UserInfo {
   email: string
   name: string
   phone?: string
-  /** Vai trò: CUSTOMER / BROKER / ADMIN — dùng để điều hướng giao diện */
-  role?: 'CUSTOMER' | 'BROKER' | 'ADMIN'
+  /** Danh sách role code: CUSTOMER / BROKER / ADMIN — dùng để điều hướng giao diện */
+  roles?: string[]
+  /** Danh sách permission code — dùng để ẩn/hiện chức năng theo quyền */
+  permissions?: string[]
 }

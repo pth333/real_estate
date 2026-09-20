@@ -8,6 +8,7 @@ import type {
   LoginRequest,
   RegisterRequest,
   SendOtpResult,
+  UserInfo,
   VerifyOtpResult,
 } from '~/types/auth'
 
@@ -33,6 +34,15 @@ export class AuthService extends BaseService {
   /** Đăng xuất — không cần đọc body, chỉ cần gọi thành công */
   async logout(): Promise<void> {
     await this.post('/auth/logout')
+  }
+
+  /**
+   * Thông tin user đang đăng nhập: id, tên, email, roles[], permissions[].
+   * FE gọi lúc khởi động để state global luôn có quyền MỚI NHẤT
+   * (admin đổi role thì không cần đăng nhập lại mới thấy đúng giao diện).
+   */
+  getUserCurrentInfo(): Promise<UserInfo> {
+    return this.getData<UserInfo>('/auth/user-current-info')
   }
 
   /** Gửi OTP xác thực số điện thoại trước khi đăng tin */

@@ -106,6 +106,22 @@ func (h *UserHandler) Logout(c *fiber.Ctx) error {
 	})
 }
 
+// GetUserCurrentInfo — trả thông tin user đang đăng nhập (id, tên, email, roles[], permissions[]).
+// FE gọi lúc khởi động và lưu vào state global để ẩn/hiện UI + chặn ở tầng route.
+func (h *UserHandler) GetUserCurrentInfo(c *fiber.Ctx) error {
+	userID, ok := c.Locals("user_id").(uint64)
+	if !ok || userID == 0 {
+		return response.Unauthorized(c, "Unauthorized", nil)
+	}
+
+	user, err := h.service.GetUserCurrentInfo(userID)
+	if err != nil {
+		return response.Unauthorized(c, "Không đọc được thông tin tài khoản", err.Error())
+	}
+
+	return response.OK(c, user)
+}
+
 func (h *UserHandler) SendOTP(c *fiber.Ctx) error {
 	var req dto.SendOTPRequest
 

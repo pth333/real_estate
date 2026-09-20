@@ -78,10 +78,22 @@ useHead({
 import { useAuthStore } from "~/stores/auth";
 
 const auth = useAuthStore();
+const route = useRoute();
 const form = ref({ email: "", password: "" });
 const errors = ref({ email: "", password: "" });
 const loading = ref(false);
 const apiError = ref("");
+
+/**
+ * Lấy đường dẫn cần quay lại sau khi đăng nhập (do middleware route truyền vào
+ * khi chặn một trang cần đăng nhập). Chỉ nhận đường dẫn nội bộ để tránh open redirect.
+ */
+function resolveRedirect(): string {
+  const value = route.query.redirect;
+  if (typeof value !== "string") return "/";
+  if (!value.startsWith("/") || value.startsWith("//")) return "/";
+  return value;
+}
 
 function validate(): boolean {
   let ok = true;
@@ -110,7 +122,8 @@ async function handleLogin() {
   loading.value = true;
   try {
     await auth.login({ email: form.value.email, password: form.value.password });
-    await navigateTo("/");
+    // Quay lại đúng trang người dùng định vào trước khi bị chặn đăng nhập
+    await navigateTo(resolveRedirect());
   } catch (err: any) {
     apiError.value = err.message || "Đăng nhập thất bại";
   } finally {

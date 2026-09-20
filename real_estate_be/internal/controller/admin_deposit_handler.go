@@ -32,10 +32,25 @@ func (h *AdminDepositHandler) ListDeposits(c *fiber.Ctx) error {
 	return response.Success(c, fiber.StatusOK, "", items, fiber.Map{"total": total, "page": page, "size": size})
 }
 
+// GetDeposit — chi tiết 1 đơn đặt cọc cho admin.
+// Route riêng vì GET /deposits/:id chỉ mở cho khách và môi giới của đơn đó.
+func (h *AdminDepositHandler) GetDeposit(c *fiber.Ctx) error {
+	depositID, err := parseIDParam(c)
+	if err != nil || depositID == 0 {
+		return response.BadRequest(c, "ID đơn đặt cọc không hợp lệ", nil)
+	}
+
+	result, err := h.service.GetDepositForAdmin(depositID)
+	if err != nil {
+		return response.BadRequest(c, err.Error(), nil)
+	}
+	return response.OK(c, result)
+}
+
 // DecidePurchase — admin duyệt/từ chối tài liệu mua nhà.
 // Duyệt thì trừ 1 căn tồn kho dự án và tất toán hoàn 100% cho khách.
 func (h *AdminDepositHandler) DecidePurchase(c *fiber.Ctx) error {
-	adminID, _ := currentActor(c)
+	adminID := currentUserID(c)
 	depositID, err := parseIDParam(c)
 	if err != nil || depositID == 0 {
 		return response.BadRequest(c, "ID đơn đặt cọc không hợp lệ", nil)
@@ -93,7 +108,7 @@ func (h *AdminDepositHandler) GetDispute(c *fiber.Ctx) error {
 
 // ResolveDispute — admin ra quyết định và release tiền khỏi escrow.
 func (h *AdminDepositHandler) ResolveDispute(c *fiber.Ctx) error {
-	adminID, _ := currentActor(c)
+	adminID := currentUserID(c)
 	disputeID, err := parseIDParam(c)
 	if err != nil || disputeID == 0 {
 		return response.BadRequest(c, "ID tranh chấp không hợp lệ", nil)

@@ -49,6 +49,7 @@ definePageMeta({
   alias: [
     '/nguoi-ban/quan-ly-du-an'
   ],
+  requiresAuth: true,
 })
 
 const managerStore = useManagerStore()

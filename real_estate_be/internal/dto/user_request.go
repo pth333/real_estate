@@ -24,6 +24,8 @@ type UserResponse struct {
 	Name  string `json:"name"`
 	Email string `json:"email"`
 	Phone string `json:"phone"`
-	// Vai trò dùng để FE điều hướng: CUSTOMER / BROKER / ADMIN
-	Role string `json:"role"`
+	// Một user có thể giữ NHIỀU role (bảng nối user_roles)
+	Roles []string `json:"roles"`
+	// Quyền chi tiết gom từ các role — FE dùng để ẩn/hiện chức năng
+	Permissions []string `json:"permissions"`
 }

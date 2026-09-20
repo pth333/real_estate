@@ -69,6 +69,7 @@ import { useManagerService } from '~/services/manager.service'
 import { useRealEstateService } from '~/services/real-estate.service'
 definePageMeta({
     alias: "/nguoi-ban/dang-tin",
+    requiresAuth: true,
 })
 
 useHead({

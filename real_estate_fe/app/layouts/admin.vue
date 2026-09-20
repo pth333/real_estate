@@ -38,10 +38,18 @@ import { NIcon, type MenuOption } from 'naive-ui'
 import IconShieldCheck from '~/icons/IconShieldCheck.vue'
 import IconWallet from '~/icons/IconWallet.vue'
 import IconInfo from '~/icons/IconInfo.vue'
+import IconUser from '~/icons/IconUser.vue'
 
 const route = useRoute()
 
-const activeKey = ref<string>(route.path.includes('disputes') ? 'disputes' : 'escrow')
+// Xác định mục menu đang mở theo đường dẫn hiện tại
+function resolveActiveKey(path: string): string {
+  if (path.includes('/admin/users')) return 'users'
+  if (path.includes('disputes')) return 'disputes'
+  return 'escrow'
+}
+
+const activeKey = ref<string>(resolveActiveKey(route.path))
 
 function renderIcon(icon: Component) {
   return () => h(NIcon, null, { default: () => h(icon) })
@@ -50,10 +58,18 @@ function renderIcon(icon: Component) {
 const menuOptions: MenuOption[] = [
   { label: 'Tổng quan escrow', key: 'escrow', icon: renderIcon(IconWallet) },
   { label: 'Tranh chấp', key: 'disputes', icon: renderIcon(IconInfo) },
+  { label: 'Người dùng & phân quyền', key: 'users', icon: renderIcon(IconUser) },
 ]
+
+/** Đường dẫn tương ứng với từng mục menu */
+const MENU_PATHS: Record<string, string> = {
+  escrow: '/admin',
+  disputes: '/admin/disputes',
+  users: '/admin/users',
+}
 
 function handleMenuSelect(key: string) {
   activeKey.value = key
-  navigateTo(key === 'disputes' ? '/admin/disputes' : '/admin')
+  navigateTo(MENU_PATHS[key] ?? '/admin')
 }
 </script>

@@ -30,9 +30,20 @@ func InitializeAuthHandler() (*controller.UserHandler, error) {
 	db := providerDB()
 	iUserRepository := repo.NewUserRepository(db)
 	provider := providerSMS()
-	authServiceInterface := usecase.NewAuthService(iUserRepository, provider)
+	iRbacRepository := repo.NewRbacRepository(db)
+	authServiceInterface := usecase.NewAuthService(iUserRepository, provider, iRbacRepository)
 	userHandler := controller.NewUserHandler(authServiceInterface)
 	return userHandler, nil
+}
+
+// Injectors from rbac.wire.go:
+
+func InitializeAdminRbacHandler() (*controller.AdminRbacHandler, error) {
+	db := providerDB()
+	iRbacRepository := repo.NewRbacRepository(db)
+	iRbacService := usecase.NewRbacService(iRbacRepository)
+	adminRbacHandler := controller.NewAdminRbacHandler(iRbacService)
+	return adminRbacHandler, nil
 }
 
 // Injectors from category.wire.go:

@@ -15,8 +15,9 @@ import (
 // ══════════════════════════════════════════════════════════
 
 // OpenDispute — khách hoặc môi giới mở tranh chấp. Tiền bị freeze tại escrow.
-func (s *depositService) OpenDispute(depositID, userID uint64, role string, req dto.CreateDisputeRequest) (*dto.DisputeResponse, error) {
-	deposit, err := s.getOwnedDeposit(depositID, userID, role)
+func (s *depositService) OpenDispute(depositID, userID uint64, req dto.CreateDisputeRequest) (*dto.DisputeResponse, error) {
+	// Bên mở tranh chấp suy ra từ chính bản ghi đơn, không nhận từ client
+	deposit, side, err := s.getOwnedDeposit(depositID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -31,7 +32,7 @@ func (s *depositService) OpenDispute(depositID, userID uint64, role string, req 
 	}
 
 	raisedBy := model.DisputeRaisedByCustomer
-	if role == model.RoleBroker {
+	if side == model.RoleBroker {
 		raisedBy = model.DisputeRaisedByBroker
 	}
 

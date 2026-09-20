@@ -7,14 +7,14 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+// InitAIRoutes — sinh nội dung tin đăng bằng AI. CẦN ĐĂNG NHẬP.
+// (Không truyền middleware vào Router.Group — xem ghi chú ở real_estate_routes.go)
 func InitAIRoutes(Router fiber.Router) {
 	aiHandler, err := wire.InitializeAIHandler()
 	if err != nil {
 		panic(err)
 	}
 
-	aiRouter := Router.Group("/ai", middleware.AuthMiddleware)
-	{
-		aiRouter.Post("/generate-content", aiHandler.GenerateContent)
-	}
+	aiRouter := Router.Group("/ai")
+	aiRouter.Post("/generate-content", middleware.AuthMiddleware, aiHandler.GenerateContent)
 }

@@ -10,5 +10,6 @@ definePageMeta({
   alias: [
     "/nguoi-ban/quan-ly-tin-dang"
   ],
+  requiresAuth: true,
 });
 </script>

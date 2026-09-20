@@ -15,20 +15,21 @@
 </template>
 
 <script setup lang="ts">
-import {resolveComponent } from "vue";
+import { resolveComponent, type Component } from "vue";
+import type { DropdownOption } from "naive-ui";
 import { NIcon } from "naive-ui";
 import { useAuthStore } from "~/stores/auth";
 import { UserMenu } from "~/types/window";
 
 // Khởi tạo các store và class quản lý menu người dùng
 const auth = useAuthStore();
-// Truyền role để menu lọc đúng mục theo vai trò (khách / môi giới / admin)
-const userMenu = new UserMenu(auth.user?.role);
+// Truyền danh sách role để menu lọc đúng mục theo vai trò (khách / môi giới / admin)
+const userMenu = new UserMenu(auth.user?.roles);
 
 // Map danh sách tùy chọn từ class sang cấu trúc của Naive UI dropdown dựa trên role, kèm icon và divider
 const dropdownOptions = computed(() => {
   const options = userMenu.getFilteredOptions();
-  const list: any[] = [];
+  const list: DropdownOption[] = [];
 
   options.forEach((option) => {
     // Thêm đường gạch phân cách (divider) trước mục "Đăng xuất" để bám sát giao diện chuẩn
@@ -43,7 +44,7 @@ const dropdownOptions = computed(() => {
       label: option.label,
       key: option.key,
       icon: () => {
-        let iconComp = null;
+        let iconComp: string | Component | undefined;
         if (option.key === "manage-projects") {
           iconComp = resolveComponent("IconBuilding");
         } else if (option.key === "manage-posts") {
@@ -56,6 +57,8 @@ const dropdownOptions = computed(() => {
           iconComp = resolveComponent("IconWallet");
         } else if (option.key === "admin-escrow") {
           iconComp = resolveComponent("IconShieldCheck");
+        } else if (option.key === "admin-users") {
+          iconComp = resolveComponent("IconUser");
         } else if (option.key === "logout") {
           iconComp = resolveComponent("IconLock");
         }

@@ -64,6 +64,8 @@ import IconArrowRight from "~/icons/IconArrowRight.vue";
 definePageMeta({
   alias: "/nguoi-ban",
   layout: "empty",
+  // Khu vực quản lý là trang cá nhân → phải đăng nhập
+  requiresAuth: true,
 });
 
 const route = useRoute();

@@ -35,6 +35,7 @@ definePageMeta({
   alias: [
     '/nguoi-ban/quan-ly-yeu-thich'
   ],
+  requiresAuth: true,
 })
 
 const favorite = useFavorite()

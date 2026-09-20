@@ -27,7 +27,7 @@ recommendation:
 
 # ── Luồng đặt cọc escrow ─────────────────────────────
 payment:
-  return_url: http://soihieuland.io.vn/thanh-toan/ket-qua
+  return_url: http://soihieuland.io.vn/payment/result
   ipn_url: http://136.85.81.118/api/2026/deposits/payment/ipn
   vnpay:
     tmn_code: ""

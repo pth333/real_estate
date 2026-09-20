@@ -5,6 +5,7 @@ import (
 	"log"
 	"real_estate_be/internal/global"
 	model "real_estate_be/internal/models"
+	"real_estate_be/internal/repo"
 	"time"
 
 	"gorm.io/driver/mysql"
@@ -78,9 +79,18 @@ func MigrateDb(db *gorm.DB) {
 		&model.BrokerRating{},
 		&model.NotificationLog{},
 		&model.DepositPolicy{},
+		// RBAC: user —(n-n)— role —(n-n)— permission
+		&model.Role{},
+		&model.Permission{},
+		&model.RolePermission{},
+		&model.UserRole{},
 	); err != nil {
 		log.Fatalf("❌ DB migration failed: %v", err)
 	}
+	// Thứ tự bắt buộc: seed role/permission trước, rồi mới migrate users.role cũ sang user_roles,
+	// cuối cùng mới gán ADMIN theo cấu hình.
+	seedRbac(db)
+	migrateLegacyUserRole(db)
 	seedAdminUser(db)
 	seedDepositPolicies(db)
 	log.Println("✅ DB migration completed")
@@ -113,27 +123,26 @@ func seedDepositPolicies(db *gorm.DB) {
 	log.Printf("✅ [Deposit] đã seed %d chính sách mức cọc theo khoảng giá", len(policies))
 }
 
-// seedAdminUser nâng quyền ADMIN cho tài khoản cấu hình ở admin.email.
-// Dùng để có sẵn 1 admin xử lý tranh chấp mà không phải sửa DB thủ công.
+// seedAdminUser gán role ADMIN cho tài khoản cấu hình ở admin.email.
+// Dùng bảng nối user_roles (user có thể giữ thêm role khác).
 func seedAdminUser(db *gorm.DB) {
 	email := global.Config.Admin.Email
 	if email == "" {
-		log.Println("ℹ️ [Admin] chưa cấu hình admin.email — bỏ qua bước nâng quyền ADMIN")
+		log.Println("ℹ️ [Admin] chưa cấu hình admin.email — bỏ qua bước gán role ADMIN")
 		return
 	}
 
-	result := db.Model(&model.User{}).
-		Where("email = ?", email).
-		Update("role", model.RoleAdmin)
-	if result.Error != nil {
-		log.Printf("⚠️ [Admin] nâng quyền ADMIN cho %s thất bại: %v", email, result.Error)
+	var user model.User
+	if err := db.Where("email = ?", email).Limit(1).Find(&user).Error; err != nil || user.ID == 0 {
+		log.Printf("⚠️ [Admin] không tìm thấy tài khoản %s để gán role ADMIN", email)
 		return
 	}
-	if result.RowsAffected == 0 {
-		log.Printf("⚠️ [Admin] không tìm thấy tài khoản %s để nâng quyền ADMIN", email)
+
+	if err := repo.NewRbacRepository(db).AddRoleByCode(user.ID, model.RoleAdmin); err != nil {
+		log.Printf("⚠️ [Admin] gán role ADMIN cho %s thất bại: %v", email, err)
 		return
 	}
-	log.Printf("✅ [Admin] đã nâng quyền ADMIN cho %s", email)
+	log.Printf("✅ [Admin] đã gán role ADMIN cho %s", email)
 }
 
 // seedFilterRanges chèn menu khoảng giá (price) + diện tích (area) khi bảng

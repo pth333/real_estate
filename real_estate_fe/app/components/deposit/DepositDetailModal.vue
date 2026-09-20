@@ -66,7 +66,11 @@ async function load() {
   if (!props.depositId) return
   loading.value = true
   try {
-    deposit.value = await depositService.getDeposit(props.depositId)
+    // Admin dùng route riêng: /deposits/:id chỉ mở cho khách và môi giới của đơn
+    deposit.value =
+      props.role === 'ADMIN'
+        ? await depositService.getDepositAsAdmin(props.depositId)
+        : await depositService.getDeposit(props.depositId)
   } catch {
     deposit.value = null
   } finally {

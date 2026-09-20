@@ -54,13 +54,18 @@ const props = defineProps<{
 
 const activeKey = ref<string>(props.activeKey);
 
+// Quyền của user hiện tại (state global) — dùng để ẩn/hiện mục menu
+const authStore = useAuthStore();
+
 // Render icon cho Naive UI Menu
 function renderIcon(icon: Component) {
   return () => h(NIcon, null, { default: () => h(icon) });
 }
 
-// Danh sách các mục quản lý trong Sidebar
-const menuOptions: MenuOption[] = [
+// Danh sách các mục quản lý trong Sidebar.
+// `permission` (nếu có) là quyền tối thiểu để thấy mục đó — khớp với meta
+// requiresPermission của trang tương ứng, nên menu và route luôn nhất quán.
+const allMenuOptions: (MenuOption & { permission?: string })[] = [
   {
     label: "Quản lý dự án",
     key: "projects",
@@ -75,6 +80,7 @@ const menuOptions: MenuOption[] = [
     label: "Đơn đặt cọc",
     key: "deposits",
     icon: renderIcon(IconWallet),
+    permission: "broker.deposit.list",
   },
   {
     label: "Quản lý khách hàng",
@@ -87,6 +93,12 @@ const menuOptions: MenuOption[] = [
     icon: renderIcon(IconHeart),
   },
 ];
+
+const menuOptions = computed<MenuOption[]>(() =>
+  allMenuOptions.filter(
+    (option) => !option.permission || authStore.can(option.permission),
+  ),
+);
 
 // Chuyển hướng tới trang đăng tin
 const goToCreatePost = () => {

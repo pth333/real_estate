@@ -1,5 +1,6 @@
 import type { MessageApiInjection } from "naive-ui/es/message/src/MessageProvider";
 import type { Category } from "~/types/menu";
+import type { UserInfo } from "~/types/auth";
 
 /**
  * Class Menu chứa user_id + categories hiện tại, gán lên window.menu.
@@ -11,6 +12,8 @@ declare global {
     message?: MessageApiInjection;
     menu?: Menu;
     userMenu?: UserMenu;
+    /** User hiện tại (kèm roles[] + permissions[]) — mirror từ auth store */
+    currentUser?: UserInfo;
   }
 }
 
@@ -49,32 +52,35 @@ export class UserMenuOption {
  */
 export class UserMenu {
   options: UserMenuOption[] = [];
-  role?: string; // Role của người dùng hiện tại
+  roles?: string[]; // Danh sách role của người dùng hiện tại
 
-  constructor(role?: string) {
-    this.role = role;
+  constructor(roles?: string[]) {
+    this.roles = roles;
     this.options = [
       // Mục dành cho khách hàng
-      new UserMenuOption("my-deposits", "Đơn đặt cọc của tôi", "/tai-khoan/dat-coc"),
+      new UserMenuOption("my-deposits", "Đơn đặt cọc của tôi", "/account/deposits", ["CUSTOMER"]),
       // Mục dành cho môi giới
-      new UserMenuOption("manage-projects", "Quản lý dự án", "/nguoi-ban/quan-ly-du-an"),
-      new UserMenuOption("manage-posts", "Quản lý bài viết", "/nguoi-ban/quan-ly-tin-dang"),
-      new UserMenuOption("manage-deposits", "Đơn đặt cọc xem nhà", "/nguoi-ban/quan-ly-dat-coc"),
-      new UserMenuOption("manage-customers", "Quản lý khách hàng", "/nguoi-ban/quan-ly-khach-hang"),
-      new UserMenuOption("manage-favorites", "Quản lý yêu thích", "/nguoi-ban/quan-ly-yeu-thich"),
+      new UserMenuOption("manage-projects", "Quản lý dự án", "/nguoi-ban/quan-ly-du-an", ["BROKER"]),
+      new UserMenuOption("manage-posts", "Quản lý bài viết", "/nguoi-ban/quan-ly-tin-dang", ["BROKER"]),
+      new UserMenuOption("manage-deposits", "Đơn đặt cọc xem nhà", "/nguoi-ban/quan-ly-dat-coc",["BROKER"]),
+      new UserMenuOption("manage-customers", "Quản lý khách hàng", "/nguoi-ban/quan-ly-khach-hang", ["BROKER"]),
+      new UserMenuOption("manage-favorites", "Quản lý yêu thích", "/nguoi-ban/quan-ly-yeu-thich", ["BROKER", "CUSTOMER"]),
       // Mục chỉ admin thấy
       new UserMenuOption("admin-escrow", "Quản trị escrow", "/admin", ["ADMIN"]),
+      new UserMenuOption("admin-users", "Người dùng & phân quyền", "/admin/users", ["ADMIN"]),
       new UserMenuOption("logout", "Đăng xuất")
     ];
   }
 
   /**
-   * Lấy danh sách tùy chọn menu đã lọc dựa theo role hiện tại của người dùng.
+   * Lấy danh sách tùy chọn menu đã lọc dựa theo các role hiện tại của người dùng.
+   * Tùy chọn không khai báo roles thì ai cũng thấy; có khai báo thì phải giao role khác rỗng.
    */
   getFilteredOptions(): UserMenuOption[] {
-    if (!this.role) return this.options;
+    const roles = this.roles ?? [];
+    if (!roles.length) return this.options;
     return this.options.filter(
-      (opt) => !opt.roles || opt.roles.includes(this.role!)
+      (opt) => !opt.roles || opt.roles.some((role) => roles.includes(role))
     );
   }
 

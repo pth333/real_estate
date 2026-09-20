@@ -34,7 +34,7 @@
 
             <!-- Action buttons -->
             <n-space vertical>
-                <n-button type="primary" block @click="showBookingModal = true">
+                <n-button type="primary" block @click="handleOpenBooking">
                     <template #icon>
                         <IconWallet />
                     </template>
@@ -60,16 +60,32 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRealEstateDetail } from '~/stores/detail/real_estate_detail';
+import { useAuthStore } from '~/stores/auth';
 import IconWallet from '~/icons/IconWallet.vue';
 import DepositBookingModal from '~/components/deposit/DepositBookingModal.vue';
 
 const realEstateDetailStore = useRealEstateDetail()
+const authStore = useAuthStore()
+const route = useRoute()
 
 // Trạng thái mở modal đặt cọc
 const showBookingModal = ref(false);
 
 // ID BĐS đang xem — bắt buộc phải có mới đặt cọc được
 const listingId = computed(() => realEstateDetailStore.listing?.id ?? 0);
+
+/**
+ * Trang chi tiết BĐS là trang CÔNG KHAI nên khách vãng lai vẫn xem được.
+ * Nhưng đặt cọc thì cần tài khoản → nhắc đăng nhập và quay lại đúng tin này.
+ */
+function handleOpenBooking() {
+    if (!authStore.isAuthenticated) {
+        window.message?.info('Vui lòng đăng nhập để đặt cọc giữ lịch xem nhà');
+        navigateTo({ path: '/dang-nhap', query: { redirect: route.fullPath } });
+        return;
+    }
+    showBookingModal.value = true;
+}
 
 const agentInitial = computed(() => {
     const name = realEstateDetailStore.listing?.agent_name || 'Q';

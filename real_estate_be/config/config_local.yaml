@@ -27,7 +27,7 @@ recommendation:
 # ── Luồng đặt cọc escrow ─────────────────────────────
 payment:
   # FE nhận kết quả thanh toán (return URL)
-  return_url: http://localhost:3000/thanh-toan/ket-qua
+  return_url: http://localhost:3000/payment/result
   # Backend nhận IPN từ cổng thanh toán
   ipn_url: http://localhost:8000/api/2026/deposits/payment/ipn
   vnpay:
