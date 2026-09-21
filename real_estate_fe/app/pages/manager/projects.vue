@@ -1,7 +1,7 @@
 <template>
-  <div class="flex-1 bg-white p-6 rounded-lg border border-gray-200 flex flex-col gap-4 h-full min-h-0">
-    <!-- Header: Tìm kiếm + nút tạo dự án -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 flex-shrink-0">
+  <div class="flex h-full min-h-0 flex-1 flex-col gap-4 rounded-xl border border-gray-200 bg-white p-5 lg:p-6">
+    <!-- Tìm kiếm + nút tạo dự án -->
+    <div class="flex flex-shrink-0 flex-col justify-between gap-4 md:flex-row md:items-center">
       <div class="w-full md:w-80">
         <n-input v-model:value="searchQuery" placeholder="Tìm kiếm theo tên dự án..." clearable @input="handleSearch">
           <template #prefix>
@@ -12,7 +12,7 @@
         </n-input>
       </div>
 
-      <n-button type="error" @click="goToCreateProject">
+      <n-button type="primary" @click="goToCreateProject">
         <template #icon>
           <n-icon>
             <IconAddOutline />

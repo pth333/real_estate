@@ -1,12 +1,9 @@
 <template>
-  <div class="flex-1 bg-white p-6 rounded-lg border border-gray-200 flex flex-col gap-4 h-full min-h-0">
-    <div class="flex items-center justify-between flex-shrink-0">
-      <div>
-        <p class="text-sm text-gray-500 mb-1">Quản lý yêu thích</p>
-        <h2 class="text-lg font-bold text-gray-800">Danh mục bất động sản yêu thích</h2>
-      </div>
-      <span class="inline-flex items-center rounded-full bg-red-50 px-3 py-1 text-xs font-medium text-red-500">
-        {{ total }} tin đăng
+  <div class="flex h-full min-h-0 flex-1 flex-col gap-4 rounded-xl border border-gray-200 bg-white p-5 lg:p-6">
+    <!-- Tiêu đề trang đã có ở khu vực quản lý, ở đây chỉ giữ thống kê nhanh -->
+    <div class="flex flex-shrink-0 items-center justify-between">
+      <span class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-600">
+        {{ total }} tin đăng yêu thích
       </span>
     </div>
 

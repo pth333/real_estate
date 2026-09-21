@@ -1,11 +1,8 @@
 <template>
-  <div class="bg-white rounded-lg border border-gray-200 p-6 flex flex-col gap-4 h-full min-h-0">
-    <!-- Header -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 flex-shrink-0">
-      <div>
-        <p class="text-sm text-gray-500 mb-1">Đơn khách đặt cọc xem nhà</p>
-        <h2 class="text-lg font-bold text-gray-800">Lịch hẹn xem nhà cần xử lý</h2>
-      </div>
+  <div class="flex h-full min-h-0 flex-col gap-4 rounded-xl border border-gray-200 bg-white p-5 lg:p-6">
+    <!-- Tiêu đề trang đã có ở khu vực quản lý, ở đây chỉ giữ bộ lọc -->
+    <div class="flex flex-shrink-0 flex-col justify-between gap-3 md:flex-row md:items-center">
+      <span class="text-sm text-gray-500">Lọc theo trạng thái để xử lý nhanh từng nhóm đơn</span>
       <div class="w-full md:w-64">
         <n-select v-model:value="statusFilter" :options="statusOptions" placeholder="Tất cả trạng thái" clearable />
       </div>

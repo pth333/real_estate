@@ -7,7 +7,7 @@
       <!-- Thẻ số liệu escrow -->
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div v-for="card in cards" :key="card.label"
-          class="bg-white rounded-lg border border-gray-200 p-4 flex flex-col gap-2">
+          class="bg-white rounded-xl border border-gray-200 p-4 flex flex-col gap-2">
           <div class="flex items-center justify-between">
             <span class="text-xs text-gray-400">{{ card.label }}</span>
             <n-icon :class="card.iconClass" size="18">
@@ -32,7 +32,7 @@
       </n-alert>
 
       <!-- Trạng thái đơn -->
-      <div class="bg-white rounded-lg border border-gray-200 p-5 flex flex-col gap-4">
+      <div class="bg-white rounded-xl border border-gray-200 p-5 flex flex-col gap-4">
         <div class="flex items-center justify-between">
           <h2 class="text-base font-semibold text-gray-800">Đơn đặt cọc theo trạng thái</h2>
           <n-button text type="primary" @click="openDisputes">Xem tranh chấp đang mở ({{ summary?.open_disputes ?? 0 }})</n-button>
@@ -49,7 +49,7 @@
       </div>
 
       <!-- Danh sách đơn gần đây -->
-      <div class="bg-white rounded-lg border border-gray-200 p-5 flex flex-col gap-4 h-[520px] min-h-0">
+      <div class="bg-white rounded-xl border border-gray-200 p-5 flex flex-col gap-4 h-[520px] min-h-0">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <h2 class="text-base font-semibold text-gray-800">Tất cả đơn đặt cọc</h2>
           <div class="w-full md:w-64">

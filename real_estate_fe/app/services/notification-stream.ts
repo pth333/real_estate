@@ -49,7 +49,7 @@ export class NotificationStream {
   // chế độ xoá type của Node khi test — parameter property không phải cú pháp xoá được.
   constructor(options: NotificationStreamOptions) {
     this.options = options
-    this.fetchImpl = options.fetchImpl ?? fetch
+    this.fetchImpl = options.fetchImpl ?? fetch.bind(globalThis)
     this.reconnectDelayMs = options.reconnectDelayMs ?? DEFAULT_RECONNECT_DELAY_MS
   }
 

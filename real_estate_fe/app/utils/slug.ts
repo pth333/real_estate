@@ -167,7 +167,12 @@ export function buildListParams(f: Filter | undefined): Record<string, string> {
 /**
  * Build URL trang chi tiết từ slug listing (đã chứa "-rs{id}").
  * VD "nha-pho-2-tang-cau-giay-rs123" → "/nha-pho-2-tang-cau-giay-rs123".
+ *
+ * Luôn trả về đường dẫn TUYỆT ĐỐI: `navigateTo` với chuỗi tương đối sẽ bị resolve
+ * theo route hiện tại (đang ở /nguoi-ban/... thì thành /nguoi-ban/<slug> — sai trang).
+ * Đồng thời bỏ dấu "/" đầu của slug để không tạo ra "//..." (trình duyệt hiểu là
+ * URL protocol-relative và có thể điều hướng ra site khác).
  */
 export function buildDetailUrl(listingSlug: string): string {
-  return `/${listingSlug}`;
+  return `/${listingSlug.replace(/^\/+/, "")}`;
 }

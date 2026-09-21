@@ -1,13 +1,13 @@
 <!-- Component danh sách bài viết dành riêng cho Manager -->
 <template>
-  <div class="flex-1 bg-white p-6 rounded-lg border border-gray-200 flex flex-col gap-4 h-full min-h-0">
+  <div class="flex h-full min-h-0 flex-1 flex-col gap-4 rounded-xl border border-gray-200 bg-white p-5 lg:p-6">
     <!-- Header: Thống kê + Bộ lọc và tìm kiếm -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 flex-shrink-0">
+    <div class="flex flex-shrink-0 flex-col justify-between gap-4 md:flex-row md:items-center">
       <div class="flex items-center gap-3">
         <n-radio-group>
           <n-radio-button value="all">Tất cả</n-radio-button>
         </n-radio-group>
-        <span class="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 text-xs font-medium text-red-500">
+        <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-600">
           {{ total }} bài đăng
         </span>
       </div>
@@ -70,6 +70,7 @@ import {
 import type { IManagerPostItem } from "~/types/manager";
 import { useManagerStore } from "~/stores/manager";
 import { useManagerService } from "~/services/manager.service";
+import { buildDetailUrl } from "~/utils/slug";
 import IconSearch from "~/icons/IconSearch.vue";
 import IconEyeOutline from "~/icons/IconEyeOutline.vue";
 import IconCreateOutline from "~/icons/IconCreateOutline.vue";
@@ -248,9 +249,13 @@ const columns: DataTableColumns<IManagerPostItem> = [
   },
 ];
 
-// Điều hướng xem chi tiết
+// Điều hướng xem chi tiết BĐS.
+// PHẢI dùng đường dẫn TUYỆT ĐỐI (bắt đầu bằng "/"): navigateTo với chuỗi tương đối bị
+// resolve theo route hiện tại, mà trang này đang ở /nguoi-ban/... nên sẽ thành
+// /nguoi-ban/<slug> thay vì /<slug> (url thật của trang chi tiết).
 const handleViewPost = (slug: string) => {
-  navigateTo(`${slug}`);
+  if (!slug) return;
+  navigateTo(buildDetailUrl(slug));
 };
 
 // Điều hướng chỉnh sửa

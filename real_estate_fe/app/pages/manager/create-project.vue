@@ -1,8 +1,6 @@
 <template>
-  <div class="w-full flex-1 min-h-0 bg-white p-6 rounded-lg border border-gray-200 flex flex-col gap-4">
-    <div class="flex-shrink-0">
-      <h2 class="text-lg font-bold text-gray-800">{{ isEdit ? 'Chỉnh sửa dự án' : 'Tạo dự án mới' }}</h2>
-    </div>
+  <div class="flex min-h-0 w-full flex-1 flex-col gap-4 rounded-xl border border-gray-200 bg-white p-5 lg:p-6">
+    <!-- Tiêu đề trang do khu vực quản lý hiển thị (Tạo dự án mới / Chỉnh sửa dự án) -->
 
     <!-- Loading khi tải chi tiết dự án (chế độ chỉnh sửa) -->
     <div v-if="loadingDetail" class="flex flex-1 items-center justify-center py-10">
@@ -32,7 +30,7 @@
     <div
       class="sticky bottom-0 flex flex-shrink-0 justify-end gap-2 pt-3 border-t border-gray-100 bg-white -mx-6 -mb-6 px-6 pb-6 mt-1">
       <n-button @click="navigateTo('/nguoi-ban/quan-ly-du-an')">Hủy</n-button>
-      <n-button type="error" :loading="submitting" @click="handleSubmit">{{ isEdit ? 'Cập nhật' : 'Tạo dự án' }}</n-button>
+      <n-button type="primary" :loading="submitting" @click="handleSubmit">{{ isEdit ? 'Cập nhật' : 'Tạo dự án' }}</n-button>
     </div>
   </div>
 </template>
@@ -53,10 +51,6 @@ definePageMeta({
   requiresAuth: true,
 })
 
-useHead({
-  title: "Tạo dự án mới",
-})
-
 const managerService = useManagerService()
 const catalogService = useCatalogService()
 const managerStore = useManagerStore()
@@ -69,6 +63,15 @@ const projectId = computed<number | null>(() => {
   return Number.isFinite(id) && id > 0 ? id : null
 })
 const isEdit = computed(() => projectId.value !== null)
+
+// Tiêu đề trang do khu vực quản lý hiển thị — ghi đè theo chế độ tạo/sửa
+const { setTitle, clearTitle } = useDashboardTitle()
+watch(
+  isEdit,
+  (editing) => setTitle(editing ? 'Chỉnh sửa dự án' : 'Tạo dự án mới'),
+  { immediate: true },
+)
+onUnmounted(clearTitle)
 
 const form = ref<ProjectFormData>({
   name: '',

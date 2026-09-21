@@ -5,13 +5,12 @@
 
     <template v-else>
       <div>
-        <h1 class="text-lg font-bold text-gray-900">Người dùng &amp; phân quyền</h1>
         <p class="text-sm text-gray-500">
           Gán role cho tài khoản. Quyền của user được suy ra từ các role đang gán.
         </p>
       </div>
 
-      <div class="bg-white rounded-lg border border-gray-200 p-5 flex flex-col gap-4">
+      <div class="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-5">
         <!-- Tìm kiếm theo tên / email / số điện thoại (debounce 300ms) -->
         <div class="w-full md:w-80">
           <n-input v-model:value="searchQuery" placeholder="Tìm theo tên, email hoặc số điện thoại..." clearable

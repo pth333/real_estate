@@ -1,115 +1,143 @@
 <template>
-  <div class="h-screen bg-gray-50 flex flex-col font-sans overflow-hidden">
-    <!-- Header của hệ thống quản lý (Cố định) -->
-    <div class="h-[65px] bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
-      <div class="flex items-center gap-3">
-        <n-avatar round size="medium" class="bg-red-50 text-red-500">
-          <template #icon>
-            <n-icon>
-              <IconBuilding />
-            </n-icon>
-          </template>
-        </n-avatar>
-        <div class="flex flex-col leading-tight">
-          <span class="text-lg font-bold text-gray-900">Hệ thống quản trị BĐS</span>
-          <span class="text-xs text-gray-400">Quản lý tin đăng &amp; khách hàng</span>
-        </div>
-      </div>
+  <div class="flex h-screen flex-col overflow-hidden bg-gray-50">
+    <DashboardTopbar title="Khu vực quản lý" subtitle="Tin đăng, dự án và đơn đặt cọc của bạn" :icon="IconCreateOutline" />
 
-      <!-- Nút thoát về Trang chủ -->
-      <n-button text class="text-emerald-600 hover:text-emerald-700" @click="goToHome">
-        Quay lại trang chủ
-        <template #icon>
-          <n-icon>
-            <IconArrowRight />
-          </n-icon>
-        </template>
-      </n-button>
-    </div>
-
-    <!-- Layout chính dạng Sidebar + Content -->
     <div class="flex flex-1 overflow-hidden">
-      <!-- Sidebar điều hướng (Cố định, tự động đồng bộ activeKey theo route) -->
-      <ManagerSidebar :active-key="activeKey" class="flex-shrink-0 h-full" />
+      <DashboardSidebar :active-key="activeKey" :groups="menuGroups" :cta="primaryAction" />
 
-      <!-- Nội dung động của các trang con -->
-      <div class="flex-1 p-6 overflow-y-auto flex flex-col h-full">
-        <div class="w-full flex-1 flex flex-col gap-4 min-h-0">
-          <div class="flex flex-col gap-1 flex-shrink-0">
-            <!-- Breadcrumb kiểu dự án -->
-            <nav class="text-xs text-emerald-600">
-              <span>Quản lý</span>
-              <span class="mx-1 text-gray-400">/</span>
-              <span class="text-gray-500">{{ currentTitle }}</span>
-            </nav>
-            <h1 class="text-xl font-bold text-gray-900">{{ currentTitle }}</h1>
-          </div>
-
-          <!-- NuxtPage render nội dung của posts.vue hoặc customers.vue -->
-          <div class="flex-1 min-h-0 flex flex-col">
-            <NuxtPage />
-          </div>
+      <main class="flex flex-1 flex-col overflow-y-auto p-4 lg:p-6">
+        <!-- Tiêu đề trang: breadcrumb + tên trang -->
+        <div class="mb-5 flex shrink-0 flex-col gap-1">
+          <nav class="flex items-center gap-1.5 text-xs text-gray-400">
+            <span>Quản lý</span>
+            <span>/</span>
+            <span class="font-medium text-emerald-600">{{ currentTitle }}</span>
+          </nav>
+          <h1 class="text-xl font-bold tracking-tight text-gray-900">{{ currentTitle }}</h1>
         </div>
-      </div>
+
+        <div class="flex min-h-0 flex-1 flex-col">
+          <NuxtPage />
+        </div>
+      </main>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import ManagerSidebar from "~/components/manager/ManagerSidebar.vue";
-import IconBuilding from "~/icons/IconBuilding.vue";
-import IconArrowRight from "~/icons/IconArrowRight.vue";
+import type { Component } from 'vue'
+import type { DashboardMenuGroup } from '~/types/dashboard'
+import DashboardTopbar from '~/components/dashboard/DashboardTopbar.vue'
+import DashboardSidebar from '~/components/dashboard/DashboardSidebar.vue'
+import IconCreateOutline from '~/icons/IconCreateOutline.vue'
+import IconBuilding from '~/icons/IconBuilding.vue'
+import IconWallet from '~/icons/IconWallet.vue'
+import IconUser from '~/icons/IconUser.vue'
+import IconHeart from '~/icons/IconHeart.vue'
+import IconAddOutline from '~/icons/IconAddOutline.vue'
 
-// Thiết lập alias cho cả folder quản lý sang /nguoi-ban và tắt layout default
+// Alias cả folder quản lý sang /nguoi-ban và tắt layout mặc định của website
 definePageMeta({
-  alias: "/nguoi-ban",
-  layout: "empty",
-  // Khu vực quản lý là trang cá nhân → phải đăng nhập
+  alias: '/nguoi-ban',
+  layout: 'empty',
   requiresAuth: true,
-});
+})
 
-const route = useRoute();
+const route = useRoute()
 
-// Tự động suy ra activeKey dựa trên URL hiện tại
-const activeKey = computed<"projects" | "posts" | "customers" | "favorites" | "deposits">(() => {
-  if (route.path.includes("quan-ly-du-an") || route.path.includes("projects")) {
-    return "projects";
-  }
-  if (route.path.includes("tao-du-an")) {
-    return "projects";
-  }
-  if (route.path.includes("quan-ly-dat-coc") || route.path.includes("deposits")) {
-    return "deposits";
-  }
-  if (route.path.includes("quan-ly-khach-hang") ) {
-    return "customers";
-  }
-  if (route.path.includes("quan-ly-yeu-thich")) {
-    return "favorites";
-  }
-  return "posts";
-});
-
-const currentTitle = computed(() => {
-  if (activeKey.value === "projects") return "Danh sách dự án";
-  if (activeKey.value === "deposits") return "Đơn đặt cọc xem nhà";
-  if (activeKey.value === "posts") return "Danh sách bài đăng của bạn";
-  if (activeKey.value === "customers") return "Danh sách khách hàng đăng ký";
-  return "Danh mục bất động sản yêu thích";
-});
-
-// Đồng bộ tiêu đề trang động theo tab hiện tại của Manager
-useHead({
-  title: currentTitle,
-});
-
-const goToHome = () => {
-  navigateTo("/");
-};
-</script>
-
-<style scoped>
-body {
-  overflow-x: hidden;
+const primaryAction: { label: string; path: string; icon: Component } = {
+  label: 'Đăng tin mới',
+  path: '/nguoi-ban/dang-tin',
+  icon: IconAddOutline,
 }
-</style>
+
+/**
+ * Cấu hình menu tập trung: mỗi mục khai báo cả nhãn menu, tiêu đề trang và các đoạn
+ * path để nhận biết mục đang mở — tránh phải sửa 3 chỗ khi thêm trang mới.
+ */
+const menuGroups: DashboardMenuGroup[] = [
+  {
+    label: 'Quản lý',
+    items: [
+      {
+        key: 'posts',
+        label: 'Tin đăng',
+        pageTitle: 'Danh sách bài đăng của bạn',
+        path: '/nguoi-ban/quan-ly-tin-dang',
+        icon: IconCreateOutline,
+        match: ['quan-ly-tin-dang', 'posts'],
+      },
+      {
+        key: 'projects',
+        label: 'Dự án',
+        pageTitle: 'Danh sách dự án',
+        path: '/nguoi-ban/quan-ly-du-an',
+        icon: IconBuilding,
+        match: ['quan-ly-du-an', 'projects'],
+      },
+      {
+        // Mục ẩn: chỉ để nhận biết trang tạo/sửa dự án và tô sáng mục "Dự án"
+        key: 'project-form',
+        label: 'Dự án',
+        pageTitle: 'Tạo dự án mới',
+        path: '/nguoi-ban/tao-du-an',
+        icon: IconBuilding,
+        hidden: true,
+        match: ['tao-du-an'],
+      },
+      {
+        key: 'deposits',
+        label: 'Đơn đặt cọc',
+        pageTitle: 'Đơn đặt cọc xem nhà',
+        path: '/nguoi-ban/quan-ly-dat-coc',
+        icon: IconWallet,
+        // Chỉ môi giới (có quyền xem đơn được giao) mới thấy mục này
+        permission: 'broker.deposit.list',
+        match: ['quan-ly-dat-coc', 'deposits'],
+      },
+    ],
+  },
+  {
+    label: 'Khách hàng',
+    items: [
+      {
+        key: 'customers',
+        label: 'Khách hàng',
+        pageTitle: 'Danh sách khách hàng đăng ký',
+        path: '/nguoi-ban/quan-ly-khach-hang',
+        icon: IconUser,
+        match: ['quan-ly-khach-hang', 'customers'],
+      },
+      {
+        key: 'favorites',
+        label: 'Yêu thích',
+        pageTitle: 'Danh mục bất động sản yêu thích',
+        path: '/nguoi-ban/quan-ly-yeu-thich',
+        icon: IconHeart,
+        match: ['quan-ly-yeu-thich', 'favorites'],
+      },
+    ],
+  },
+]
+
+const allItems = computed(() => menuGroups.flatMap((group) => group.items))
+
+// Danh sách menu là hằng số nên luôn có mục đầu để làm mặc định
+const fallbackItem = menuGroups[0]?.items[0]
+
+// Suy ra mục đang mở từ URL (mục ẩn vẫn tham gia để ra đúng tiêu đề)
+const activeItem = computed(() => findActiveItem(allItems.value, route.path) ?? fallbackItem)
+
+/** Trang con có thể ghi đè tiêu đề (VD Tạo dự án mới / Chỉnh sửa dự án) */
+const { titleOverride, clearTitle } = useDashboardTitle()
+watch(() => route.path, () => clearTitle())
+
+const activeKey = computed(() => activeItem.value?.key ?? '')
+const currentTitle = computed(
+  () => titleOverride.value ?? activeItem.value?.pageTitle ?? 'Khu vực quản lý',
+)
+
+useHead({
+  title: computed(() => `${currentTitle.value} | NhàViệt`),
+})
+</script>

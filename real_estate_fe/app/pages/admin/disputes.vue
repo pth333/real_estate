@@ -4,19 +4,16 @@
       description="Chỉ tài khoản quản trị viên mới xử lý được tranh chấp" />
 
     <template v-else>
-      <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div>
-          <h1 class="text-lg font-bold text-gray-900">Tranh chấp cần xử lý</h1>
-          <p class="text-sm text-gray-500">
-            Tiền cọc của các đơn dưới đây đang bị tạm giữ. Chỉ release sau khi admin ra quyết định.
-          </p>
-        </div>
+      <div class="flex flex-col justify-between gap-3 md:flex-row md:items-center">
+        <p class="text-sm text-gray-500">
+          Tiền cọc của các đơn dưới đây đang bị tạm giữ. Chỉ giải ngân sau khi admin ra quyết định.
+        </p>
         <div class="w-full md:w-56">
           <n-select v-model:value="statusFilter" :options="statusOptions" placeholder="Tất cả trạng thái" clearable />
         </div>
       </div>
 
-      <div class="bg-white rounded-lg border border-gray-200 p-4 flex flex-col gap-4 min-h-[420px]">
+      <div class="bg-white rounded-xl border border-gray-200 p-4 flex flex-col gap-4 min-h-[420px]">
         <n-spin :show="loading">
           <n-empty v-if="!disputes.length && !loading" description="Không có tranh chấp nào" class="py-16" />
 

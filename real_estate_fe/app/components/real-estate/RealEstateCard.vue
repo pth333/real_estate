@@ -96,6 +96,7 @@
 
 <script setup lang="ts">
 import type { RealEstateResponse } from '~/types/real_estate'
+import { buildDetailUrl } from '~/utils/slug'
 
 const props = defineProps<{
     realEstates: RealEstateResponse[]
@@ -142,7 +143,8 @@ const handleToggleFavorite = async (estate: RealEstateResponse) => {
 }
 
 const goToDetail = (estate: RealEstateResponse) => {
+    // Dùng helper để luôn ra đường dẫn tuyệt đối /<slug>-rs<id> (xem utils/slug.ts)
     const slug = estate.slug || `-rs${estate.id}`
-    navigateTo(`/${slug}`)
+    navigateTo(buildDetailUrl(slug))
 }
 </script>
