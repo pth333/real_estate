@@ -1,5 +1,8 @@
 <template>
-  <div id="app" class="min-h-screen bg-limestone text-graphite">
+  <!-- Nền + màu chữ gốc dùng token Tailwind thật.
+       Trước đây là bg-limestone/text-graphite nhưng các token này CHƯA TỪNG được
+       định nghĩa trong main.css nên không render ra style nào. -->
+  <div id="app" class="min-h-screen bg-white text-gray-900">
     <NuxtErrorBoundary>
       <NuxtLayout>
         <NConfigProvider :theme-overrides="themeOverrides">

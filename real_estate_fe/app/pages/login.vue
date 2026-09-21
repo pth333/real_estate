@@ -1,133 +1,107 @@
 <template>
-  <div class="flex h-screen overflow-hidden bg-limestone">
-    <!-- Left panel -->
-    <div class="flex w-full shrink-0 items-center justify-center bg-foundation px-8 lg:w-2/5">
-      <div class="w-full max-w-sm">
-        <h1 class="mb-2 font-semibold tracking-tight text-limestone text-3xl">
-          Đăng nhập
-        </h1>
-        <p class="mb-8 text-sm text-patina/80">
-          Truy cập vào nền tảng bất động sản
-        </p>
+  <AuthShell title="Đăng nhập" subtitle="Chào mừng bạn quay lại nền tảng bất động sản NhàViệt.">
+    <n-form :model="form" label-placement="top" :show-require-mark="false" @submit.prevent="handleLogin">
+      <n-form-item label="Email" :feedback="errors.email" :validation-status="errors.email ? 'error' : undefined">
+        <n-input v-model:value="form.email" type="text" placeholder="your@email.com" clearable autocomplete="email" />
+      </n-form-item>
 
-        <n-form :model="form" label-placement="top">
-          <n-form-item label="Email" :feedback="errors.email" :validation-status="errors.email ? 'error' : undefined">
-            <n-input v-model:value="form.email" type="text" placeholder="your@email.com" clearable />
-          </n-form-item>
+      <n-form-item label="Mật khẩu" :feedback="errors.password"
+        :validation-status="errors.password ? 'error' : undefined">
+        <n-input v-model:value="form.password" type="password" placeholder="Nhập mật khẩu" show-password-on="click"
+          autocomplete="current-password" />
+      </n-form-item>
 
-          <n-form-item label="Mật khẩu" :feedback="errors.password"
-            :validation-status="errors.password ? 'error' : undefined">
-            <n-input v-model:value="form.password" type="password" placeholder="••••••••" show-password-on="click"
-              clearable />
-          </n-form-item>
+      <n-button type="primary" attr-type="submit" size="large" block :loading="loading" :disabled="loading"
+        class="mt-2">
+        Đăng nhập
+      </n-button>
+    </n-form>
 
-          <n-button type="primary" attr-type="submit" :loading="loading" :disabled="loading" size="large" block
-            @click="handleLogin">
-            Đăng nhập
-          </n-button>
-        </n-form>
+    <n-alert v-if="apiError" type="error" :title="apiError" closable class="mt-4" />
 
-        <n-alert v-if="apiError" type="error" :title="apiError" class="mt-4" closable />
-
-        <p class="mt-8 text-sm text-limestone/60">
-          Chưa có tài khoản?
-          <NuxtLink to="/dang-ky" class="font-medium text-oak hover:underline">Đăng ký</NuxtLink>
-        </p>
-      </div>
-    </div>
-
-    <!-- Right panel -->
-    <div class="hidden lg:block lg:w-3/5">
-      <div class="relative h-full w-full">
-        <svg class="h-full w-full" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <pattern id="topo" x="0" y="0" width="120" height="120" patternUnits="userSpaceOnUse">
-              <path d="M20 60c15-8 35-8 50 0s35 8 50 0" fill="none" stroke="#2a3439" stroke-width="0.5"
-                opacity="0.15" />
-              <path d="M20 80c15-8 35-8 50 0s35 8 50 0" fill="none" stroke="#2a3439" stroke-width="0.5" opacity="0.1" />
-              <path d="M20 40c15-8 35-8 50 0s35 8 50 0" fill="none" stroke="#2a3439" stroke-width="0.5" opacity="0.1" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#topo)" />
-        </svg>
-        <div class="absolute inset-0 flex items-center justify-center">
-          <div class="text-center">
-            <div class="mb-4 text-6xl font-bold tracking-tighter text-foundation/10">
-              BĐS
-            </div>
-            <p class="text-sm font-medium tracking-wide text-foundation/30">
-              NỀN TẢNG QUẢN LÝ
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+    <template #footer>
+      <p class="text-sm text-gray-500">
+        Chưa có tài khoản?
+        <NuxtLink to="/dang-ky" class="font-semibold text-emerald-600 hover:underline">
+          Đăng ký ngay
+        </NuxtLink>
+      </p>
+    </template>
+  </AuthShell>
 </template>
 
 <script setup lang="ts">
+import { useAuthStore } from '~/stores/auth'
+import { brandTitle } from '~/utils/brand'
+import AuthShell from '~/components/auth/AuthShell.vue'
+
 definePageMeta({
   layout: false,
-  alias: "/dang-nhap",
-});
+  alias: '/dang-nhap',
+})
 
 useHead({
-  title: "Đăng nhập",
-});
+  title: brandTitle('Đăng nhập'),
+})
 
-import { useAuthStore } from "~/stores/auth";
+const auth = useAuthStore()
+const route = useRoute()
 
-const auth = useAuthStore();
-const route = useRoute();
-const form = ref({ email: "", password: "" });
-const errors = ref({ email: "", password: "" });
-const loading = ref(false);
-const apiError = ref("");
+/** Trang đăng ký chuyển sang kèm ?email=... để khỏi phải gõ lại */
+const presetEmail = typeof route.query.email === 'string' ? route.query.email : ''
+
+const form = ref({ email: presetEmail, password: '' })
+const errors = ref({ email: '', password: '' })
+const loading = ref(false)
+const apiError = ref('')
 
 /**
  * Lấy đường dẫn cần quay lại sau khi đăng nhập (do middleware route truyền vào
  * khi chặn một trang cần đăng nhập). Chỉ nhận đường dẫn nội bộ để tránh open redirect.
  */
 function resolveRedirect(): string {
-  const value = route.query.redirect;
-  if (typeof value !== "string") return "/";
-  if (!value.startsWith("/") || value.startsWith("//")) return "/";
-  return value;
+  const value = route.query.redirect
+  if (typeof value !== 'string') return '/'
+  if (!value.startsWith('/') || value.startsWith('//')) return '/'
+  return value
 }
 
 function validate(): boolean {
-  let ok = true;
-  errors.value.email = "";
-  errors.value.password = "";
-  if (!form.value.email.trim()) {
-    errors.value.email = "Email không được để trống";
-    ok = false;
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.value.email)) {
-    errors.value.email = "Email không hợp lệ";
-    ok = false;
+  let ok = true
+  errors.value.email = ''
+  errors.value.password = ''
+
+  const email = form.value.email.trim()
+  if (!email) {
+    errors.value.email = 'Email không được để trống'
+    ok = false
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    errors.value.email = 'Email không hợp lệ'
+    ok = false
   }
+
   if (!form.value.password) {
-    errors.value.password = "Mật khẩu không được để trống";
-    ok = false;
-  } else if (form.value.password.length < 6) {
-    errors.value.password = "Mật khẩu phải có ít nhất 6 ký tự";
-    ok = false;
+    errors.value.password = 'Mật khẩu không được để trống'
+    ok = false
   }
-  return ok;
+
+  return ok
 }
 
 async function handleLogin() {
-  apiError.value = "";
-  if (!validate()) return;
-  loading.value = true;
+  if (loading.value) return
+  apiError.value = ''
+  if (!validate()) return
+
+  loading.value = true
   try {
-    await auth.login({ email: form.value.email, password: form.value.password });
+    await auth.login({ email: form.value.email.trim(), password: form.value.password })
     // Quay lại đúng trang người dùng định vào trước khi bị chặn đăng nhập
-    await navigateTo(resolveRedirect());
-  } catch (err: any) {
-    apiError.value = err.message || "Đăng nhập thất bại";
+    await navigateTo(resolveRedirect())
+  } catch (err: unknown) {
+    apiError.value = err instanceof Error ? err.message : 'Đăng nhập thất bại'
   } finally {
-    loading.value = false;
+    loading.value = false
   }
 }
 </script>

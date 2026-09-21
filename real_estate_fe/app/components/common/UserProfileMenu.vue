@@ -23,12 +23,18 @@ import { UserMenu } from "~/types/window";
 
 // Khởi tạo các store và class quản lý menu người dùng
 const auth = useAuthStore();
-// Truyền danh sách role để menu lọc đúng mục theo vai trò (khách / môi giới / admin)
-const userMenu = new UserMenu(auth.user?.roles);
+
+/**
+ * Bọc trong computed để menu TỰ CẬP NHẬT khi store nạp xong quyền.
+ * Trước đây `new UserMenu(auth.user?.roles)` chạy 1 lần lúc setup nên menu bị "đóng băng"
+ * theo state tại thời điểm mount: cookie cũ chưa có roles → hiện sai, và phải load lại
+ * trang vài lần mới đúng.
+ */
+const userMenu = computed(() => new UserMenu(auth.user?.roles));
 
 // Map danh sách tùy chọn từ class sang cấu trúc của Naive UI dropdown dựa trên role, kèm icon và divider
 const dropdownOptions = computed(() => {
-  const options = userMenu.getFilteredOptions();
+  const options = userMenu.value.getFilteredOptions();
   const list: DropdownOption[] = [];
 
   options.forEach((option) => {
@@ -88,7 +94,7 @@ const handleLogout = async () => {
  * @param key Key của tùy chọn được chọn
  */
 const handleSelect = async (key: string) => {
-  const option = userMenu.getOptionByKey(key);
+  const option = userMenu.value.getOptionByKey(key);
   if (option?.path) {
     // Đảm bảo đường dẫn luôn bắt đầu bằng '/' để không gặp lỗi relative route khi chuyển trang
     const path = option.path.startsWith("/") ? option.path : `/${option.path}`;

@@ -5,21 +5,31 @@ import assert from "node:assert/strict";
 const userMenuModule = await import("../app/types/window.ts");
 const { UserMenu, UserMenuOption } = userMenuModule;
 
-test("Khởi tạo UserMenu thành công và có đủ 3 options", () => {
+test("Khởi tạo UserMenu thành công và có đủ các mục menu", () => {
   const menu = new UserMenu();
-  assert.equal(menu.options.length, 3);
+  assert.equal(menu.options.length, 9);
 
-  assert.equal(menu.options[0].key, "manage-posts");
-  assert.equal(menu.options[0].label, "Quản lý bài viết");
-  assert.equal(menu.options[0].path, "nguoi-ban/quan-ly-tin-dang");
+  const byKey = Object.fromEntries(menu.options.map((o) => [o.key, o]));
 
-  assert.equal(menu.options[1].key, "manage-customers");
-  assert.equal(menu.options[1].label, "Quản lý khách hàng");
-  assert.equal(menu.options[1].path, "nguoi-ban/quan-ly-khach-hang");
+  // Mục của khách hàng
+  assert.equal(byKey["my-deposits"].label, "Đơn đặt cọc của tôi");
+  assert.equal(byKey["my-deposits"].path, "/account/deposits");
 
-  assert.equal(menu.options[2].key, "logout");
-  assert.equal(menu.options[2].label, "Đăng xuất");
-  assert.equal(menu.options[2].path, undefined);
+  // Mục của môi giới
+  assert.equal(byKey["manage-posts"].label, "Quản lý bài viết");
+  assert.equal(byKey["manage-posts"].path, "/nguoi-ban/quan-ly-tin-dang");
+  assert.equal(byKey["manage-deposits"].label, "Đơn đặt cọc xem nhà");
+  assert.equal(byKey["manage-deposits"].path, "/nguoi-ban/quan-ly-dat-coc");
+  assert.equal(byKey["manage-customers"].label, "Quản lý khách hàng");
+  assert.equal(byKey["manage-customers"].path, "/nguoi-ban/quan-ly-khach-hang");
+
+  // Mục chỉ admin thấy
+  assert.equal(byKey["admin-escrow"].path, "/admin");
+  assert.equal(byKey["admin-users"].path, "/admin/users");
+
+  // Đăng xuất không có path (xử lý riêng)
+  assert.equal(byKey["logout"].label, "Đăng xuất");
+  assert.equal(byKey["logout"].path, undefined);
 });
 
 test("getOptionByKey trả về đúng option hoặc undefined", () => {
@@ -33,18 +43,60 @@ test("getOptionByKey trả về đúng option hoặc undefined", () => {
   assert.equal(nonExistentOpt, undefined);
 });
 
-test("Lọc tùy chọn dựa trên role thành công", () => {
-  const menu = new UserMenu("admin");
+test("Fail-closed: chưa biết role thì chỉ thấy mục không giới hạn role", () => {
+  // undefined = chưa nạp được quyền (VD cookie cũ chưa có roles)
+  const unknown = new UserMenu();
+  assert.deepEqual(unknown.getFilteredOptions().map((o) => o.key), ["logout"]);
 
-  // Gán role chi tiết cho một vài option để test
-  menu.options[0].roles = ["seller", "admin"];
-  menu.options[1].roles = ["seller"]; // option này admin không xem được
-
-  const filtered = menu.getFilteredOptions();
-
-  // Admin chỉ thấy 2 options: manage-posts và logout
-  assert.equal(filtered.length, 2);
-  assert.equal(filtered[0].key, "manage-posts");
-  assert.equal(filtered[1].key, "logout");
+  // [] = đã biết nhưng user không có role nào
+  const noRole = new UserMenu([]);
+  assert.deepEqual(noRole.getFilteredOptions().map((o) => o.key), ["logout"]);
 });
 
+test("UserMenuOption khai báo role dạng mảng để một user giữ nhiều role", () => {
+  const option = new UserMenuOption("x", "X", "/x", ["BROKER", "CUSTOMER"]);
+  assert.deepEqual(option.roles, ["BROKER", "CUSTOMER"]);
+});
+
+test("Admin chỉ thấy mục của admin và mục không giới hạn role", () => {
+  const menu = new UserMenu(["ADMIN"]);
+  const keys = menu.getFilteredOptions().map((o) => o.key);
+
+  assert.deepEqual(keys, ["admin-escrow", "admin-users", "logout"]);
+});
+
+test("Khách hàng thấy mục đơn đặt cọc của mình, không thấy mục môi giới/admin", () => {
+  const menu = new UserMenu(["CUSTOMER"]);
+  const keys = menu.getFilteredOptions().map((o) => o.key);
+
+  assert.deepEqual(keys, ["my-deposits", "manage-favorites", "logout"]);
+});
+
+test("Môi giới thấy mục quản lý của môi giới, không thấy mục admin", () => {
+  const menu = new UserMenu(["BROKER"]);
+  const keys = menu.getFilteredOptions().map((o) => o.key);
+
+  assert.deepEqual(keys, [
+    "manage-projects",
+    "manage-posts",
+    "manage-deposits",
+    "manage-customers",
+    "manage-favorites",
+    "logout",
+  ]);
+});
+
+test("User giữ NHIỀU role thấy hợp nhất menu của các role đó", () => {
+  const menu = new UserMenu(["CUSTOMER", "BROKER"]);
+  const keys = menu.getFilteredOptions().map((o) => o.key);
+
+  assert.deepEqual(keys, [
+    "my-deposits",
+    "manage-projects",
+    "manage-posts",
+    "manage-deposits",
+    "manage-customers",
+    "manage-favorites",
+    "logout",
+  ]);
+});

@@ -1,13 +1,16 @@
 import { defineStore } from "pinia";
 import type { NotificationItem, NotificationSSEPayload } from "~/types/real_estate";
 import { useNotificationService } from "~/services/notification.service";
+import { NotificationStream } from "~/services/notification-stream";
 
 export const useNotificationStore = defineStore("notification", () => {
   const items = ref<NotificationItem[]>([]);
   const unreadCount = ref(0);
   const loading = ref(false);
-  const eventSource = ref<EventSource | null>(null);
   const connected = ref(false);
+
+  // Client SSE dùng fetch (EventSource không gửi được header Authorization → luôn 401)
+  let stream: NotificationStream | null = null;
 
   async function fetchList() {
     loading.value = true;
@@ -34,6 +37,57 @@ export const useNotificationStore = defineStore("notification", () => {
     } finally {
       loading.value = false;
     }
+  }
+
+  /** Xử lý 1 thông báo đẩy từ SSE */
+  function pushRealtimeNotification(payload: NotificationSSEPayload) {
+    items.value.unshift({
+      id: Date.now(), // Fake ID cho client
+      type: "new_listing",
+      payload: payload,
+      created_at: new Date().toISOString(),
+    });
+
+    window.message?.success(
+      `BĐS mới: ${payload.title} - ${(payload.price / 1_000_000_000).toFixed(1)} tỷ`,
+      { duration: 5000, closable: true },
+    );
+
+    unreadCount.value++;
+  }
+
+  /**
+   * Kết nối nhận thông báo realtime. Chỉ chạy khi đã đăng nhập
+   * (thông báo là dữ liệu cá nhân, khách vãng lai không gọi).
+   */
+  function connectSSE() {
+    if (import.meta.server || stream) return;
+
+    const authStore = useAuthStore();
+    const config = useRuntimeConfig();
+
+    stream = new NotificationStream({
+      url: `${config.public.apiBaseUrl}/notifications/stream`,
+      getToken: () => authStore.token ?? null,
+      refreshToken: () => authStore.refreshToken(),
+      handlers: {
+        onMessage: (payload) => pushRealtimeNotification(payload as NotificationSSEPayload),
+        onOpen: () => {
+          connected.value = true;
+        },
+        onClose: () => {
+          connected.value = false;
+        },
+      },
+    });
+
+    stream.start();
+  }
+
+  function disconnectSSE() {
+    stream?.stop();
+    stream = null;
+    connected.value = false;
   }
 
   function markAllAsRead() {
@@ -63,59 +117,6 @@ export const useNotificationStore = defineStore("notification", () => {
       if (unreadCount.value > 0) {
         unreadCount.value--;
       }
-    }
-  }
-
-  function connectSSE() {
-    if (eventSource.value || import.meta.server) return;
-
-    const config = useRuntimeConfig();
-    const url = `${config.public.apiBaseUrl}/notifications/stream`;
-    const es = new EventSource(url);
-
-    es.onopen = () => { connected.value = true; };
-
-    es.onmessage = (event) => {
-      try {
-        const payload: NotificationSSEPayload = JSON.parse(event.data);
-
-        // Push vào list hiện tại
-        items.value.unshift({
-          id: Date.now(), // Fake ID cho client
-          type: "new_listing",
-          payload: payload,
-          created_at: new Date().toISOString()
-        });
-
-        if (typeof window !== 'undefined' && (window as any).$message) {
-            (window as any).$message.success(`BĐS mới: ${payload.title} - ${(payload.price / 1_000_000_000).toFixed(1)} tỷ`, {
-                duration: 5000,
-                closable: true
-            });
-        }
-
-        unreadCount.value++;
-      } catch (e) {
-        console.error("SSE parse error:", e);
-      }
-    };
-
-    es.onerror = () => {
-        connected.value = false;
-        es.close();
-        eventSource.value = null;
-        // Reconnect sau 5s
-        setTimeout(connectSSE, 5000);
-    };
-
-    eventSource.value = es;
-  }
-
-  function disconnectSSE() {
-    if (eventSource.value) {
-      eventSource.value.close();
-      eventSource.value = null;
-      connected.value = false;
     }
   }
 

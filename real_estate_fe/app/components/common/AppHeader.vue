@@ -1,11 +1,11 @@
 <template>
   <header class="sticky top-0 z-50 border-b border-gray-100 bg-white/95 backdrop-blur">
     <div class="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 lg:px-6">
-      <!-- Logo -->
+      <!-- Logo: bấm về trang chủ -->
       <NuxtLink to="/" class="flex shrink-0 items-center gap-2">
-        <img src="/logo.svg" alt="NhàViệt" class="h-9 w-9" :style="{ filter: LOGO_FILTER }" />
+        <img :src="LOGO_PATH" :alt="BRAND_NAME" class="h-9 w-9" :style="{ filter: LOGO_FILTER }" />
         <span class="text-lg font-bold tracking-tight text-gray-800">
-          Nhà<span class="text-emerald-600">Việt</span>
+          Nhà<span class="text-emerald-600">{{ BRAND_NAME_ACCENT }}</span>
         </span>
       </NuxtLink>
 
@@ -45,11 +45,8 @@
 
 <script setup lang="ts">
 import { useAuthStore } from '~/stores/auth'
+import { BRAND_NAME, BRAND_NAME_ACCENT, LOGO_FILTER, LOGO_PATH } from '~/utils/brand'
 import IconAddOutline from '~/icons/IconAddOutline.vue'
-
-/** Đổi màu logo.svg sang tông emerald của thương hiệu */
-const LOGO_FILTER =
-  'invert(48%) sepia(79%) saturate(476%) hue-rotate(114deg) brightness(95%) contrast(95%)'
 
 const auth = useAuthStore()
 

@@ -12,7 +12,8 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "lint": "eslint . --fix --cache",
-    "format": "prettier --write src/"
+    "format": "prettier --write src/",
+    "test": "node --test tests/"
   },
   "dependencies": {
     "@css-render/vue3-ssr": "^0.15.14",

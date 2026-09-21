@@ -96,7 +96,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
 import { useDepositService } from '~/services/deposit.service'
 import { formatVnd } from '~/utils/deposit'
 import type { BookingOptions, PaymentMethod } from '~/types/deposit'

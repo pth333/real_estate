@@ -81,7 +81,7 @@ const listingId = computed(() => realEstateDetailStore.listing?.id ?? 0);
 function handleOpenBooking() {
     if (!authStore.isAuthenticated) {
         window.message?.info('Vui lòng đăng nhập để đặt cọc giữ lịch xem nhà');
-        navigateTo({ path: '/dang-nhap', query: { redirect: route.fullPath } });
+        // navigateTo({ path: '/dang-nhap', query: { redirect: route.fullPath } });
         return;
     }
     showBookingModal.value = true;
