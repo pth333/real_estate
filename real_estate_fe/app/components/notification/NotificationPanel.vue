@@ -1,5 +1,6 @@
 <template>
-  <div class="w-85 border border-gray-200 bg-white shadow-xl rounded-lg overflow-hidden flex flex-col">
+  <!-- Mobile co lại theo màn hình, desktop giữ nguyên 340px -->
+  <div class="flex w-85 max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl">
     <!-- Header -->
     <div class="flex items-center justify-between border-b border-gray-100 px-4 py-3 bg-gray-50">
       <h3 class="text-sm font-semibold text-gray-800 flex items-center gap-1.5">

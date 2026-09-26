@@ -1,6 +1,8 @@
 <template>
-    <div class="md:col-span-1">
-        <div class="border border-gray-200 bg-white rounded-lg p-4 shadow-sm sticky top-6 space-y-4">
+    <div class="lg:col-span-1">
+        <!-- Khối liên hệ đầy đủ: mobile/tablet nằm dưới nội dung (theo thứ tự DOM),
+             desktop dính ở cột phải. -->
+        <div class="space-y-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm lg:sticky lg:top-6">
             <h3 class="text-base font-bold text-gray-800 border-b border-gray-100 pb-2">Thông tin liên hệ</h3>
 
             <!-- Người bán -->
@@ -55,6 +57,26 @@
             <DepositBookingModal v-if="listingId" v-model:show="showBookingModal" :real-estate-id="listingId"
                 :estate-title="realEstateDetailStore.listing?.title" />
         </div>
+
+        <!-- Thanh CTA cố định đáy màn hình (chỉ mobile/tablet): luôn thấy nút gọi & đặt cọc khi cuộn -->
+        <Teleport to="body">
+            <div class="fixed inset-x-0 bottom-0 z-40 flex items-center gap-2 border-t border-gray-200 bg-white/95 px-3 pt-2 backdrop-blur lg:hidden"
+                style="padding-bottom: max(0.5rem, env(safe-area-inset-bottom));">
+                <n-button v-if="realEstateDetailStore.listing?.agent_phone" type="primary" ghost class="flex-1"
+                    @click="handleCall">
+                    <template #icon>
+                        <IconPhone />
+                    </template>
+                    Gọi tư vấn
+                </n-button>
+                <n-button type="primary" class="flex-1" @click="handleOpenBooking">
+                    <template #icon>
+                        <IconWallet />
+                    </template>
+                    Đặt cọc
+                </n-button>
+            </div>
+        </Teleport>
     </div>
 </template>
 <script setup lang="ts">

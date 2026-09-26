@@ -8,16 +8,7 @@ import (
 )
 
 // InitRealEstateRoutes — API bất động sản.
-//
-// ⚠️ Middleware gắn TRỰC TIẾP trên từng route, KHÔNG dùng group có middleware.
-// Lý do (Fiber v2): `Group.Group(prefix, handlers...)` append handlers vào slice Handlers
-// của group CHA, nên các route đăng ký sau trên group cha sẽ thừa hưởng middleware đó —
-// đúng những route được ghi chú là "public" lại bị bắt đăng nhập.
-//
-// Phân loại:
-//   - PUBLIC (khách vãng lai xem được): danh sách/tìm kiếm, chi tiết, dữ liệu danh mục,
-//     dự án, gợi ý. Đây là phần nội dung chính của website.
-//   - CẦN ĐĂNG NHẬP: yêu thích (dữ liệu cá nhân của từng user).
+
 func InitRealEstateRoutes(Router fiber.Router) {
 	realEstateHandler, err := wire.InitializeRealEstateHandler()
 	if err != nil {

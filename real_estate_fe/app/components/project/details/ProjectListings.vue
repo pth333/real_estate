@@ -1,8 +1,8 @@
 <!-- components/project/ProjectListings.vue -->
 <template>
-    <div class="bg-white rounded-xl p-5 mt-6">
+    <div class="mt-4 rounded-xl bg-white p-4 md:mt-6 md:p-5">
         <!-- Header -->
-        <div class="flex items-center justify-between mb-4">
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
             <div class="flex items-center gap-2">
                 <h3 class="text-lg font-semibold text-gray-800">
                     Tin mua bán tại {{ project.name }}
@@ -25,15 +25,15 @@
         </div>
 
         <!-- Loading -->
-        <div v-if="loading" class="grid grid-cols-3 gap-4">
+        <div v-if="loading" class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             <SkeletonCard :count="3" type="card" />
         </div>
 
         <!-- Empty -->
         <n-empty v-else-if="items.length === 0" description="Chưa có tin đăng nào cho dự án này" class="py-10" />
 
-        <!-- Cards -->
-        <div v-else class="grid grid-cols-3 gap-4 overflow-hidden">
+        <!-- Cards: 1 cột mobile, 2 cột tablet, 3 cột desktop -->
+        <div v-else class="grid grid-cols-1 gap-4 overflow-hidden md:grid-cols-2 lg:grid-cols-3">
             <NuxtLink v-for="item in visibleItems" :key="item.id" :to="`${item.slug}`"
                 class="cursor-pointer rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200 bg-white">
 

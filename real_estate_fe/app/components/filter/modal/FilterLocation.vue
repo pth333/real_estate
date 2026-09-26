@@ -17,8 +17,8 @@
     </div>
 
     <!-- Nút Áp dụng -->
-    <div class="mt-2 flex justify-end">
-      <n-button type="primary" @click="onApply">
+    <div class="mt-2 flex md:justify-end">
+      <n-button type="primary" class="w-full md:w-auto" @click="onApply">
         Áp dụng
       </n-button>
     </div>

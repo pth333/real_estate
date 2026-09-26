@@ -1,9 +1,9 @@
 <template>
-  <nav class="flex flex-1">
+  <nav class="flex min-w-0 flex-1">
     <ul class="flex items-center gap-1">
       <li v-for="cat in menuStore.menu?.categories" :key="cat.ID" class="relative group">
         <button @click="handleClick(cat.Slug)"
-          class="px-3 py-2 text-sm font-medium text-gray-700 hover:text-emerald-600 hover:underline underline-offset-4 transition-colors">
+          class="whitespace-nowrap px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:text-emerald-600 hover:underline underline-offset-4">
           {{ cat.Name }}
         </button>
         <ul v-if="cat.children?.length"

@@ -1,6 +1,6 @@
 <template>
-  <n-modal :show="showModalAll" preset="card" :style="{ maxWidth: '520px' }" mask-closable content-style="max-height: 70vh; overflow-y: auto;"
-    @update:show="emit('update:showModalAll', $event)">
+  <n-modal :show="showModalAll" preset="card" :style="{ width: 'min(520px, calc(100vw - 24px))' }" mask-closable
+    content-style="max-height: 72dvh; overflow-y: auto;" @update:show="emit('update:showModalAll', $event)">
 
     <!-- Header động -->
     <template #header>
@@ -21,10 +21,10 @@
       <!-- Khu vực / Khoảng giá / Diện tích (dạng ô input) -->
       <div v-for="field in inputFields" :key="field.label">
         <div class="text-sm font-semibold mb-2">{{ field.label }}</div>
-        <div class="flex items-center justify-between w-full px-3 py-2.5 border border-gray-300 rounded-md bg-white cursor-pointer hover:border-emerald-400 transition-colors"
+        <div class="flex w-full cursor-pointer items-center justify-between gap-3 rounded-md border border-gray-300 bg-white px-3 py-2.5 transition-colors hover:border-emerald-400"
           @click="filterStore.screen = field.screen">
-          <span class="text-sm" :class="field.isDefault ? 'text-gray-400' : 'text-gray-800'">{{ field.value }}</span>
-          <IconChevronRight class="h-4 w-4 text-gray-400 shrink-0" />
+          <span class="truncate text-sm" :class="field.isDefault ? 'text-gray-400' : 'text-gray-800'">{{ field.value }}</span>
+          <IconChevronRight class="h-4 w-4 shrink-0 text-gray-400" />
         </div>
       </div>
 
@@ -32,11 +32,9 @@
       <!-- Số phòng ngủ -->
       <div>
         <div class="text-sm font-semibold mb-3">Số phòng ngủ</div>
-        <div class="flex gap-2 flex-wrap">
+        <div class="grid grid-cols-5 gap-2 md:flex md:flex-wrap">
           <button v-for="opt in roomOptions" :key="opt.value"
-            class="px-4 py-1.5 border rounded-md text-sm transition-colors" :class="filterStore.filters.bedrooms === opt.value
-              ? 'bg-red-500 text-white border-red-500'
-              : 'bg-white text-gray-700 border-gray-300 hover:border-emerald-400'"
+            :class="[optionButtonClass, filterStore.filters.bedrooms === opt.value ? optionActiveClass : optionIdleClass]"
             @click="toggleSingle('bedrooms', opt.value)">
             {{ opt.label }}
           </button>
@@ -47,11 +45,9 @@
       <!-- Số phòng tắm -->
       <div>
         <div class="text-sm font-semibold mb-3">Số phòng tắm, vệ sinh</div>
-        <div class="flex gap-2 flex-wrap">
+        <div class="grid grid-cols-5 gap-2 md:flex md:flex-wrap">
           <button v-for="opt in roomOptions" :key="opt.value"
-            class="px-4 py-1.5 border rounded-md text-sm transition-colors" :class="filterStore.filters.bathrooms === opt.value
-              ? 'bg-red-500 text-white border-red-500'
-              : 'bg-white text-gray-700 border-gray-300 hover:border-emerald-400'"
+            :class="[optionButtonClass, filterStore.filters.bathrooms === opt.value ? optionActiveClass : optionIdleClass]"
             @click="toggleSingle('bathrooms', opt.value)">
             {{ opt.label }}
           </button>
@@ -62,11 +58,9 @@
       <!-- Hướng nhà -->
       <div>
         <div class="text-sm font-semibold mb-3">Hướng nhà</div>
-        <div class="flex gap-2 flex-wrap">
+        <div class="grid grid-cols-4 gap-2 md:flex md:flex-wrap">
           <button v-for="opt in directionOptions" :key="opt.value"
-            class="px-3 py-1.5 border rounded-md text-sm transition-colors" :class="filterStore.filters.house_direction === opt.value
-              ? 'bg-red-500 text-white border-red-500'
-              : 'bg-white text-gray-700 border-gray-300 hover:border-emerald-400'"
+            :class="[optionButtonClass, filterStore.filters.house_direction === opt.value ? optionActiveClass : optionIdleClass]"
             @click="toggleSingle('house_direction', opt.value)">
             {{ opt.label }}
           </button>
@@ -77,11 +71,9 @@
       <!-- Hướng ban công -->
       <div>
         <div class="text-sm font-semibold mb-3">Hướng ban công</div>
-        <div class="flex gap-2 flex-wrap">
+        <div class="grid grid-cols-4 gap-2 md:flex md:flex-wrap">
           <button v-for="opt in directionOptions" :key="opt.value"
-            class="px-3 py-1.5 border rounded-md text-sm transition-colors" :class="filterStore.filters.balcony_direction === opt.value
-              ? 'bg-red-500 text-white border-red-500'
-              : 'bg-white text-gray-700 border-gray-300 hover:border-emerald-400'"
+            :class="[optionButtonClass, filterStore.filters.balcony_direction === opt.value ? optionActiveClass : optionIdleClass]"
             @click="toggleSingle('balcony_direction', opt.value)">
             {{ opt.label }}
           </button>
@@ -92,11 +84,9 @@
       <!-- Pháp lý -->
       <div>
         <div class="text-sm font-semibold mb-3">Pháp lý</div>
-        <div class="flex gap-2 flex-wrap">
+        <div class="grid grid-cols-2 gap-2 md:flex md:flex-wrap">
           <button v-for="opt in legalOptions" :key="opt.value"
-            class="px-3 py-1.5 border rounded-md text-sm transition-colors" :class="filterStore.filters.legal_docs === opt.value
-              ? 'bg-red-500 text-white border-red-500'
-              : 'bg-white text-gray-700 border-gray-300 hover:border-emerald-400'"
+            :class="[optionButtonClass, filterStore.filters.legal_docs === opt.value ? optionActiveClass : optionIdleClass]"
             @click="toggleSingle('legal_docs', opt.value)">
             {{ opt.label }}
           </button>
@@ -107,11 +97,9 @@
       <!-- Nội thất -->
       <div>
         <div class="text-sm font-semibold mb-3">Nội thất</div>
-        <div class="flex gap-2 flex-wrap">
+        <div class="grid grid-cols-2 gap-2 md:flex md:flex-wrap">
           <button v-for="opt in interiorOptions" :key="opt.value"
-            class="px-3 py-1.5 border rounded-md text-sm transition-colors" :class="filterStore.filters.interior === opt.value
-              ? 'bg-red-500 text-white border-red-500'
-              : 'bg-white text-gray-700 border-gray-300 hover:border-emerald-400'"
+            :class="[optionButtonClass, filterStore.filters.interior === opt.value ? optionActiveClass : optionIdleClass]"
             @click="toggleSingle('interior', opt.value)">
             {{ opt.label }}
           </button>
@@ -136,9 +124,9 @@
 
     <!-- Footer actions -->
     <template #footer>
-      <div v-if="filterStore.screen === 'main'" class="flex justify-end gap-2 mt-2">
-        <n-button  @click="handleReset">Đặt lại</n-button>
-        <n-button type="primary" @click="handleApply">Áp dụng</n-button>
+      <div v-if="filterStore.screen === 'main'" class="mt-2 flex gap-2 md:justify-end">
+        <n-button class="flex-1 md:flex-none" @click="handleReset">Đặt lại</n-button>
+        <n-button type="primary" class="flex-1 md:flex-none" @click="handleApply">Áp dụng</n-button>
       </div>
     </template>
   </n-modal>
@@ -169,6 +157,11 @@ const screenTitle = computed(() => {
 })
 
 // --- Options ---
+// Class dùng chung cho nút chọn nhanh: mobile ưu tiên vùng chạm lớn, từ tablet gọn lại
+const optionButtonClass = 'rounded-md border px-2 py-2 text-xs transition-colors md:px-3 md:py-1.5 md:text-sm'
+const optionActiveClass = 'border-red-500 bg-red-500 text-white'
+const optionIdleClass = 'border-gray-300 bg-white text-gray-700 hover:border-emerald-400'
+
 const roomOptions = [
   { label: '1', value: 1 },
   { label: '2', value: 2 },

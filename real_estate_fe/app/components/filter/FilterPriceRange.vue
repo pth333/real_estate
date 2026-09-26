@@ -11,7 +11,7 @@
       </n-button>
     </template>
 
-    <div class="w-80 p-4">
+    <div class="w-80 max-w-[calc(100vw-2rem)] p-3 md:p-4">
       <h3 class="mb-3 text-sm font-semibold text-gray-700">Khoảng giá</h3>
 
       <!-- Inputs -->
@@ -26,7 +26,7 @@
       <!-- Preset ratios -->
       <div class="mb-3 grid grid-cols-2 gap-1.5">
         <button v-for="preset in presets" :key="preset.label" :class="[
-          ' px-3 py-1.5 text-xs transition-colors',
+          'px-3 py-2 text-xs transition-colors md:py-1.5',
           isPresetActive(preset)
             ? 'bg-emerald-600 text-white'
             : 'bg-gray-100 text-gray-600 hover:bg-gray-200',

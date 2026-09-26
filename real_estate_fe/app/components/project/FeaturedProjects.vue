@@ -1,33 +1,33 @@
 <template>
-    <section class="py-8">
-        <div class="container mx-auto px-24">
-            <!-- Header -->
-            <div class="flex items-center justify-between mb-5">
-                <h2 class="text-xl font-bold text-gray-900">Dự án bất động sản nổi bật</h2>
+    <section class="py-6 md:py-8">
+        <div class="container mx-auto px-4 md:px-12 lg:px-24">
+            <!-- Header: mobile cho xuống dòng thay vì ép chữ -->
+            <div class="mb-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                <h2 class="text-lg font-bold text-gray-900 md:text-xl">Dự án bất động sản nổi bật</h2>
                 <NuxtLink :to="thirdCategorySlug ? `/${thirdCategorySlug}` : '#'"
-                    class="flex items-center gap-1 text-emerald-600 text-sm font-medium hover:underline">
+                    class="flex shrink-0 items-center gap-1 text-sm font-medium text-emerald-600 hover:underline">
                     Xem thêm
                     <IconArrowRight class="h-4 w-4" />
                 </NuxtLink>
             </div>
 
             <!-- Loading State -->
-            <div v-if="loading" class="grid grid-cols-4 gap-4">
+            <div v-if="loading" class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <SkeletonCard :count="4" type="project" />
             </div>
 
             <!-- Slider wrapper -->
             <div v-else-if="projects.length > 0" class="relative">
-                <!-- Nút prev -->
+                <!-- Nút prev: mobile xếp dọc nên không cần, ẩn để tránh tràn ra ngoài container -->
                 <button
-                    class="absolute -left-5 top-1/2 -translate-y-1/2 z-10 w-9 h-9 bg-white border border-gray-200 shadow rounded-md flex items-center justify-center hover:shadow-md transition-shadow"
+                    class="absolute -left-5 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md border border-gray-200 bg-white shadow transition-shadow hover:shadow-md md:flex"
                     @click="prev" :disabled="currentIndex === 0"
                     :class="{ 'opacity-50 cursor-not-allowed': currentIndex === 0 }">
                     <IconChevronLeft class="h-4 w-4 text-gray-600" />
                 </button>
 
-                <!-- Cards -->
-                <div class="grid grid-cols-4 gap-4 overflow-hidden">
+                <!-- Cards: 1 cột mobile, 2 cột tablet, 4 cột desktop -->
+                <div class="grid grid-cols-1 gap-4 overflow-hidden md:grid-cols-2 lg:grid-cols-4">
 
                     <NuxtLink v-for="item in visibleItems" :key="item.id" :to="`${item.slug}`"
                         class="bg-white border border-gray-100 rounded-lg shadow-sm hover:shadow-md overflow-hidden cursor-pointer group flex flex-col no-underline">
@@ -62,7 +62,7 @@
 
                 <!-- Nút next -->
                 <button
-                    class="absolute -right-5 top-1/2 -translate-y-1/2 z-10 w-9 h-9 bg-white border border-gray-200 shadow rounded-md flex items-center justify-center hover:shadow-md transition-shadow"
+                    class="absolute -right-5 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md border border-gray-200 bg-white shadow transition-shadow hover:shadow-md md:flex"
                     @click="next" :disabled="currentIndex + pageSize >= projects.length"
                     :class="{ 'opacity-50 cursor-not-allowed': currentIndex + pageSize >= projects.length }">
                     <IconChevronRight class="h-4 w-4 text-gray-600" />

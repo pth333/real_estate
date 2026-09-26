@@ -1,24 +1,26 @@
 <template>
-  <!-- 1. Layout mặc định (type = 'list'): Thẻ danh sách tìm kiếm BĐS -->
-  <div v-if="type === 'list'" class="flex flex-col gap-4">
-    <div v-for="i in count" :key="i" class="animate-pulse bg-white shadow-sm border border-gray-100 rounded-lg overflow-hidden">
-      <!-- Grid ảnh skeleton -->
-      <div class="grid h-60 grid-cols-[2fr_1fr] gap-0.5 bg-gray-100">
-        <div class="col-span-2 row-span-2 bg-gray-200" />
+  <!-- 1. Layout mặc định (type = 'list'): Thẻ danh sách tìm kiếm BĐS.
+       Bám theo bố cục RealEstateCard: mobile/tablet ảnh trên, desktop ảnh là cột trái. -->
+  <div v-if="type === 'list'" class="flex flex-col gap-3 md:gap-4">
+    <div v-for="i in count" :key="i"
+      class="animate-pulse overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm lg:flex">
+      <!-- Khối ảnh skeleton -->
+      <div class="grid h-56 shrink-0 grid-cols-[2fr_1fr] gap-0.5 bg-gray-100 md:h-72 lg:h-auto lg:w-[352px]">
+        <div class="bg-gray-200" />
         <div class="grid grid-rows-2 gap-0.5">
           <div class="bg-gray-200" />
           <div class="bg-gray-200" />
         </div>
       </div>
       <!-- Content skeleton -->
-      <div class="space-y-3 p-4">
+      <div class="flex flex-1 flex-col gap-3 p-3 md:p-4">
         <div class="h-4 w-3/4 bg-gray-200 rounded" />
         <div class="h-4 w-1/2 bg-gray-200 rounded" />
         <div class="flex gap-3">
           <div class="h-6 w-20 bg-gray-200 rounded" />
           <div class="h-6 w-16 bg-gray-200 rounded" />
         </div>
-        <div class="flex items-center gap-2 border-t border-gray-100 pt-3">
+        <div class="mt-auto flex items-center gap-2 border-t border-gray-100 pt-3">
           <div class="h-10 w-10 bg-gray-200 rounded-full" />
           <div class="space-y-1.5">
             <div class="h-3 w-24 bg-gray-200 rounded" />
@@ -64,15 +66,14 @@
     </div>
   </template>
 
-  <!-- 4. Layout BĐS theo địa điểm (type = 'area'): 1 thẻ to trái + lưới 2x2 phải -->
-  <div v-else-if="type === 'area'" class="flex gap-3" style="height: 360px;">
+  <!-- 4. Layout BĐS theo địa điểm (type = 'area'): mobile 1 ảnh lớn trên + lưới 2x2 dưới,
+       từ tablet trở lên mới tách ảnh to bên trái + lưới 2x2 bên phải. -->
+  <div v-else-if="type === 'area'" class="flex flex-col gap-3 md:h-[360px] md:flex-row">
     <!-- Cột trái: Skeleton Featured -->
-    <div class="relative overflow-hidden rounded-lg animate-pulse bg-gray-200 shrink-0" style="flex: 0 0 45%;">
-    </div>
+    <div class="relative h-52 shrink-0 animate-pulse overflow-hidden rounded-lg bg-gray-200 md:h-full md:w-[45%]" />
     <!-- Cột phải: Skeleton 2x2 grid -->
-    <div class="flex-1 grid grid-cols-2 grid-rows-2 gap-3">
-        <div v-for="i in 4" :key="i" class="relative overflow-hidden rounded-lg animate-pulse bg-gray-200">
-        </div>
+    <div class="grid flex-1 grid-cols-2 grid-rows-2 gap-3">
+      <div v-for="i in 4" :key="i" class="relative h-32 animate-pulse overflow-hidden rounded-lg bg-gray-200 md:h-auto" />
     </div>
   </div>
 </template>

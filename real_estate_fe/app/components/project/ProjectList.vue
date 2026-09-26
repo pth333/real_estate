@@ -1,17 +1,17 @@
 <template>
   <n-layout class="bg-transparent">
-    <n-layout-content class="mx-auto max-w-[1200px] px-6 py-6 bg-transparent">
+    <n-layout-content class="mx-auto max-w-[1200px] bg-transparent px-4 py-4 md:px-6 md:py-6">
       <!-- Breadcrumb Naive UI chuyên nghiệp -->
-      <n-breadcrumb class="mb-4">
+      <n-breadcrumb class="mb-3 md:mb-4">
         <n-breadcrumb-item @click="navigateTo('/')">Trang chủ</n-breadcrumb-item>
         <n-breadcrumb-item>Dự án</n-breadcrumb-item>
         <n-breadcrumb-item>Dự án BĐS Toàn Quốc</n-breadcrumb-item>
       </n-breadcrumb>
 
-      <!-- Tiêu đề + sắp xếp -->
-      <n-space justify="space-between" align="end" class="mb-5">
+      <!-- Tiêu đề + sắp xếp: mobile xếp dọc, từ tablet trở lên dàn ngang -->
+      <n-space justify="space-between" align="end" :size="12" wrap class="mb-4 md:mb-5">
         <n-space vertical :size="4">
-          <n-h1 class="text-2xl! font-bold! m-0! !text-gray-900">Dự án toàn quốc</n-h1>
+          <n-h1 class="m-0! text-xl! font-bold! !text-gray-900 md:text-2xl!">Dự án toàn quốc</n-h1>
           <n-text depth="3" class="text-sm">
             Hiện đang có <strong class="text-gray-700">{{ projects.length.toLocaleString('vi-VN') }}</strong> dự án
           </n-text>
@@ -20,14 +20,14 @@
         <!-- Sort selector Naive UI xịn sò -->
         <n-space align="center">
           <n-text depth="3" class="text-sm">Sắp xếp:</n-text>
-          <n-select v-model:value="sortOrder" :options="sortOptions" class="w-48" size="small" />
+          <n-select v-model:value="sortOrder" :options="sortOptions" class="w-40 md:w-48" size="small" />
         </n-space>
       </n-space>
 
-      <!-- Grid Layout Naive UI cố định 4 cột đồng bộ -->
-      <n-grid :cols="4" :x-gap="24" :y-gap="24">
-        <!-- Cột trái (Chiếm 3/4 cột) -->
-        <n-grid-item :span="3" class="min-w-0">
+      <!-- Grid Layout: 1 cột mobile, 2 cột tablet (md), 4 cột desktop (lg) -->
+      <n-grid :cols="'1 md:2 lg:4'" :x-gap="'0 md:16 lg:24'" :y-gap="'16 lg:24'" responsive="screen">
+        <!-- Cột trái (Chiếm 3/4 cột ở desktop) -->
+        <n-grid-item :span="'1 md:2 lg:3'" class="min-w-0">
           <n-spin :show="loading">
             <!-- Empty State Naive UI -->
             <n-empty v-if="!loading && projects.length === 0" description="Không tìm thấy dự án nào thuộc danh mục này"
@@ -39,9 +39,11 @@
             <n-space v-else vertical :size="16">
               <NuxtLink v-for="project in pagedProjects" :key="project.id" hoverable content-style="padding: 0;"
                 class="overflow-hidden cursor-pointer group" :to="`${project.slug}`">
-                <n-grid :cols="12" class="h-44">
+                <!-- Mobile: ảnh trên, thông tin dưới. Từ tablet: ảnh trái 1/3, thông tin phải 2/3.
+                     Bắt buộc có item-responsive + responsive="screen" thì span dạng "md:4" mới hiểu. -->
+                <n-grid :cols="12" item-responsive responsive="screen" class="h-auto md:h-44">
                   <!-- Thumbnail dự án -->
-                  <n-grid-item :span="4" class="relative overflow-hidden bg-gray-100">
+                  <n-grid-item :span="'12 md:4'" class="relative h-40 overflow-hidden bg-gray-100 md:h-auto">
                     <img :src="project.thumbnail || 'https://placehold.co/440x296/e2e8f0/94a3b8?text=Project'"
                       :alt="project.name"
                       class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
@@ -54,7 +56,7 @@
                   </n-grid-item>
 
                   <!-- Thông tin dự án -->
-                  <n-grid-item :span="8" class="p-4 flex flex-col justify-between min-w-0">
+                  <n-grid-item :span="'12 md:8'" class="flex min-w-0 flex-col justify-between p-3 md:p-4">
                     <n-space vertical :size="6" class="min-w-0">
                       <!-- Tên dự án -->
                       <n-h2
@@ -104,8 +106,8 @@
           </n-spin>
         </n-grid-item>
 
-        <!-- Cột phải: Sidebar (Chiếm 1/4 cột) -->
-        <n-grid-item :span="1">
+        <!-- Cột phải: Sidebar (Chiếm 1/4 cột ở desktop, nằm dưới danh sách ở mobile/tablet) -->
+        <n-grid-item :span="'1 md:2 lg:1'">
           <n-card title="Đánh giá dự án" header-style="border-b: 1px solid #f3f4f6; padding: 12px 16px;"
             content-style="padding: 0;" class="overflow-hidden">
             <template #header-extra>
@@ -117,7 +119,7 @@
             <!-- Sidebar list sử dụng n-space vertical -->
             <n-space vertical :size="0" class="divide-y divide-gray-100">
               <div v-for="(item, i) in sidebarReviews" :key="i"
-                class="relative h-40 overflow-hidden cursor-pointer group">
+                class="relative h-32 cursor-pointer overflow-hidden group md:h-40">
                 <img :src="item.img" :alt="item.title"
                   class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                 <div class="absolute inset-0 from-black/70 via-black/10 to-transparent"></div>

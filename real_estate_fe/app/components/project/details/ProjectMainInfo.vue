@@ -1,15 +1,15 @@
 <template>
   <div v-if="project" class="flex flex-col gap-6">
-    <!-- Gallery -->
-    <div class="relative h-90 cursor-pointer overflow-hidden rounded-xl" @click="openLightbox(0)">
+    <!-- Gallery: mobile chỉ hiện ảnh lớn, từ tablet trở lên mới hiện mosaic ảnh nhỏ -->
+    <div class="relative h-56 cursor-pointer overflow-hidden rounded-xl md:h-72 lg:h-90" @click="openLightbox(0)">
       <div class="grid h-full gap-1" :style="gridStyle">
         <!-- Ảnh lớn đầu tiên -->
-        <div class="row-span-2 overflow-hidden">
+        <div class="col-span-full row-span-2 overflow-hidden md:col-span-1">
           <img :src="images[0]?.url" :alt="images[0]?.file_name" class="h-full w-full object-cover" />
         </div>
 
         <!-- Các ảnh còn lại dynamic -->
-        <div v-for="(img, idx) in previewImages" :key="img.id" class="relative overflow-hidden">
+        <div v-for="(img, idx) in previewImages" :key="img.id" class="relative hidden overflow-hidden md:block">
           <img :src="img.thumbnail_url || img.url" :alt="img.file_name" class="h-full w-full object-cover" />
 
           <!-- Badge +N ở ảnh cuối -->
@@ -28,7 +28,8 @@
           <template #icon>
             <IconImage />
           </template>
-          Xem tất cả {{ images.length }} ảnh
+          <span class="hidden md:inline">Xem tất cả {{ images.length }} ảnh</span>
+          <span class="md:hidden">{{ images.length }} ảnh</span>
         </n-button>
       </div>
     </div>
@@ -45,15 +46,15 @@
         </span>
       </div>
 
-      <h1 class="m-0 text-2xl font-bold leading-snug text-gray-900">{{ project.name }}</h1>
+      <h1 class="m-0 text-xl font-bold leading-snug text-gray-900 md:text-2xl">{{ project.name }}</h1>
       <span class="flex items-start gap-1 text-sm text-gray-400">
         <IconMapPin class="mt-0.5 h-4 w-4 shrink-0" />
         {{ project.full_address || 'Địa chỉ đang cập nhật' }}
       </span>
     </div>
 
-    <!-- Stats grid -->
-    <div class="grid grid-cols-3 gap-4">
+    <!-- Stats grid: 2 cột ở mobile (ô khoảng giá chiếm cả dòng), 3 cột từ tablet -->
+    <div class="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
       <div class="rounded-xl border border-gray-100/50 bg-gray-50/50 p-3">
         <div class="flex flex-col gap-1">
           <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">QUY MÔ</span>
@@ -77,7 +78,7 @@
         </div>
       </div>
 
-      <div class="rounded-xl border border-gray-100/50 bg-gray-50/50 p-3">
+      <div class="col-span-2 rounded-xl border border-gray-100/50 bg-gray-50/50 p-3 md:col-span-1">
         <div class="flex flex-col gap-1">
           <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">KHOẢNG GIÁ</span>
           <span class="text-base font-bold text-emerald-600">
@@ -118,7 +119,7 @@
         @keydown.right.prevent="next"
       >
         <!-- Header -->
-        <div class="flex items-center justify-between px-6 py-4 text-white">
+        <div class="flex items-center justify-between px-4 py-3 text-white md:px-6 md:py-4">
           <span class="text-sm text-white/70">{{ currentIndex + 1 }} / {{ images.length }}</span>
           <button
             class="rounded-full p-2 text-white/70 transition hover:bg-white/10 hover:text-white"
@@ -129,9 +130,9 @@
         </div>
 
         <!-- Main image -->
-        <div class="relative flex flex-1 items-center justify-center px-10 py-2">
+        <div class="relative flex flex-1 items-center justify-center px-3 py-2 md:px-10">
           <button
-            class="absolute left-4 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
+            class="absolute left-2 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 md:left-4 md:h-11 md:w-11"
             @click="prev"
           >
             <IconChevronLeft class="h-6 w-6" />
@@ -139,11 +140,11 @@
 
           <img
             :src="images[currentIndex]?.url"
-            class="max-h-[72vh] max-w-[78vw] rounded-lg object-contain shadow-2xl"
+            class="max-h-[72vh] max-w-[92vw] rounded-lg object-contain shadow-2xl md:max-w-[78vw]"
           />
 
           <button
-            class="absolute right-4 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
+            class="absolute right-2 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 md:right-4 md:h-11 md:w-11"
             @click="next"
           >
             <IconChevronRight class="h-6 w-6" />
@@ -151,7 +152,7 @@
         </div>
 
         <!-- Thumbnail strip -->
-        <div class="thumbnail-strip flex justify-center gap-2 overflow-x-auto px-4 pb-5 pt-2">
+        <div class="thumbnail-strip flex justify-start gap-2 overflow-x-auto px-4 pb-5 pt-2 md:justify-center">
           <div
             v-for="(img, idx) in images"
             :key="img.id"

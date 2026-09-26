@@ -1,12 +1,12 @@
 <template>
-    <div class="bg-white rounded-lg py-4">
+    <div class="rounded-lg bg-white px-3 py-3 md:px-4 md:py-4">
         <h2 class="mb-3 border-b border-gray-200 pb-2 text-base font-bold text-gray-800">
             Vị trí dự án {{ projectName }}
         </h2>
 
         <!-- Bản đồ -->
         <div class="relative overflow-hidden rounded-lg border border-gray-200">
-            <div id="nearby-amenities-map" class="h-[260px] w-full"></div>
+            <div id="nearby-amenities-map" class="h-56 w-full md:h-64 lg:h-[260px]"></div>
             <p v-if="!hasCoords"
                 class="absolute inset-0 flex items-center justify-center bg-gray-100 text-sm text-gray-400">
                 Không có vị trí trên bản đồ
@@ -17,8 +17,8 @@
             </p>
         </div>
 
-        <!-- Tab danh mục tiện ích -->
-        <div class="mt-2 flex items-center gap-5 overflow-x-auto border-b border-gray-100 py-2">
+        <!-- Tab danh mục tiện ích: cuộn ngang khi màn hình hẹp -->
+        <div class="mt-2 flex items-center gap-4 overflow-x-auto border-b border-gray-100 py-2 md:gap-5 [scrollbar-width:none]">
             <button v-for="cat in categories" :key="cat.key"
                 class="flex shrink-0 items-center gap-1.5 text-sm font-medium transition-colors"
                 :class="activeCategory === cat.key ? 'text-emerald-600' : 'text-gray-500 hover:text-gray-700'"

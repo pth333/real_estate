@@ -1,5 +1,6 @@
 <template>
-  <div class="sticky top-6">
+  <!-- Desktop: khối liên hệ dính ở cột phải. Mobile/tablet: nằm dưới nội dung. -->
+  <div class="lg:sticky lg:top-6">
     <n-card class="border border-gray-100 shadow-sm rounded-xl">
       <n-space vertical :size="16">
         <!-- Avatar và thông tin liên hệ -->
@@ -37,6 +38,22 @@
         </n-space>
       </n-space>
     </n-card>
+
+    <!-- Thanh CTA cố định đáy màn hình (chỉ mobile/tablet): luôn thấy nút liên hệ khi cuộn -->
+    <Teleport to="body">
+      <div class="fixed inset-x-0 bottom-0 z-40 flex items-center gap-2 border-t border-gray-200 bg-white/95 px-3 pt-2 backdrop-blur lg:hidden"
+        style="padding-bottom: max(0.5rem, env(safe-area-inset-bottom));">
+        <n-button type="primary" class="flex-1 bg-emerald-600!">
+          <template #icon>
+            <IconPhone />
+          </template>
+          Gọi tư vấn
+        </n-button>
+        <n-button ghost class="flex-1">
+          Tải bảng giá
+        </n-button>
+      </div>
+    </Teleport>
   </div>
 </template>
 

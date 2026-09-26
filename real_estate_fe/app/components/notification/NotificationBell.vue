@@ -1,7 +1,8 @@
 <template>
-  <n-popover v-model:show="showPopover" trigger="click" placement="bottom-end" :width="340" raw :show-arrow="false">
+  <!-- Không set width cứng để panel tự co theo màn hình (xem NotificationPanel) -->
+  <n-popover v-model:show="showPopover" trigger="click" placement="bottom-end" raw :show-arrow="false">
     <template #trigger>
-      <button class="relative p-2 text-gray-600 transition hover:bg-gray-100 hover:text-gray-800 rounded-full flex items-center justify-center">
+      <button class="relative flex items-center justify-center rounded-full p-2 text-gray-600 transition hover:bg-gray-100 hover:text-gray-800">
         <n-badge :value="store.unreadCount" :max="9" :show="store.unreadCount > 0">
           <IconBell class="size-6 text-gray-600" />
         </n-badge>

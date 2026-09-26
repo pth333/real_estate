@@ -25,19 +25,19 @@ export const useRealEstateStore = defineStore("realEstate", () => {
     filter: filter.value,
   }));
 
-  async function fetchList() {
-    loading.value = true;
-    try {
-      const realEstateService = useRealEstateService();
-      const res = await realEstateService.searchList(payload.value);
-      items.value = res.data;
-      total.value = res.total;
-    } catch (e) {
-      console.error("Lỗi tải danh sách BĐS:", e);
-    } finally {
-      loading.value = false;
-    }
-  }
+  // async function fetchList() {
+  //   loading.value = true;
+  //   try {
+  //     const realEstateService = useRealEstateService();
+  //     const res = await realEstateService.searchList(payload.value);
+  //     items.value = res.data;
+  //     total.value = res.total;
+  //   } catch (e) {
+  //     console.error("Lỗi tải danh sách BĐS:", e);
+  //   } finally {
+  //     loading.value = false;
+  //   }
+  // }
 
   async function fetchSummary(from?: string, to?: string) {
     summaryLoading.value = true;
@@ -51,22 +51,22 @@ export const useRealEstateStore = defineStore("realEstate", () => {
     }
   }
 
-  function setFilter(newFilter: Filter) {
-    filter.value = newFilter;
-    page.value = 1;
-    fetchList();
-  }
+  // function setFilter(newFilter: Filter) {
+  //   filter.value = newFilter;
+  //   page.value = 1;
+  //   fetchList();
+  // }
 
-  function setPage(newPage: number) {
-    page.value = newPage;
-    fetchList();
-  }
+  // function setPage(newPage: number) {
+  //   page.value = newPage;
+  //   fetchList();
+  // }
 
-  function setPageSize(newSize: number) {
-    pageSize.value = newSize;
-    page.value = 1;
-    fetchList();
-  }
+  // function setPageSize(newSize: number) {
+  //   pageSize.value = newSize;
+  //   page.value = 1;
+  //   fetchList();
+  // }
 
   return {
     items,
@@ -80,10 +80,10 @@ export const useRealEstateStore = defineStore("realEstate", () => {
     currentPage,
     categorySlug,
     formattedPrice,
-    fetchList,
+    // fetchList,
     fetchSummary,
-    setFilter,
-    setPage,
-    setPageSize,
+    // setFilter,
+    // setPage,
+    // setPageSize,
   };
 });

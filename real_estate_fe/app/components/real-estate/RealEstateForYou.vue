@@ -1,10 +1,10 @@
 <template>
-  <section class="py-8">
-    <div class="container mx-auto px-24">
-      <!-- Header -->
-      <div class="flex items-center justify-between mb-5">
-        <h2 class="text-xl font-bold text-gray-900">Bất động sản dành cho bạn</h2>
-        <div class="flex items-center gap-3 text-sm">
+  <section class="py-6 md:py-8">
+    <div class="container mx-auto px-4 md:px-12 lg:px-24">
+      <!-- Header: mobile xuống dòng, từ tablet trở lên dàn ngang -->
+      <div class="mb-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <h2 class="text-lg font-bold text-gray-900 md:text-xl">Bất động sản dành cho bạn</h2>
+        <div class="flex items-center gap-2 text-xs md:gap-3 md:text-sm">
           <NuxtLink :to="realEstateNewest[0] ? `/${realEstateNewest[0].Slug}` : '#'"
             class="text-gray-600 hover:text-red-500 transition-colors">
             Tin nhà đất bán mới nhất
@@ -18,17 +18,17 @@
       </div>
 
       <!-- Loading State -->
-      <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div v-if="loading" class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <SkeletonCard :count="8" type="card" />
       </div>
 
-      <!-- Grid -->
-      <div v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <!-- Grid: 1 cột mobile, 2 cột tablet, 4 cột desktop -->
+      <div v-else class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <NuxtLink v-for="item in visibleItems" :key="item.id" :to="`/${item.slug}`">
           <n-card hoverable size="small" content-style="padding: 12px;"
             class="cursor-pointer overflow-hidden rounded-lg shadow-sm">
             <template #cover>
-              <div class="relative h-48 overflow-hidden bg-gray-100 group">
+              <div class="group relative h-40 overflow-hidden bg-gray-100 md:h-48">
                 <div v-if="(item.image_urls?.length ?? 0) > 1"
                   class="absolute bottom-2 left-2 z-10 flex items-center gap-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded">
                   <IconImage class="h-3 w-3" />

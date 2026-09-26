@@ -5,7 +5,7 @@
   <div id="app" class="min-h-screen bg-white text-gray-900">
     <NuxtErrorBoundary>
       <NuxtLayout>
-        <NConfigProvider :theme-overrides="themeOverrides">
+        <NConfigProvider :theme-overrides="themeOverrides" :breakpoints="BREAKPOINTS">
           <NNotificationProvider>
             <NMessageProvider>
               <NDialogProvider>
@@ -41,6 +41,22 @@ const themeOverrides: GlobalThemeOverrides = {
     primaryColorPressed: "#047857",
     primaryColorSuppl: "#10b981",
   },
+};
+
+/**
+ * Breakpoint cho n-grid (responsive="screen").
+ * Giữ nguyên bộ key gốc của Naive UI và bổ sung md/lg trùng khớp 1:1 với Tailwind
+ * (md = 768px tablet, lg = 1024px desktop) để grid và class Tailwind luôn đổi cùng lúc.
+ */
+const BREAKPOINTS: Record<string, number> = {
+  xs: 0,
+  s: 640,
+  md: 768,
+  m: 1024,
+  lg: 1024,
+  l: 1280,
+  xl: 1536,
+  "2xl": 1920,
 };
 
 // Thông báo là dữ liệu cá nhân → chỉ kết nối SSE khi đã đăng nhập.

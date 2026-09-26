@@ -1,10 +1,11 @@
 <template>
-    <div class="bg-white rounded-lg py-4">
+    <div class="rounded-lg bg-white px-3 py-3 md:px-4 md:py-4">
         <h2 class="mb-4 border-b border-gray-200 pb-2 text-base font-bold text-gray-800">
             Đặc điểm bất động sản
         </h2>
 
-        <div class="grid grid-cols-1 gap-x-8 sm:grid-cols-2">
+        <!-- Mobile 1 cột cho dễ đọc, từ tablet trở lên mới tách 2 cột -->
+        <div class="grid grid-cols-1 gap-x-8 md:grid-cols-2">
             <template v-for="attr in attrs" :key="attr.label">
                 <div v-if="attr.value" class="flex items-center justify-between border-b border-gray-100 py-2">
                     <span class="flex items-center gap-2 text-sm text-gray-500">

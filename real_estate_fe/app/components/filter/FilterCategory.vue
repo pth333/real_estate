@@ -7,15 +7,16 @@
         <template #icon>
           <IconChevronDownOutline class="h-4 w-4" />
         </template>
-        {{ buttonLabel }}
+        <!-- Mobile giới hạn bề rộng để không đẩy thanh filter tràn -->
+        <span class="max-w-[7rem] truncate md:max-w-none">{{ buttonLabel }}</span>
       </n-button>
     </template>
 
-    <div class="w-72 p-3">
+    <div class="w-72 max-w-[calc(100vw-2rem)] p-3">
       <n-input v-model:value="keyword" placeholder="Tìm loại bất động sản..." clearable size="small" class="mb-2" />
       <n-tree :key="keyword ? 'filtered' : 'all'" :data="treeData" :pattern="keyword" :filter-method="treeFilter"
         :default-expand-all="!!keyword" block-line block-node selectable :selected-keys="selectedKeys"
-        class="max-h-72 overflow-y-auto" @update:selected-keys="handleSelect" />
+        class="max-h-60 overflow-y-auto md:max-h-72" @update:selected-keys="handleSelect" />
     </div>
   </n-popover>
 </template>

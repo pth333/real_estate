@@ -1,13 +1,16 @@
 <template>
-    <div class="grid grid-cols-1 gap-4">
+    <div class="grid grid-cols-1 gap-3 md:gap-4">
+        <!-- Desktop (lg) là layout chính: ảnh thành cột trái cố định, nội dung nằm bên phải.
+             Mobile/tablet: ảnh mosaic trên đầu, nội dung xếp dọc bên dưới. -->
         <div v-for="estate in realEstates" :key="estate.id"
-            class="group relative overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm transition-shadow duration-300 hover:shadow-md">
+            class="group relative overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm transition-shadow duration-300 hover:shadow-md lg:flex">
             <div v-if="estate.badge"
                 class="absolute left-3 top-3 z-10 rounded bg-red-600 px-3 py-1 text-xs font-bold uppercase text-white">
                 {{ estate.badge }}
             </div>
 
-            <div class="grid h-80 grid-cols-[2fr_1fr] gap-0.5 overflow-hidden rounded-t-lg bg-gray-100">
+            <div
+                class="grid h-56 shrink-0 grid-cols-[2fr_1fr] gap-0.5 overflow-hidden bg-gray-100 md:h-72 lg:h-auto lg:w-[352px]">
                 <div class="overflow-hidden">
                     <img :src="mainImage(estate)" :alt="estate.title" class="h-full w-full object-cover"
                         @error="handleImageError" />
@@ -36,14 +39,14 @@
                 </div>
             </div>
 
-            <div class="space-y-3 p-4">
-                <h3 class="cursor-pointer text-base font-semibold uppercase leading-tight text-gray-800 line-clamp-2 hover:text-emerald-600"
+            <div class="flex min-w-0 flex-1 flex-col gap-3 p-3 md:p-4">
+                <h3 class="cursor-pointer text-sm font-semibold uppercase leading-tight text-gray-800 line-clamp-2 hover:text-emerald-600 md:text-base"
                     @click="goToDetail(estate)">
                     {{ estate.title }}
                 </h3>
 
-                <div class="flex flex-wrap items-center gap-3 text-sm text-gray-500">
-                    <span class="text-lg font-bold text-red-600">{{ formatPrice(estate.price_vnd) }}</span>
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500">
+                    <span class="text-base font-bold text-red-600 md:text-lg">{{ formatPrice(estate.price_vnd) }}</span>
                     <span>{{ estate.acreage.toFixed(1) }} m²</span>
                     <span>{{ formatPricePerM2(estate.price_per_m2) }}</span>
                     <div class="flex gap-3">
@@ -61,7 +64,8 @@
                     {{ truncatedDescription(estate) }}
                 </p>
 
-                <div class="flex items-center justify-between border-t border-gray-200 pt-3">
+                <div
+                    class="mt-auto flex flex-col gap-3 border-t border-gray-200 pt-3 md:flex-row md:items-center md:justify-between">
                     <div class="flex items-center gap-2">
                         <div
                             class="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500 text-lg font-bold text-white">
@@ -74,14 +78,14 @@
                         </div>
                     </div>
 
-                    <div class="flex gap-2">
+                    <div class="flex items-center gap-2">
                         <button v-if="estate.agent_phone"
-                            class="flex cursor-pointer items-center gap-1.5 rounded-md bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600"
+                            class="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600 md:flex-none"
                             @click="handleCall(estate)">
                             <IconPhone /> {{ formattedPhone(estate) }}
                         </button>
                         <button
-                            class="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 transition-colors hover:border-red-400 hover:text-red-500"
+                            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-gray-200 transition-colors hover:border-red-400 hover:text-red-500"
                             :class="estate.is_favorite ? 'border-red-500 text-red-500' : ''"
                             @click.stop="handleToggleFavorite(estate)">
                             <IconHeart class="h-4 w-4"

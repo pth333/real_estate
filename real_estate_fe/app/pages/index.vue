@@ -1,6 +1,6 @@
 <template>
-  <div class="flex flex-col gap-16">
-    <section class="hero-bg py-40 px-2 relative overflow-hidden">
+  <div class="flex flex-col gap-8 md:gap-12 lg:gap-16">
+    <section class="hero-bg relative overflow-hidden px-4 py-16 md:px-6 md:py-24 lg:py-40">
       <!-- Background image -->
       <div class="absolute inset-0 bg-cover bg-center bg-no-repeat" :style="backgroundStyle">
         <!-- Overlay -->
@@ -8,14 +8,14 @@
       </div>
 
       <!-- Content -->
-      <div class="relative max-w-3xl mx-auto text-center">
-        <h1 class="text-2xl sm:text-3xl font-bold text-primary leading-snug mb-2">
-          Giải pháp giao dịch bất động sản từ trực tuyến<br class="hidden sm:block" /> đến trực tiếp của Phan Hieu Group
+      <div class="relative mx-auto max-w-3xl text-center">
+        <h1 class="mb-2 text-xl font-bold leading-snug text-primary md:text-2xl lg:text-3xl">
+          Giải pháp giao dịch bất động sản từ trực tuyến<br class="hidden md:block" /> đến trực tiếp của Phan Hieu Group
         </h1>
-        <p class="text-sm text-primary/70 mb-6">Tìm kiếm Bất động sản theo nhu cầu của Quý khách</p>
+        <p class="mb-5 text-sm text-primary/70 md:mb-6">Tìm kiếm Bất động sản theo nhu cầu của Quý khách</p>
 
         <!-- Search box -->
-        <div class="bg-white  shadow-lg px-4 py-4 max-w-2xl mx-auto">
+        <div class="mx-auto max-w-2xl bg-white px-3 py-3 shadow-lg md:px-4 md:py-4">
           <n-input-group>
             <n-input v-model:value="searchQuery" placeholder="Tìm kiếm theo khu vực hoặc dự án" size="large"
               style="text-align: left;" />

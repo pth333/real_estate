@@ -1,15 +1,15 @@
 <template>
-    <div class="container mx-auto py-4">
+    <div class="px-3 py-3 md:px-4 md:py-4">
         <h2 class="mb-4 border-b border-gray-200 pb-2 text-base font-bold text-gray-800">
             Bất dộng sản dành cho bạn
         </h2>
         <!-- Loading State -->
-        <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        <div v-if="loading" class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             <SkeletonCard :count="6" type="card" />
         </div>
 
-        <!-- Grid 3 cột -->
-        <div v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        <!-- Grid: 1 cột mobile, 2 cột tablet, 3 cột desktop -->
+        <div v-else class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             <NuxtLink v-for="item in visibleItems" :key="item.id" :to="`/${item.slug}`" class="block h-full">
                 <div
                     class="flex h-full cursor-pointer flex-col overflow-hidden rounded-sm border border-gray-100 bg-white shadow-sm transition-shadow duration-200 hover:shadow-md">

@@ -1,13 +1,14 @@
 <template>
-    <div class="mx-auto max-w-285 px-3 py-4">
+    <!-- pb lớn ở mobile/tablet để thanh CTA cố định dưới màn hình không che nội dung -->
+    <div class="mx-auto max-w-285 px-3 py-4 pb-24 md:px-4 md:py-5 lg:pb-5">
         <!-- Loading -->
         <SkeletonCard v-if="realEstateDetailStore.loading" />
 
-        <!-- Detail -->
-        <div v-else class="grid grid-cols-1 md:grid-cols-4 gap-5">
+        <!-- Detail: desktop chia 2 cột (nội dung + liên hệ), mobile/tablet xếp dọc -->
+        <div v-else class="grid grid-cols-1 gap-4 md:gap-5 lg:grid-cols-4">
 
             <!-- Cột trái -->
-            <div class="md:col-span-3 space-y-2">
+            <div class="space-y-2 lg:col-span-3">
                 <RealEstateGallery />
 
                 <!-- Breadcrumb -->

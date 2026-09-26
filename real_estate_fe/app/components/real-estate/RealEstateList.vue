@@ -1,8 +1,9 @@
 <template>
-  <!-- Sticky bar nằm ngoài -->
-  <div class="sticky top-0 z-10 ">
-    <div class="mx-auto max-w-[1200px] bg-white px-6 py-3"> <!-- thêm dòng này -->
-      <div class="flex flex-col gap-3">
+  <!-- Sticky bar nằm ngoài. top-16 = chiều cao AppHeader (h-16) đang sticky ở top-0,
+       nếu để top-0 thì thanh search luôn bị header che khi cuộn. -->
+  <div class="sticky top-16 z-10 border-b border-gray-100 bg-white lg:border-0">
+    <div class="mx-auto max-w-[1200px] px-4 py-2 md:px-6 md:py-3">
+      <div class="flex flex-col gap-2 md:gap-3">
         <SearchBar @search="handleSearch" />
         <FilterManager />
       </div>
@@ -10,17 +11,17 @@
   </div>
 
   <!-- Content bình thường -->
-  <div class="mx-auto max-w-[1200px] px-6 py-6">
+  <div class="mx-auto max-w-[1200px] px-4 py-4 md:px-6 md:py-6">
     <!-- Loading -->
     <SkeletonCard v-if="loading" :count="pageSize" />
 
     <!-- Empty -->
-    <div v-else-if="realEstates.length === 0" class="px-6 py-16 text-center">
+    <div v-else-if="realEstates.length === 0" class="px-4 py-12 text-center md:py-16">
       <p class="text-base text-gray-400">Không tìm thấy bất động sản nào</p>
     </div>
 
     <!-- Data grid -->
-    <div v-else class="mb-8 flex flex-col gap-4">
+    <div v-else class="mb-6 flex flex-col gap-3 md:mb-8 md:gap-4">
       <RealEstateCard :realEstates="realEstates" />
     </div>
 

@@ -1,32 +1,34 @@
 <template>
     <section class="py-8">
-        <div class="container mx-auto px-24">
-            <h2 class="text-xl font-bold text-gray-900 mb-5">Bất động sản theo địa điểm</h2>
+        <div class="container mx-auto px-4 md:px-12 lg:px-24">
+            <h2 class="mb-5 text-lg font-bold text-gray-900 md:text-xl">Bất động sản theo địa điểm</h2>
 
             <SkeletonCard v-if="loading" type="area" />
 
-            <div v-else class="flex gap-3" style="height: 360px;">
-                <div class="relative overflow-hidden rounded-lg cursor-pointer group shrink-0" style="flex: 0 0 45%;"
+            <!-- Mobile: địa điểm nổi bật trên đầu, lưới 2x2 bên dưới.
+                 Từ tablet trở lên: ảnh lớn bên trái 45%, lưới 2x2 bên phải. -->
+            <div v-else class="flex flex-col gap-3 md:h-[360px] md:flex-row">
+                <div class="group relative h-52 shrink-0 cursor-pointer overflow-hidden rounded-lg md:h-full md:w-[45%]"
                     @click="goToCity(featured)">
                     <img :src="featured?.image" :alt="featured?.name"
-                        class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                        class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
                     <div class="absolute inset-0 bg-linear-to-t from-black/60 via-black/20 to-transparent" />
                     <div class="absolute bottom-0 left-0 p-4 text-white">
-                        <p class="font-bold text-lg leading-tight"> {{ featured?.name }} </p>
-                        <p class="text-sm text-white/80 mt-0.5"> {{ featured?.count }} tin đăng </p>
+                        <p class="text-lg font-bold leading-tight"> {{ featured?.name }} </p>
+                        <p class="mt-0.5 text-sm text-white/80"> {{ featured?.count }} tin đăng </p>
                     </div>
                 </div>
 
-                <div class="flex-1 grid grid-cols-2 grid-rows-2 gap-3">
+                <div class="grid flex-1 grid-cols-2 grid-rows-2 gap-3">
                     <div v-for="location in restLocations" :key="location.id"
-                        class="relative overflow-hidden rounded-lg cursor-pointer group">
-                        <div @click="goToCity(location)" class="w-full h-full">
+                        class="relative h-32 cursor-pointer overflow-hidden rounded-lg group md:h-auto">
+                        <div @click="goToCity(location)" class="h-full w-full">
                             <img :src="location.image" :alt="location.name"
-                                class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                                class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
                             <div class="absolute inset-0 bg-linear-to-t from-black/60 via-black/20 to-transparent" />
                             <div class="absolute bottom-0 left-0 p-3 text-white">
-                                <p class="font-bold text-sm leading-tight"> {{ location.name }} </p>
-                                <p class="text-xs text-white/80 mt-0.5"> {{ location.count }} tin đăng </p>
+                                <p class="text-sm font-bold leading-tight"> {{ location.name }} </p>
+                                <p class="mt-0.5 text-xs text-white/80"> {{ location.count }} tin đăng </p>
                             </div>
                         </div>
                     </div>
