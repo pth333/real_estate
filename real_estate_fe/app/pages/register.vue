@@ -1,5 +1,5 @@
 <template>
-  <AuthShell title="Tạo tài khoản" subtitle="Đăng ký miễn phí để đặt cọc giữ lịch xem nhà và lưu tin yêu thích.">
+  <AuthShell title="Tạo tài khoản" subtitle="Đăng ký miễn phí để đặt lịch xem nhà và lưu tin yêu thích.">
     <n-form :model="form" label-placement="top" :show-require-mark="false" @submit.prevent="handleRegister">
       <n-form-item label="Họ và tên" :feedback="errors.name" :validation-status="errors.name ? 'error' : undefined">
         <n-input v-model:value="form.name" type="text" placeholder="Nguyễn Văn A" clearable autocomplete="name" />

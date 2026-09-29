@@ -1,6 +1,6 @@
 <template>
   <div class="flex h-screen flex-col overflow-hidden bg-gray-50">
-    <DashboardTopbar title="Quản trị escrow" subtitle="Giám sát dòng tiền đặt cọc &amp; xử lý tranh chấp"
+    <DashboardTopbar title="Quản trị escrow" subtitle="Giám sát dòng phí môi giới &amp; xử lý tranh chấp"
       :icon="IconShieldCheck" />
 
     <div class="flex flex-1 overflow-hidden">

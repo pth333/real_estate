@@ -41,7 +41,7 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 
 	accessToken, refreshToken, user, err := h.service.Login(req)
 	if err != nil {
-		return response.Unauthorized(c, "Login failed", err.Error())
+		return response.Unauthorized(c, err.Error(), err)
 	}
 
 	// Set refresh token vào http-only cookie

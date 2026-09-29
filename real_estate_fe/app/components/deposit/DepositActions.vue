@@ -18,6 +18,10 @@
       <n-button v-if="isCustomer && canCheckin" type="primary" @click="openModal('checkin')">
         Nhập OTP check-in
       </n-button>
+      <!-- Không nhập được mã (mất mạng, hết pin, mã hết hạn) → xác nhận bằng vị trí -->
+      <n-button v-if="isCustomer && canCheckin" secondary :loading="processing" @click="confirmArrived">
+        Tôi đã tới (không có mã)
+      </n-button>
       <n-button v-if="isCustomer && canRate" secondary @click="openModal('rating')">
         Đánh giá môi giới
       </n-button>
@@ -47,9 +51,9 @@
       <div class="w-[440px] bg-white rounded-xl p-6 flex flex-col gap-4">
         <span class="font-semibold text-gray-800">Từ chối lịch xem nhà</span>
         <p class="text-sm text-gray-500">
-          Khách sẽ được hoàn 100% tiền cọc. Vui lòng cho khách biết lý do.
+          Khách sẽ được hoàn 100% phí môi giới. Vui lòng cho khách biết lý do.
         </p>
-        <n-input v-model:value="rejectReason" type="textarea" :rows="3" placeholder="VD: Bất động sản đã có khách cọc mua" />
+        <n-input v-model:value="rejectReason" type="textarea" :rows="3" placeholder="VD: Bất động sản đã có khách mua" />
         <div class="flex justify-end gap-2">
           <n-button @click="closeModal('reject')">Huỷ</n-button>
           <n-button type="error" :loading="processing" @click="rejectDeposit">Xác nhận từ chối</n-button>
@@ -75,6 +79,9 @@
       <div class="w-[420px] bg-white rounded-xl p-6 flex flex-col gap-4">
         <span class="font-semibold text-gray-800">Check-in buổi xem nhà</span>
         <p class="text-sm text-gray-500">Nhập mã 6 số do môi giới hiển thị để xác nhận bạn đã gặp môi giới.</p>
+        <n-alert v-if="locationHint" type="info" :bordered="false" class="text-xs">
+          {{ locationHint }}
+        </n-alert>
         <n-input v-model:value="checkinOtp" placeholder="Nhập 6 số" :maxlength="6" size="large" />
         <div class="flex justify-end gap-2">
           <n-button @click="closeModal('checkin')">Huỷ</n-button>
@@ -118,7 +125,7 @@
 
         <p class="text-xs text-amber-600">
           Báo cáo chỉ được gửi <strong>một lần</strong> và không sửa lại được. Nếu 2 bên báo cáo khác nhau,
-          tiền cọc sẽ được tạm giữ và chuyển cho admin xác minh dựa trên bằng chứng.
+          phí môi giới sẽ được tạm giữ và chuyển cho admin xác minh dựa trên bằng chứng.
           <strong>Bên không gửi báo cáo trong thời hạn coi như không chứng minh được và bị áp theo báo cáo của bên kia.</strong>
         </p>
         <div class="flex justify-end gap-2">
@@ -133,7 +140,7 @@
       <div class="w-[480px] bg-white rounded-xl p-6 flex flex-col gap-4">
         <span class="font-semibold text-gray-800">Mở tranh chấp</span>
         <p class="text-sm text-gray-500">
-          Tiền cọc sẽ bị tạm giữ cho tới khi admin ra quyết định. Vui lòng mô tả rõ sự việc và gửi kèm bằng chứng.
+          Phí môi giới sẽ bị tạm giữ cho tới khi admin ra quyết định. Vui lòng mô tả rõ sự việc và gửi kèm bằng chứng.
         </p>
         <n-input v-model:value="disputeReason" type="textarea" :rows="3" placeholder="Mô tả sự việc" />
         <EvidenceUploader v-model:urls="evidenceUrls" />
@@ -165,7 +172,7 @@
           <strong>{{ PURCHASE_PROOF_LABEL[deposit.customer_purchase_proof] || 'chưa chọn' }}</strong>
         </p>
         <n-alert type="warning" :bordered="false">
-          Duyệt sẽ <strong>hoàn 100% tiền cọc</strong> cho khách và
+          Duyệt sẽ <strong>hoàn 100% phí môi giới</strong> cho khách và
           <strong>trừ 1 căn</strong> vào số căn đã bán của dự án. Hành động không hoàn tác được.
         </n-alert>
         <n-input v-model:value="purchaseNote" type="textarea" :rows="2"
@@ -184,7 +191,7 @@
       <div class="w-[520px] max-w-[94vw] bg-white rounded-xl p-6 flex flex-col gap-4">
         <span class="font-semibold text-gray-800">Từ chối tài liệu mua nhà</span>
         <p class="text-sm text-gray-500">
-          Đơn sẽ chuyển sang <strong>tranh chấp</strong> để xử lý tiếp, tiền cọc vẫn bị tạm giữ.
+          Đơn sẽ chuyển sang <strong>tranh chấp</strong> để xử lý tiếp, phí môi giới vẫn bị tạm giữ.
         </p>
         <n-input v-model:value="purchaseNote" type="textarea" :rows="3"
           placeholder="Lý do từ chối (bắt buộc, VD: hợp đồng không có chữ ký 2 bên)" />
@@ -218,7 +225,7 @@ import { NButton, NInput, NModal, NRadio, NRadioGroup, NRate, NSpace } from 'nai
 import type { Deposit, DepositActorRole } from '~/types/deposit'
 import { PURCHASE_PROOF_LABEL, PURCHASE_PROOF_OPTIONS } from '~/types/deposit'
 import { useDepositService } from '~/services/deposit.service'
-import { reportOptions } from '~/utils/deposit'
+import { reportOptions, getCurrentLocation } from '~/utils/deposit'
 
 const props = defineProps<{
   deposit: Deposit
@@ -252,6 +259,11 @@ const purchaseNote = ref('')
 
 const options = computed(() => reportOptions(props.deposit, isBroker.value))
 
+// Giải thích vì sao xin vị trí — toạ độ chỉ lưu ở mức ~100m và dùng làm bằng chứng buổi xem
+const locationHint = computed(() =>
+  'Hệ thống sẽ ghi nhận vị trí của bạn (chỉ lưu toạ độ làm tròn ~100m) để xác nhận hai bên đã gặp nhau tại buổi xem.',
+)
+
 // Báo cáo mua/không mua (đã check-in) bắt buộc kèm ảnh; báo điểm danh thì không
 const evidenceRequired = computed(() => props.deposit.status === 'CHECKED_IN')
 
@@ -269,7 +281,8 @@ const purchaseProofHint = computed(
   () => PURCHASE_PROOF_OPTIONS.find((item) => item.value === purchaseProofValue.value)?.hint ?? '',
 )
 
-const canGenerateOtp = computed(() => isBroker.value && props.deposit.can_checkin && !props.deposit.broker_checkin)
+// Cho phép sinh lại OTP trong suốt cửa sổ check-in (mã cũ hết hạn / khách tới muộn)
+const canGenerateOtp = computed(() => isBroker.value && props.deposit.can_checkin)
 const canCheckin = computed(() => isCustomer.value && props.deposit.can_checkin)
 const canReport = computed(() => {
   if (!isCustomer.value && !isBroker.value) return false
@@ -288,8 +301,12 @@ const canAddEvidence = computed(() => {
   if (!dispute || dispute.status === 'RESOLVED') return false
   return !dispute.evidence_deadline || new Date(dispute.evidence_deadline).getTime() > Date.now()
 })
+// Cho phép đánh giá sau khi buổi xem đã diễn ra (đã check-in) hoặc đơn đã tất toán
 const canRate = computed(
-  () => isCustomer.value && !props.deposit.has_rating && props.deposit.status.startsWith('VISITED'),
+  () =>
+    isCustomer.value &&
+    !props.deposit.has_rating &&
+    ['CHECKED_IN', 'COMPLETED', 'REFUNDED', 'VISITED_BOUGHT', 'VISITED_NOT_BUY'].includes(props.deposit.status),
 )
 
 // Admin duyệt tài liệu mua nhà của đơn đang chờ
@@ -343,7 +360,7 @@ async function rejectDeposit() {
   }
   const ok = await run(
     () => depositService.rejectDeposit(props.deposit.id, rejectReason.value).then(() => undefined),
-    'Đã từ chối lịch, tiền cọc sẽ được hoàn cho khách',
+    'Đã từ chối lịch, phí môi giới sẽ được hoàn cho khách',
   )
   if (ok) {
     closeModal('reject')
@@ -354,13 +371,38 @@ async function rejectDeposit() {
 async function generateOtp() {
   processing.value = true
   try {
-    const result = await depositService.generateOtp(props.deposit.id)
+    // Kèm vị trí: chỉ khi môi giới ở gần BĐS thì hệ thống mới tính là đã tới
+    const location = await getCurrentLocation()
+    const result = await depositService.generateOtp(props.deposit.id, location)
     otpCode.value = result.otp
     otpExpiresAt.value = new Date(result.expires_at).toLocaleTimeString('vi-VN')
+    if (result.location_warning) {
+      window.message?.warning(result.location_warning)
+    }
     openModal('otp')
     emit('changed')
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Không sinh được OTP'
+    window.message?.error(message)
+  } finally {
+    processing.value = false
+  }
+}
+
+/** Khách báo đã tới bằng vị trí khi không nhập được OTP (2 bên gần nhau ⇒ tự xác nhận) */
+async function confirmArrived() {
+  processing.value = true
+  try {
+    const location = await getCurrentLocation()
+    if (!location) {
+      window.message?.warning('Chưa lấy được vị trí. Vui lòng cho phép truy cập vị trí rồi thử lại.')
+      return
+    }
+    await depositService.checkinLocation(props.deposit.id, location)
+    window.message?.success('Đã ghi nhận vị trí của bạn tại buổi xem nhà')
+    emit('changed')
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Không ghi nhận được vị trí'
     window.message?.error(message)
   } finally {
     processing.value = false
@@ -372,10 +414,11 @@ async function submitCheckin() {
     window.message?.warning('Vui lòng nhập mã OTP')
     return
   }
-  const ok = await run(
-    () => depositService.checkin(props.deposit.id, checkinOtp.value.trim()).then(() => undefined),
-    'Check-in thành công, vui lòng báo cáo kết quả sau buổi xem',
-  )
+  const ok = await run(async () => {
+    // Vị trí là bằng chứng bổ trợ: không lấy được vẫn check-in được bằng OTP
+    const location = await getCurrentLocation()
+    await depositService.checkin(props.deposit.id, checkinOtp.value.trim(), location).then(() => undefined)
+  }, 'Check-in thành công, vui lòng báo cáo kết quả sau buổi xem')
   if (ok) {
     closeModal('checkin')
     checkinOtp.value = ''
@@ -417,7 +460,7 @@ async function submitDispute() {
   }
   const ok = await run(
     () => depositService.openDispute(props.deposit.id, disputeReason.value, evidenceUrls.value).then(() => undefined),
-    'Đã mở tranh chấp, tiền cọc được tạm giữ',
+    'Đã mở tranh chấp, phí môi giới được tạm giữ',
   )
   if (ok) {
     closeModal('dispute')
@@ -462,7 +505,7 @@ async function submitPurchaseDecision(approved: boolean) {
   const ok = await run(
     () => depositService.decidePurchase(props.deposit.id, approved, purchaseNote.value),
     approved
-      ? 'Đã duyệt tài liệu, hoàn 100% tiền cọc và trừ 1 căn của dự án'
+      ? 'Đã duyệt tài liệu, hoàn 100% phí môi giới và trừ 1 căn của dự án'
       : 'Đã từ chối tài liệu, đơn chuyển sang tranh chấp',
   )
   if (ok) {

@@ -12,13 +12,13 @@ test("Khởi tạo UserMenu thành công và có đủ các mục menu", () => {
   const byKey = Object.fromEntries(menu.options.map((o) => [o.key, o]));
 
   // Mục của khách hàng
-  assert.equal(byKey["my-deposits"].label, "Đơn đặt cọc của tôi");
-  assert.equal(byKey["my-deposits"].path, "/account/deposits");
+  assert.equal(byKey["my-deposits"].label, "Đơn đặt lịch của tôi");
+  assert.equal(byKey["my-deposits"].path, "/tai-khoan/dat-coc");
 
   // Mục của môi giới
   assert.equal(byKey["manage-posts"].label, "Quản lý bài viết");
   assert.equal(byKey["manage-posts"].path, "/nguoi-ban/quan-ly-tin-dang");
-  assert.equal(byKey["manage-deposits"].label, "Đơn đặt cọc xem nhà");
+  assert.equal(byKey["manage-deposits"].label, "Đơn đặt lịch xem nhà");
   assert.equal(byKey["manage-deposits"].path, "/nguoi-ban/quan-ly-dat-coc");
   assert.equal(byKey["manage-customers"].label, "Quản lý khách hàng");
   assert.equal(byKey["manage-customers"].path, "/nguoi-ban/quan-ly-khach-hang");
@@ -65,7 +65,7 @@ test("Admin chỉ thấy mục của admin và mục không giới hạn role", 
   assert.deepEqual(keys, ["admin-escrow", "admin-users", "logout"]);
 });
 
-test("Khách hàng thấy mục đơn đặt cọc của mình, không thấy mục môi giới/admin", () => {
+test("Khách hàng thấy mục đơn đặt lịch của mình, không thấy mục môi giới/admin", () => {
   const menu = new UserMenu(["CUSTOMER"]);
   const keys = menu.getFilteredOptions().map((o) => o.key);
 

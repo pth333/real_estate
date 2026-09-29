@@ -33,7 +33,7 @@ type ConfigSettings struct {
 	Admin          AdminConfig          `mapstructure:"admin"`
 }
 
-// PaymentConfig — cấu hình cổng thanh toán cho luồng đặt cọc escrow
+// PaymentConfig — cấu hình cổng thanh toán cho luồng đặt lịch escrow
 type PaymentConfig struct {
 	// URL FE nhận kết quả thanh toán (return URL của cổng)
 	ReturnURL string `mapstructure:"return_url"`
@@ -50,11 +50,9 @@ type VNPaySetting struct {
 	ExpireMinutes int    `mapstructure:"expire_minutes"`
 }
 
-// DepositConfig — các mốc thời gian nghiệp vụ đặt cọc (đọc từ plan mục 2 & 6)
+// DepositConfig — các mốc thời gian nghiệp vụ đặt lịch xem nhà (đọc từ plan mục 2 & 6)
 type DepositConfig struct {
-	// Số tiền cọc mặc định (VNĐ) khi FE không gửi lên
-	DefaultAmount float64 `mapstructure:"default_amount"`
-	// Phí môi giới mặc định (VNĐ)
+	// Phí môi giới mặc định (VNĐ) khi BĐS chưa có giá / chưa cấu hình phân khúc
 	DefaultBrokerFee float64 `mapstructure:"default_broker_fee"`
 	// Thời hạn môi giới phải xác nhận lịch (giờ)
 	BrokerConfirmHours int `mapstructure:"broker_confirm_hours"`
@@ -62,8 +60,11 @@ type DepositConfig struct {
 	OTPValidMinutes int `mapstructure:"otp_valid_minutes"`
 	// Thời gian ân hạn sau viewing_start trước khi mở cửa sổ báo cáo (giờ)
 	CheckinGraceHours int `mapstructure:"checkin_grace_hours"`
-	// Cửa sổ để 2 bên tự báo cáo kết quả (giờ)
+	// Cửa sổ để 2 bên tự báo cáo điểm danh khi không check-in được (giờ)
 	ReportWindowHours int `mapstructure:"report_window_hours"`
+	// Số NGÀY giữ phí sau buổi xem: trong khoảng này khách đặt cọc mua BĐS thì hoàn 100% phí,
+	// quá hạn mà không đặt cọc thì phí thuộc về môi giới.
+	RefundWindowDays int `mapstructure:"refund_window_days"`
 	// Hạn upload bằng chứng khi có dispute (giờ)
 	DisputeEvidenceHours int `mapstructure:"dispute_evidence_hours"`
 	// Thời hạn thanh toán của 1 deposit trước khi tự huỷ (phút)

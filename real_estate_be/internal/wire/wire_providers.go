@@ -18,7 +18,7 @@ func providerSMS() sms.Provider {
 }
 
 // providerPaymentGateway chọn cổng thanh toán theo cấu hình:
-// thiếu merchant key → dùng cổng MOCK để chạy được toàn bộ luồng đặt cọc.
+// thiếu merchant key → dùng cổng MOCK để chạy được toàn bộ luồng đặt lịch.
 func providerPaymentGateway() payment.Gateway {
 	return payment.NewGateway(payment.Config{
 		ReturnURL: global.Config.Payment.ReturnURL,

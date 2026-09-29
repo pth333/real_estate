@@ -16,7 +16,7 @@ kafka:
     real_estate_enriched: real_estate.enriched.v1
     real_estate_notified: real_estate.notified.v1
 redis:
-  addr: localhost:6380
+  addr: localhost:6379
   db: 0
 r2:
   region: auto
@@ -24,7 +24,7 @@ r2:
 recommendation:
   addr: localhost:50051
 
-# ── Luồng đặt cọc escrow ─────────────────────────────
+# ── Đặt lịch xem nhà + cổng thanh toán phí môi giới ─────
 payment:
   # FE nhận kết quả thanh toán (return URL)
   return_url: http://localhost:3000/payment/result
@@ -39,14 +39,15 @@ payment:
     expire_minutes: 15
 
 deposit:
-  # Mức cọc/phí dự phòng khi BĐS chưa có giá. Bình thường hệ thống tra bảng
+  # Phí môi giới dự phòng khi BĐS chưa có giá. Bình thường hệ thống tra bảng
   # deposit_policies theo giá BĐS (seed sẵn 5 phân khúc khi khởi động).
-  default_amount: 5000000
   default_broker_fee: 200000
   broker_confirm_hours: 24
   otp_valid_minutes: 10
   checkin_grace_hours: 2
   report_window_hours: 24
+  # Số ngày giữ phí sau buổi xem trước khi chuyển cho môi giới (khách đặt cọc mua thì hoàn 100%)
+  refund_window_days: 4
   dispute_evidence_hours: 48
   payment_timeout_minutes: 30
   cron_interval_seconds: 60

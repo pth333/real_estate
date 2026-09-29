@@ -29,23 +29,39 @@ const (
 
 	// Cho phép môi giới sinh OTP sớm trước giờ hẹn
 	otpEarlyMinutes = 30
+
+	// Khung giờ xem nhà: mỗi khung cố định 1 tiếng, chỉ trong giờ làm việc
+	viewingSlotFirstHour = 8
+	viewingSlotLastHour  = 18
+	viewingSlotHours     = 1
+
+	// Bán kính coi là 2 bên đã gặp nhau / đã ở đúng bất động sản (mét).
+	// Rộng rãi vì GPS trong nhà/chung cư lệch vài chục tới vài trăm mét.
+	checkinMatchRadiusMeters = 300
+	// Sai số GPS tối đa còn dùng được làm bằng chứng (mét)
+	checkinMaxAccuracyMeters = 150
 )
 
-// IDepositService — toàn bộ nghiệp vụ đặt cọc escrow (plan mục 2 → 8)
+// IDepositService — toàn bộ nghiệp vụ đặt lịch escrow (plan mục 2 → 8)
 type IDepositService interface {
 	// ── Khách hàng ──
 	GetBookingOptions(realEstateID uint64) (*dto.BookingOptionsResponse, error)
 	CreateDeposit(customerID uint64, req dto.CreateDepositRequest, clientIP string) (*dto.CreateDepositResponse, error)
 	HandlePaymentCallback(params map[string]string) (*dto.PaymentCallbackResponse, error)
 	ListCustomerDeposits(customerID uint64, status string, page, size int) ([]dto.DepositResponse, int64, error)
-	CustomerCheckin(depositID, customerID uint64, otp string) (*dto.DepositResponse, error)
+	CustomerCheckin(depositID, customerID uint64, otp string, location dto.CheckinLocationRequest) (*dto.DepositResponse, error)
+	// CustomerArrived — khách báo "tôi đã tới" bằng vị trí khi không nhập được OTP
+	CustomerArrived(depositID, customerID uint64, location dto.CheckinLocationRequest) (*dto.DepositResponse, error)
+	// RefundFeeOnPurchaseDeposit — luồng đặt cọc mua BĐS gọi khi khách đặt cọc thành công:
+	// hoàn 100% phí môi giới của buổi xem nếu còn trong thời gian giữ phí
+	RefundFeeOnPurchaseDeposit(depositID uint64) error
 	RateBroker(depositID, customerID uint64, req dto.RateBrokerRequest) error
 
 	// ── Môi giới ──
 	ListBrokerDeposits(brokerID uint64, status string, page, size int) ([]dto.DepositResponse, int64, error)
 	ConfirmDeposit(depositID, brokerID uint64) (*dto.DepositResponse, error)
 	RejectDeposit(depositID, brokerID uint64, reason string) (*dto.DepositResponse, error)
-	GenerateCheckinOTP(depositID, brokerID uint64) (*dto.CheckinOTPResponse, error)
+	GenerateCheckinOTP(depositID, brokerID uint64, location dto.CheckinLocationRequest) (*dto.CheckinOTPResponse, error)
 
 	// ── Dùng chung 2 bên ──
 	GetDepositDetail(depositID, requesterID uint64) (*dto.DepositResponse, error)
@@ -114,11 +130,8 @@ func (s *depositService) PaymentGatewayName() string { return s.gateway.Name() }
 
 // normalizeDepositConfig điền giá trị mặc định theo plan khi file cấu hình thiếu.
 func normalizeDepositConfig(cfg global.DepositConfig) global.DepositConfig {
-	if cfg.DefaultAmount <= 0 {
-		cfg.DefaultAmount = 5_000_000
-	}
-	if cfg.DefaultBrokerFee < 0 {
-		cfg.DefaultBrokerFee = 0
+	if cfg.DefaultBrokerFee <= 0 {
+		cfg.DefaultBrokerFee = 200_000
 	}
 	if cfg.BrokerConfirmHours <= 0 {
 		cfg.BrokerConfirmHours = 24
@@ -132,6 +145,9 @@ func normalizeDepositConfig(cfg global.DepositConfig) global.DepositConfig {
 	if cfg.ReportWindowHours <= 0 {
 		cfg.ReportWindowHours = 24
 	}
+	if cfg.RefundWindowDays <= 0 {
+		cfg.RefundWindowDays = 4
+	}
 	if cfg.DisputeEvidenceHours <= 0 {
 		cfg.DisputeEvidenceHours = 48
 	}
@@ -142,10 +158,10 @@ func normalizeDepositConfig(cfg global.DepositConfig) global.DepositConfig {
 }
 
 // ══════════════════════════════════════════════════════════
-// 2.1 Luồng đặt cọc
+// 2.1 Luồng đặt lịch
 // ══════════════════════════════════════════════════════════
 
-// GetBookingOptions trả mức cọc + phí môi giới hệ thống đề xuất cho 1 BĐS.
+// GetBookingOptions trả phí môi giới hệ thống áp dụng cho 1 BĐS.
 // FE gọi API này để hiển thị, khách không được sửa số tiền.
 func (s *depositService) GetBookingOptions(realEstateID uint64) (*dto.BookingOptionsResponse, error) {
 	estate, err := s.realEstateRepo.GetModelByID(realEstateID)
@@ -155,7 +171,7 @@ func (s *depositService) GetBookingOptions(realEstateID uint64) (*dto.BookingOpt
 	return s.resolveBookingOptions(estate)
 }
 
-// ensureProjectHasStock chặn đặt cọc khi dự án đã bán hết căn.
+// ensureProjectHasStock chặn đặt lịch khi dự án đã bán hết căn.
 // BĐS không thuộc dự án nào (project_id NULL) thì không giới hạn.
 func (s *depositService) ensureProjectHasStock(projectID *uint64) error {
 	if projectID == nil {
@@ -172,7 +188,8 @@ func (s *depositService) ensureProjectHasStock(projectID *uint64) error {
 	return nil
 }
 
-// resolveBookingOptions tra bảng deposit_policies theo giá BĐS.// BĐS chưa có giá (price <= 0) → dùng mức mặc định trong config, không tra bảng
+// resolveBookingOptions tra bảng deposit_policies theo giá BĐS để lấy PHÍ MÔI GIỚI.
+// BĐS chưa có giá (price <= 0) → dùng mức mặc định trong config, không tra bảng
 // (nếu tra sẽ khớp nhầm khoảng "Dưới 1 tỷ" và báo sai phân khúc cho khách).
 func (s *depositService) resolveBookingOptions(estate *model.RealEstate) (*dto.BookingOptionsResponse, error) {
 	response := &dto.BookingOptionsResponse{
@@ -183,7 +200,6 @@ func (s *depositService) resolveBookingOptions(estate *model.RealEstate) (*dto.B
 
 	if estate.PriceVND > 0 {
 		if policy, err := s.policyRepo.GetByPrice(estate.PriceVND); err == nil {
-			response.Amount = policy.DepositAmount
 			response.BrokerFee = policy.BrokerFee
 			response.PolicyLabel = policy.Label
 			return response, nil
@@ -191,18 +207,17 @@ func (s *depositService) resolveBookingOptions(estate *model.RealEstate) (*dto.B
 	}
 
 	// Fallback: BĐS không có giá hoặc chưa cấu hình chính sách cho phân khúc đó
-	response.Amount = s.cfg.DefaultAmount
 	response.BrokerFee = s.cfg.DefaultBrokerFee
-	response.PolicyLabel = "Mức cọc mặc định"
+	response.PolicyLabel = "Phí môi giới mặc định"
 	response.IsFallback = true
 
-	if response.Amount <= 0 || response.BrokerFee >= response.Amount {
-		return nil, errors.New("chưa cấu hình mức cọc hợp lệ cho bất động sản này")
+	if response.BrokerFee <= 0 {
+		return nil, errors.New("chưa cấu hình phí môi giới hợp lệ cho bất động sản này")
 	}
 	return response, nil
 }
 
-// CreateDeposit — khách điền form đặt cọc, hệ thống giữ chỗ khung giờ và trả URL thanh toán.
+// CreateDeposit — khách điền form đặt lịch, hệ thống giữ chỗ khung giờ và trả URL thanh toán.
 func (s *depositService) CreateDeposit(customerID uint64, req dto.CreateDepositRequest, clientIP string) (*dto.CreateDepositResponse, error) {
 	estate, err := s.realEstateRepo.GetModelByID(req.RealEstateID)
 	if err != nil {
@@ -217,12 +232,17 @@ func (s *depositService) CreateDeposit(customerID uint64, req dto.CreateDepositR
 		return nil, err
 	}
 
-	// Số tiền cọc + phí môi giới do hệ thống tra theo giá BĐS, KHÔNG nhận từ client
+	contactName, contactPhone, err := normalizeContactInfo(req.ContactName, req.ContactPhone)
+	if err != nil {
+		return nil, err
+	}
+
+	// Phí môi giới do hệ thống tra theo giá BĐS, KHÔNG nhận từ client
 	options, err := s.resolveBookingOptions(estate)
 	if err != nil {
 		return nil, err
 	}
-	amount := options.Amount
+	// Khách chỉ trả phí môi giới cho buổi xem, không còn phí môi giới
 	brokerFee := options.BrokerFee
 
 	method := strings.ToUpper(strings.TrimSpace(req.PaymentMethod))
@@ -241,7 +261,7 @@ func (s *depositService) CreateDeposit(customerID uint64, req dto.CreateDepositR
 		return nil, errors.New("khung giờ này đã có người đặt, vui lòng chọn khung giờ khác")
 	}
 
-	// BĐS thuộc dự án đã hết căn thì không nhận đặt cọc nữa
+	// BĐS thuộc dự án đã hết căn thì không nhận đặt lịch nữa
 	if err := s.ensureProjectHasStock(estate.ProjectID); err != nil {
 		return nil, err
 	}
@@ -251,11 +271,13 @@ func (s *depositService) CreateDeposit(customerID uint64, req dto.CreateDepositR
 		RealEstateID:  estate.ID,
 		BrokerID:      *estate.UserID,
 		ProjectID:     estate.ProjectID,
-		Amount:        amount,
+		Amount:        brokerFee,
 		BrokerFee:     brokerFee,
 		ViewingDate:   viewingDate,
 		ViewingStart:  start,
 		ViewingEnd:    end,
+		ContactName:   contactName,
+		ContactPhone:  contactPhone,
 		Status:        model.DepositStatusAwaitingPayment,
 		PaymentMethod: method,
 		PaymentRef:    buildPaymentRef(),
@@ -264,11 +286,11 @@ func (s *depositService) CreateDeposit(customerID uint64, req dto.CreateDepositR
 		return nil, err
 	}
 
-	// Sinh URL thanh toán; tiền sẽ vào tài khoản platform (escrow), KHÔNG vào môi giới
+	// Sinh URL thanh toán cho PHÍ MÔI GIỚI; tiền vào tài khoản platform, KHÔNG vào môi giới ngay
 	paymentURL, err := s.gateway.CreatePaymentURL(payment.CreatePaymentRequest{
 		OrderRef:  deposit.PaymentRef,
-		Amount:    deposit.Amount,
-		OrderInfo: fmt.Sprintf("Dat coc xem nha don %d", deposit.ID),
+		Amount:    brokerFee,
+		OrderInfo: fmt.Sprintf("Phi moi gioi xem nha don %d", deposit.ID),
 		ClientIP:  clientIP,
 		Method:    method,
 		BankCode:  req.BankCode,
@@ -300,7 +322,7 @@ func (s *depositService) HandlePaymentCallback(params map[string]string) (*dto.P
 
 	deposit, err := s.depositRepo.GetByPaymentRef(result.OrderRef)
 	if err != nil {
-		return nil, errors.New("không tìm thấy đơn đặt cọc theo mã giao dịch")
+		return nil, errors.New("không tìm thấy đơn đặt lịch theo mã giao dịch")
 	}
 
 	// Đã xử lý trước đó (cổng gọi cả return URL và IPN) → trả lại kết quả, không ghi trùng
@@ -319,7 +341,7 @@ func (s *depositService) HandlePaymentCallback(params map[string]string) (*dto.P
 			DepositID: deposit.ID,
 			Status:    deposit.Status,
 			Success:   false,
-			Message:   "Đơn đặt cọc đã quá hạn thanh toán và bị huỷ",
+			Message:   "Đơn đặt lịch đã quá hạn thanh toán và bị huỷ",
 		}, nil
 	}
 
@@ -340,12 +362,12 @@ func (s *depositService) HandlePaymentCallback(params map[string]string) (*dto.P
 		return nil, err
 	}
 
-	// Ghi nhận dòng tiền vào escrow
+	// Ghi nhận dòng tiền phí môi giới vào escrow
 	if err := s.transactionRepo.Create(&model.Transaction{
 		DepositID: deposit.ID,
 		Type:      model.TransactionDeposit,
-		Amount:    deposit.Amount,
-		Note:      fmt.Sprintf("Khách thanh toán qua %s, mã giao dịch %s", deposit.PaymentMethod, result.TransactionNo),
+		Amount:    deposit.BrokerFee,
+		Note:      fmt.Sprintf("Khách thanh toán phí môi giới qua %s, mã giao dịch %s", deposit.PaymentMethod, result.TransactionNo),
 		CreatedAt: now,
 	}); err != nil {
 		return nil, err
@@ -355,19 +377,20 @@ func (s *depositService) HandlePaymentCallback(params map[string]string) (*dto.P
 	deposit.PaidAt = &now
 
 	// Thông báo môi giới: có 24h để xác nhận lịch
+	contactName, contactPhone := contactOf(deposit)
 	s.notifyBoth(deposit, "deposit_paid",
-		fmt.Sprintf("Khách đã đặt cọc xem nhà #%d", deposit.ID),
-		fmt.Sprintf("Bạn đã đặt cọc thành công %s cho lịch xem nhà ngày %s (%s - %s). Tiền đang được platform giữ, sẽ hoàn nếu môi giới từ chối.",
-			formatMoney(deposit.Amount), formatDate(deposit.ViewingDate), deposit.ViewingStart, deposit.ViewingEnd),
-		fmt.Sprintf("Khách đã đặt cọc %s cho BĐS #%d. Vui lòng xác nhận hoặc từ chối trong %d giờ.",
-			formatMoney(deposit.Amount), deposit.RealEstateID, s.cfg.BrokerConfirmHours),
+		fmt.Sprintf("Khách đã đặt lịch xem nhà #%d", deposit.ID),
+		fmt.Sprintf("Bạn đã thanh toán phí môi giới %s cho lịch xem nhà ngày %s (%s - %s). Tiền đang được platform giữ, sẽ hoàn nếu môi giới từ chối.",
+			formatMoney(deposit.BrokerFee), formatDate(deposit.ViewingDate), deposit.ViewingStart, deposit.ViewingEnd),
+		fmt.Sprintf("Khách đã trả phí môi giới %s cho BĐS #%d. Vui lòng xác nhận hoặc từ chối trong %d giờ.\nLiên hệ khách: %s - %s",
+			formatMoney(deposit.BrokerFee), deposit.RealEstateID, s.cfg.BrokerConfirmHours, contactName, contactPhone),
 	)
 
 	return &dto.PaymentCallbackResponse{
 		DepositID: deposit.ID,
 		Status:    deposit.Status,
 		Success:   true,
-		Message:   "Thanh toán thành công, tiền đã được giữ tại escrow của platform",
+		Message:   "Thanh toán thành công, phí môi giới đang được platform giữ",
 	}, nil
 }
 
@@ -422,7 +445,7 @@ func (s *depositService) RejectDeposit(depositID, brokerID uint64, reason string
 	}
 	deposit.RejectReason = reason
 
-	// Từ chối → hoàn 100% tiền cọc cho khách
+	// Từ chối → hoàn 100% phí môi giới cho khách
 	if err := s.settle(deposit, settlementPlan{
 		Status: model.DepositStatusBrokerRejected,
 		Refund: deposit.Amount,
@@ -435,7 +458,7 @@ func (s *depositService) RejectDeposit(depositID, brokerID uint64, reason string
 		fmt.Sprintf("Môi giới từ chối lịch xem nhà #%d", deposit.ID),
 		fmt.Sprintf("Môi giới đã từ chối lịch xem nhà. Lý do: %s.\nSố tiền %s sẽ được hoàn về tài khoản thanh toán của bạn.",
 			reason, formatMoney(deposit.Amount)),
-		fmt.Sprintf("Bạn đã từ chối đơn #%d. Tiền cọc đã được hoàn cho khách.", deposit.ID),
+		fmt.Sprintf("Bạn đã từ chối đơn #%d. Phí môi giới đã được hoàn cho khách.", deposit.ID),
 	)
 
 	return s.GetDepositDetail(deposit.ID, brokerID)
@@ -445,8 +468,13 @@ func (s *depositService) RejectDeposit(depositID, brokerID uint64, reason string
 // 2.3 OTP check-in chống gian lận
 // ══════════════════════════════════════════════════════════
 
-// GenerateCheckinOTP — môi giới mở app sinh OTP 6 số (hiệu lực 10 phút, dùng 1 lần).
-func (s *depositService) GenerateCheckinOTP(depositID, brokerID uint64) (*dto.CheckinOTPResponse, error) {
+// GenerateCheckinOTP — môi giới xác nhận đã tới nơi kèm vị trí, hệ thống sinh OTP 6 số
+// (hiệu lực 10 phút, dùng 1 lần) cho khách nhập.
+//
+// Vị trí là bằng chứng cho "môi giới có mặt": chỉ khi toạ độ nằm trong bán kính BĐS thì
+// broker_checkin mới tính là đã xác nhận. Không có vị trí thì vẫn sinh OTP (khách vẫn
+// check-in được) nhưng môi giới chưa có căn cứ đòi phí, FE nhận cảnh báo để bấm lại.
+func (s *depositService) GenerateCheckinOTP(depositID, brokerID uint64, location dto.CheckinLocationRequest) (*dto.CheckinOTPResponse, error) {
 	deposit, err := s.requireSide(depositID, brokerID, model.RoleBroker)
 	if err != nil {
 		return nil, err
@@ -463,25 +491,185 @@ func (s *depositService) GenerateCheckinOTP(depositID, brokerID uint64) (*dto.Ch
 	if err != nil {
 		return nil, err
 	}
-	expiresAt := time.Now().Add(time.Duration(s.cfg.OTPValidMinutes) * time.Minute)
+	now := time.Now()
+	expiresAt := now.Add(time.Duration(s.cfg.OTPValidMinutes) * time.Minute)
 
-	brokerChecked := true
-	if err := s.depositRepo.UpdateFields(deposit.ID, map[string]interface{}{
+	fields := map[string]interface{}{
 		"otp_hash":       string(hash),
 		"otp_expires_at": expiresAt,
-		"broker_checkin": brokerChecked,
-	}); err != nil {
+	}
+
+	warning := ""
+	if usableCheckinLocation(location.CheckinLocation) && atEstate(deposit.RealEstate, location.CheckinLocation) {
+		saveCheckinLocation(deposit, fields, true, location.CheckinLocation, now)
+		brokerChecked := true
+		fields["broker_checkin"] = brokerChecked
+		deposit.BrokerCheckin = &brokerChecked
+	} else {
+		fields["broker_checkin"] = false
+		warning = "Chưa ghi nhận được vị trí của bạn tại bất động sản. Hãy bật định vị và bấm lại để có bằng chứng bạn đã tới."
+	}
+
+	if err := s.depositRepo.UpdateFields(deposit.ID, fields); err != nil {
+		return nil, err
+	}
+	if err := s.refreshCheckinMatch(deposit); err != nil {
+		return nil, err
+	}
+	// 2 bên đã ở gần nhau thì coi như đã gặp mặt, không cần khách nhập OTP nữa
+	if err := s.autoCheckinIfMatched(deposit); err != nil {
 		return nil, err
 	}
 
 	return &dto.CheckinOTPResponse{
-		OTP:       otp,
-		ExpiresAt: expiresAt.Format(time.RFC3339),
+		OTP:             otp,
+		ExpiresAt:       expiresAt.Format(time.RFC3339),
+		LocationWarning: warning,
 	}, nil
 }
 
+// saveCheckinLocation lưu toạ độ (đã làm tròn ~100m) của 1 bên vào đơn và map update.
+// Trả về false nếu toạ độ gửi lên không dùng được làm bằng chứng.
+func saveCheckinLocation(
+	deposit *model.Deposit, fields map[string]interface{}, isBroker bool,
+	location dto.CheckinLocation, now time.Time,
+) bool {
+	if !usableCheckinLocation(location) {
+		return false
+	}
+
+	lat, lng := roundCoord(location.Latitude), roundCoord(location.Longitude)
+	var accuracy *float64
+	if location.Accuracy > 0 {
+		value := location.Accuracy
+		accuracy = &value
+	}
+
+	if isBroker {
+		fields["broker_checkin_lat"] = lat
+		fields["broker_checkin_lng"] = lng
+		fields["broker_checkin_at"] = now
+		if accuracy != nil {
+			fields["broker_checkin_accuracy"] = *accuracy
+		}
+		deposit.BrokerCheckinLat, deposit.BrokerCheckinLng = &lat, &lng
+		deposit.BrokerCheckinAcc, deposit.BrokerCheckinAt = accuracy, &now
+		return true
+	}
+
+	fields["customer_checkin_lat"] = lat
+	fields["customer_checkin_lng"] = lng
+	fields["customer_checkin_at"] = now
+	if accuracy != nil {
+		fields["customer_checkin_accuracy"] = *accuracy
+	}
+	deposit.CustomerCheckinLat, deposit.CustomerCheckinLng = &lat, &lng
+	deposit.CustomerCheckinAcc, deposit.CustomerCheckinAt = accuracy, &now
+	return true
+}
+
+// refreshCheckinMatch cập nhật khoảng cách 2 bên + cờ "đã gặp nhau" sau mỗi lần có vị trí mới.
+func (s *depositService) refreshCheckinMatch(deposit *model.Deposit) error {
+	var distance *float64
+	matched := false
+	if deposit.BrokerCheckinLat != nil && deposit.BrokerCheckinLng != nil &&
+		deposit.CustomerCheckinLat != nil && deposit.CustomerCheckinLng != nil {
+		value := round2(distanceMeters(
+			*deposit.BrokerCheckinLat, *deposit.BrokerCheckinLng,
+			*deposit.CustomerCheckinLat, *deposit.CustomerCheckinLng,
+		))
+		distance = &value
+		matched = value <= checkinMatchRadiusMeters
+	}
+
+	if err := s.depositRepo.UpdateFields(deposit.ID, map[string]interface{}{
+		"checkin_distance_meters": distance,
+		"checkin_matched":         matched,
+	}); err != nil {
+		return err
+	}
+
+	deposit.CheckinDistanceMeters = distance
+	deposit.CheckinMatched = matched
+	return nil
+}
+
+// autoCheckinIfMatched — 2 bên đã ở gần nhau ⇒ coi như buổi xem đã diễn ra:
+// chuyển CHECKED_IN luôn, không bắt khách nhập OTP nữa (OTP chỉ còn là đường dự phòng).
+func (s *depositService) autoCheckinIfMatched(deposit *model.Deposit) error {
+	if !deposit.CheckinMatched || deposit.Status != model.DepositStatusBrokerConfirmed {
+		return nil
+	}
+
+	customerChecked := true
+	// Hạn giữ phí: hết buổi xem + 4 ngày để khách kịp đặt cọc mua BĐS
+	deadline := s.feeHoldDeadline(deposit)
+	if err := s.depositRepo.UpdateFields(deposit.ID, map[string]interface{}{
+		"status":           model.DepositStatusCheckedIn,
+		"customer_checkin": customerChecked,
+		"otp_hash":         "",
+		"otp_expires_at":   nil,
+		"report_deadline":  deadline,
+	}); err != nil {
+		return err
+	}
+
+	deposit.Status = model.DepositStatusCheckedIn
+	deposit.CustomerCheckin = &customerChecked
+	deposit.OTPHash = ""
+	deposit.OTPExpiresAt = nil
+	s.notifyBoth(deposit, "checked_in_location",
+		fmt.Sprintf("Đã xác nhận buổi xem nhà #%d", deposit.ID),
+		fmt.Sprintf("Hệ thống ghi nhận bạn và môi giới đã ở cùng địa điểm tại buổi xem nhà. Phí môi giới được giữ trong %d ngày: nếu bạn đặt cọc mua bất động sản trong thời gian này, phí sẽ được hoàn 100%% cho bạn.", s.cfg.RefundWindowDays),
+		fmt.Sprintf("Hệ thống ghi nhận bạn và khách đã ở cùng địa điểm tại buổi xem nhà #%d. Phí môi giới sẽ được chuyển cho bạn sau %d ngày nếu khách không đặt cọc mua bất động sản.", deposit.ID, s.cfg.RefundWindowDays),
+	)
+	return nil
+}
+
+// CustomerArrived — khách báo "tôi đã tới" bằng vị trí khi không nhập được OTP
+// (mất mạng, hết pin, mã hết hạn...). Không cần OTP nhưng BẮT BUỘC có vị trí dùng được:
+// - 2 bên ở gần nhau ⇒ tự động CHECKED_IN (đã gặp mặt thật).
+// - Chỉ khách ở gần BĐS ⇒ ghi nhận khách có mặt, chờ đối chiếu với log của môi giới.
+func (s *depositService) CustomerArrived(depositID, customerID uint64, location dto.CheckinLocationRequest) (*dto.DepositResponse, error) {
+	deposit, err := s.requireSide(depositID, customerID, model.RoleCustomer)
+	if err != nil {
+		return nil, err
+	}
+	if deposit.Status != model.DepositStatusBrokerConfirmed {
+		return nil, errors.New("đơn không ở trạng thái chờ check-in")
+	}
+	if !s.withinCheckinWindow(deposit, time.Now()) {
+		return nil, errors.New("chưa tới thời gian check-in của buổi xem nhà")
+	}
+	if !usableCheckinLocation(location.CheckinLocation) {
+		return nil, errors.New("chưa lấy được vị trí của bạn, vui lòng bật định vị và thử lại")
+	}
+
+	now := time.Now()
+	fields := map[string]interface{}{}
+	saveCheckinLocation(deposit, fields, false, location.CheckinLocation, now)
+
+	// Chỉ tính khách có mặt khi ở gần BĐS; ở xa thì vẫn lưu vị trí nhưng chưa phải bằng chứng
+	if atEstate(deposit.RealEstate, location.CheckinLocation) {
+		customerChecked := true
+		fields["customer_checkin"] = customerChecked
+		deposit.CustomerCheckin = &customerChecked
+	}
+	if err := s.depositRepo.UpdateFields(deposit.ID, fields); err != nil {
+		return nil, err
+	}
+	if err := s.refreshCheckinMatch(deposit); err != nil {
+		return nil, err
+	}
+	if err := s.autoCheckinIfMatched(deposit); err != nil {
+		return nil, err
+	}
+
+	return s.GetDepositDetail(deposit.ID, customerID)
+}
+
 // CustomerCheckin — khách nhập OTP môi giới hiển thị tại chỗ → CHECKED_IN.
-func (s *depositService) CustomerCheckin(depositID, customerID uint64, otp string) (*dto.DepositResponse, error) {
+func (s *depositService) CustomerCheckin(depositID, customerID uint64, otp string, location dto.CheckinLocationRequest) (*dto.DepositResponse, error) {
 	deposit, err := s.requireSide(depositID, customerID, model.RoleCustomer)
 	if err != nil {
 		return nil, err
@@ -499,23 +687,32 @@ func (s *depositService) CustomerCheckin(depositID, customerID uint64, otp strin
 		return nil, errors.New("mã OTP không đúng")
 	}
 
+	now := time.Now()
+	fields := map[string]interface{}{}
+	// Vị trí của khách là bằng chứng bổ trợ để đối chiếu với vị trí môi giới
+	saveCheckinLocation(deposit, fields, false, location.CheckinLocation, now)
+
 	customerChecked := true
-	deadline := time.Now().Add(time.Duration(s.cfg.ReportWindowHours) * time.Hour)
-	if err := s.depositRepo.UpdateFields(deposit.ID, map[string]interface{}{
-		"status":           model.DepositStatusCheckedIn,
-		"customer_checkin": customerChecked,
-		"otp_hash":         "",
-		"otp_expires_at":   nil,
-		"report_deadline":  deadline,
-	}); err != nil {
+	// Hạn giữ phí: hết buổi xem + 4 ngày để khách kịp đặt cọc mua BĐS
+	deadline := s.feeHoldDeadline(deposit)
+	fields["status"] = model.DepositStatusCheckedIn
+	fields["customer_checkin"] = customerChecked
+	fields["otp_hash"] = ""
+	fields["otp_expires_at"] = nil
+	fields["report_deadline"] = deadline
+	if err := s.depositRepo.UpdateFields(deposit.ID, fields); err != nil {
+		return nil, err
+	}
+	if err := s.refreshCheckinMatch(deposit); err != nil {
 		return nil, err
 	}
 
 	deposit.Status = model.DepositStatusCheckedIn
+	deposit.CustomerCheckin = &customerChecked
 	s.notifyBoth(deposit, "checked_in",
 		fmt.Sprintf("Check-in xem nhà #%d thành công", deposit.ID),
-		fmt.Sprintf("Xác nhận bạn đã gặp môi giới tại buổi xem nhà. Vui lòng báo cáo kết quả (có mua / không mua) trong %d giờ tới.", s.cfg.ReportWindowHours),
-		fmt.Sprintf("Khách đã check-in tại buổi xem nhà #%d. Vui lòng báo cáo kết quả trong %d giờ tới.", deposit.ID, s.cfg.ReportWindowHours),
+		fmt.Sprintf("Xác nhận bạn đã gặp môi giới tại buổi xem nhà. Phí môi giới được giữ trong %d ngày: nếu bạn đặt cọc mua bất động sản trong thời gian này, phí sẽ được hoàn 100%% cho bạn.", s.cfg.RefundWindowDays),
+		fmt.Sprintf("Khách đã check-in tại buổi xem nhà #%d. Phí môi giới sẽ được chuyển cho bạn sau %d ngày nếu khách không đặt cọc mua bất động sản.", deposit.ID, s.cfg.RefundWindowDays),
 	)
 
 	return s.GetDepositDetail(deposit.ID, customerID)
@@ -531,10 +728,11 @@ func (s *depositService) CustomerCheckin(depositID, customerID uint64, otp strin
 // Mỗi bên chỉ báo cáo được MỘT LẦN (không cho sửa) để bên khai sau không thể
 // xem câu trả lời của bên kia rồi đổi cho khớp.
 //
-// Nguyên tắc "ai claim quyền lợi thì phải chứng minh":
-// - Báo mua/không mua (đã check-in) bắt buộc kèm ảnh bằng chứng.
-// - Riêng khách khai BOUGHT phải kèm tài liệu mua bán thật, vì khách là bên
-//   duy nhất hưởng lợi từ việc khai BOUGHT (hoàn 100% thay vì mất phí môi giới).
+// Báo cáo chỉ dùng cho ĐIỂM DANH khi không check-in được (có mặt / không đến) — phần
+// mua/không mua đã bỏ: phí hoàn hay không do KHÁCH ĐẶT CỌC MUA BĐS quyết định, không do lời khai.
+//
+// Mỗi bên chỉ báo cáo được MỘT LẦN (không cho sửa) để bên khai sau không thể
+// xem câu trả lời của bên kia rồi đổi cho khớp.
 func (s *depositService) SubmitReport(depositID, userID uint64, req dto.ReportResultRequest) (*dto.DepositResponse, error) {
 	// Phía báo cáo suy ra từ chính bản ghi đơn, không nhận từ client
 	deposit, side, err := s.getOwnedDeposit(depositID, userID)
@@ -546,14 +744,13 @@ func (s *depositService) SubmitReport(depositID, userID uint64, req dto.ReportRe
 	var allowed []string
 
 	switch deposit.Status {
-	case model.DepositStatusCheckedIn:
-		// Đã check-in → báo cáo kết quả mua/không mua
-		allowed = []string{model.ReportBought, model.ReportNotBuy}
 	case model.DepositStatusBrokerConfirmed:
 		// Không check-in được → điểm danh có mặt / không đến
 		allowed = []string{model.ReportAttended, model.ReportNoShow}
+	case model.DepositStatusCheckedIn:
+		return nil, errors.New("buổi xem đã check-in xong, không cần báo cáo thêm")
 	default:
-		return nil, errors.New("đơn đặt cọc không ở trạng thái có thể báo cáo")
+		return nil, errors.New("đơn đặt lịch không ở trạng thái có thể báo cáo")
 	}
 
 	// Khoá báo cáo: mỗi bên chỉ gửi 1 lần
@@ -571,22 +768,6 @@ func (s *depositService) SubmitReport(depositID, userID uint64, req dto.ReportRe
 
 	evidenceURLs := req.EvidenceURLs
 	purchaseProof := strings.ToUpper(strings.TrimSpace(req.PurchaseProof))
-
-	// Báo cáo mua/không mua phải có bằng chứng, vì tiền chia theo đúng câu trả lời.
-	if deposit.Status == model.DepositStatusCheckedIn && len(evidenceURLs) == 0 {
-		return nil, errors.New("vui lòng gửi kèm ít nhất 1 ảnh bằng chứng cho kết quả mua/không mua")
-	}
-
-	// Khách khai đã mua → phải xuất trình tài liệu mua bán, không nhận ảnh bất kỳ
-	if !isBroker && report == model.ReportBought {
-		if !containsString(model.PurchaseProofTypes, purchaseProof) {
-			return nil, errors.New("khai đã mua nhà phải chọn loại tài liệu chứng minh: " +
-				strings.Join(model.PurchaseProofTypes, " / "))
-		}
-		if len(evidenceURLs) == 0 {
-			return nil, errors.New("vui lòng upload tài liệu chứng minh đã mua nhà")
-		}
-	}
 
 	now := time.Now()
 	fields := map[string]interface{}{}
@@ -620,25 +801,10 @@ func (s *depositService) SubmitReport(depositID, userID uint64, req dto.ReportRe
 	return s.GetDepositDetail(deposit.ID, userID)
 }
 
-// evaluateReports áp bảng quyết định của plan mục 3 khi đã có đủ báo cáo 2 bên.
+// evaluateReports áp bảng quyết định khi đã có đủ báo cáo ĐIỂM DANH của 2 bên.
+// (Nhánh báo cáo mua/không mua đã bỏ — xem settleOverdueByCheckinLog và releaseFeeAfterHold.)
 func (s *depositService) evaluateReports(deposit *model.Deposit) error {
 	switch deposit.Status {
-	case model.DepositStatusCheckedIn:
-		// Chưa đủ 2 báo cáo → chờ bên còn lại
-		if deposit.BrokerReport == "" || deposit.CustomerReport == "" {
-			return nil
-		}
-		// Mâu thuẫn về kết quả mua/không mua → chuyển admin
-		if deposit.BrokerReport != deposit.CustomerReport {
-			return s.openSystemDispute(deposit, "Hai bên báo cáo kết quả mua/không mua khác nhau")
-		}
-		if deposit.BrokerReport == model.ReportBought {
-			// Khách mua nhà → phải chờ admin duyệt tài liệu mua bán trước khi
-			// tất toán và trừ tồn kho dự án (tránh tài liệu giả làm mất căn).
-			return s.awaitPurchaseApproval(deposit)
-		}
-		return s.settleWithNotify(deposit, model.DepositStatusVisitedNotBuy, "Khách đến nhưng không mua")
-
 	case model.DepositStatusBrokerConfirmed:
 		if deposit.BrokerReport == "" || deposit.CustomerReport == "" {
 			return nil
@@ -676,8 +842,8 @@ func (s *depositService) awaitPurchaseApproval(deposit *model.Deposit) error {
 	deposit.Status = model.DepositStatusPendingPurchase
 
 	s.notifyBoth(deposit, "purchase_pending_approval",
-		fmt.Sprintf("Đơn đặt cọc #%d đang chờ duyệt tài liệu mua nhà", deposit.ID),
-		"Hai bên đã xác nhận bạn mua nhà. Tài liệu mua bán đang được admin kiểm tra, tiền cọc được giữ nguyên tại platform.",
+		fmt.Sprintf("Đơn đặt lịch #%d đang chờ duyệt tài liệu mua nhà", deposit.ID),
+		"Hai bên đã xác nhận bạn mua nhà. Tài liệu mua bán đang được admin kiểm tra, phí môi giới được giữ nguyên tại platform.",
 		fmt.Sprintf("Hai bên đã xác nhận khách mua nhà ở đơn #%d. Tài liệu đang chờ admin duyệt trước khi tất toán.", deposit.ID),
 	)
 	return nil
@@ -693,10 +859,10 @@ func (s *depositService) awaitPurchaseApproval(deposit *model.Deposit) error {
 func (s *depositService) DecidePurchase(depositID, adminID uint64, req dto.PurchaseDecisionRequest) (*dto.DepositResponse, error) {
 	deposit, err := s.depositRepo.GetByID(depositID)
 	if err != nil {
-		return nil, errors.New("không tìm thấy đơn đặt cọc")
+		return nil, errors.New("không tìm thấy đơn đặt lịch")
 	}
 	if deposit.Status != model.DepositStatusPendingPurchase {
-		return nil, errors.New("đơn đặt cọc không ở trạng thái chờ duyệt tài liệu mua nhà")
+		return nil, errors.New("đơn đặt lịch không ở trạng thái chờ duyệt tài liệu mua nhà")
 	}
 
 	now := time.Now()
@@ -764,8 +930,8 @@ func (s *depositService) RateBroker(depositID, customerID uint64, req dto.RateBr
 	if req.Rating < 1 || req.Rating > 5 {
 		return errors.New("điểm đánh giá phải từ 1 đến 5")
 	}
-	// Chỉ đánh giá được sau khi buổi xem đã có kết luận
-	if !isVisitedStatus(deposit.Status) {
+	// Chỉ đánh giá được sau khi buổi xem đã diễn ra hoặc đơn đã tất toán
+	if !isRateableStatus(deposit.Status) {
 		return errors.New("chỉ đánh giá được sau khi buổi xem nhà kết thúc")
 	}
 	if _, err := s.ratingRepo.GetByDeposit(depositID); err == nil {
@@ -841,7 +1007,7 @@ func (s *depositService) GetDepositDetail(depositID, requesterID uint64) (*dto.D
 func (s *depositService) GetDepositForAdmin(depositID uint64) (*dto.DepositResponse, error) {
 	deposit, err := s.depositRepo.GetByID(depositID)
 	if err != nil {
-		return nil, errors.New("không tìm thấy đơn đặt cọc")
+		return nil, errors.New("không tìm thấy đơn đặt lịch")
 	}
 	return s.buildDepositDetail(deposit)
 }
@@ -872,7 +1038,7 @@ func (s *depositService) buildDepositDetail(deposit *model.Deposit) (*dto.Deposi
 func (s *depositService) getOwnedDeposit(depositID, userID uint64) (*model.Deposit, string, error) {
 	deposit, err := s.depositRepo.GetByID(depositID)
 	if err != nil {
-		return nil, "", errors.New("không tìm thấy đơn đặt cọc")
+		return nil, "", errors.New("không tìm thấy đơn đặt lịch")
 	}
 
 	if deposit.CustomerID == userID {
@@ -881,7 +1047,7 @@ func (s *depositService) getOwnedDeposit(depositID, userID uint64) (*model.Depos
 	if deposit.BrokerID == userID {
 		return deposit, model.RoleBroker, nil
 	}
-	return nil, "", errors.New("bạn không phải khách hàng hoặc môi giới của đơn đặt cọc này")
+	return nil, "", errors.New("bạn không phải khách hàng hoặc môi giới của đơn đặt lịch này")
 }
 
 // requireSide kiểm tra user có đúng vai trò yêu cầu ở đơn hay không (VD môi giới để xác nhận lịch).
@@ -892,9 +1058,9 @@ func (s *depositService) requireSide(depositID, userID uint64, wantSide string) 
 	}
 	if side != wantSide {
 		if wantSide == model.RoleBroker {
-			return nil, errors.New("bạn không phụ trách đơn đặt cọc này")
+			return nil, errors.New("bạn không phụ trách đơn đặt lịch này")
 		}
-		return nil, errors.New("đơn đặt cọc không thuộc tài khoản của bạn")
+		return nil, errors.New("đơn đặt lịch không thuộc tài khoản của bạn")
 	}
 	return deposit, nil
 }
@@ -930,7 +1096,15 @@ func (s *depositService) toDepositResponse(deposit *model.Deposit) dto.DepositRe
 		BrokerReportEvidence:   decodeEvidenceURLs(deposit.BrokerReportEvidence),
 		CustomerReportEvidence: decodeEvidenceURLs(deposit.CustomerReportEvidence),
 		CustomerPurchaseProof:  deposit.CustomerPurchaseProof,
+		PurchaseDepositAt:      formatOptionalTime(deposit.PurchaseDepositAt),
 		RejectReason:  deposit.RejectReason,
+		// Bằng chứng vị trí check-in: FE hiển thị cho 2 bên và admin đối chiếu
+		BrokerCheckinAt:       formatOptionalTime(deposit.BrokerCheckinAt),
+		CustomerCheckinAt:     formatOptionalTime(deposit.CustomerCheckinAt),
+		BrokerCheckinAcc:      deposit.BrokerCheckinAcc,
+		CustomerCheckinAcc:    deposit.CustomerCheckinAcc,
+		CheckinDistanceMeters: deposit.CheckinDistanceMeters,
+		CheckinMatched:        deposit.CheckinMatched,
 		CreatedAt:     deposit.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:     deposit.UpdatedAt.Format(time.RFC3339),
 	}
@@ -939,6 +1113,10 @@ func (s *depositService) toDepositResponse(deposit *model.Deposit) dto.DepositRe
 		resp.CustomerName = deposit.Customer.Name
 		resp.CustomerPhone = deposit.Customer.Phone
 		resp.CustomerEmail = deposit.Customer.Email
+	}
+	// Ưu tiên liên hệ khách để lại lúc đặt lịch để môi giới gọi đúng số của buổi xem
+	if name, phone := contactOf(deposit); name != "" || phone != "" {
+		resp.CustomerName, resp.CustomerPhone = name, phone
 	}
 	if deposit.Broker != nil {
 		resp.BrokerName = deposit.Broker.Name
@@ -972,7 +1150,7 @@ func (s *depositService) toDepositResponse(deposit *model.Deposit) dto.DepositRe
 	now := time.Now()
 	resp.CanConfirm = deposit.Status == model.DepositStatusPending
 	resp.CanCheckin = deposit.Status == model.DepositStatusBrokerConfirmed && s.withinCheckinWindow(deposit, now)
-	resp.CanReport = deposit.Status == model.DepositStatusCheckedIn || deposit.Status == model.DepositStatusBrokerConfirmed
+	resp.CanReport = deposit.Status == model.DepositStatusBrokerConfirmed
 	resp.CanApprovePurchase = deposit.Status == model.DepositStatusPendingPurchase
 	if deposit.PurchaseDecisionBy != nil {
 		resp.PurchaseDecisionBy = deposit.PurchaseDecisionBy
@@ -1009,30 +1187,37 @@ type settlementPlan struct {
 }
 
 // planForStatus dựng kế hoạch chia tiền chuẩn theo bảng mục 2.4.
+// Khách chỉ trả PHÍ MÔI GIỚI (Amount = BrokerFee) nên không còn phần phí môi giới hoàn lại.
 func (s *depositService) planForStatus(status string, deposit *model.Deposit) settlementPlan {
 	switch status {
 	case model.DepositStatusBrokerRejected:
-		return settlementPlan{Status: status, Refund: deposit.Amount, Note: "Môi giới từ chối / quá hạn xác nhận → hoàn 100%"}
+		return settlementPlan{Status: status, Refund: deposit.Amount, Note: "Môi giới từ chối / quá hạn xác nhận → hoàn 100% phí"}
 	case model.DepositStatusVisitedBought:
-		return settlementPlan{Status: status, Refund: deposit.Amount, Note: "Khách đến và mua nhà → hoàn 100% tiền cọc"}
+		return settlementPlan{Status: status, Refund: deposit.Amount, Note: "Khách đến và mua nhà → hoàn 100% phí môi giới"}
 	case model.DepositStatusVisitedNotBuy:
 		return settlementPlan{
 			Status:   status,
 			Refund:   deposit.Amount - deposit.BrokerFee,
 			Transfer: deposit.BrokerFee,
-			Note:     "Khách đến nhưng không mua → hoàn (cọc - phí), môi giới nhận phí",
+			Note:     "Khách đến nhưng không mua → môi giới nhận phí, khách không được hoàn",
 		}
 	case model.DepositStatusNoShowCustomer:
-		return settlementPlan{Status: status, Transfer: deposit.Amount, Note: "Khách không đến → môi giới nhận toàn bộ cọc"}
+		return settlementPlan{Status: status, Transfer: deposit.Amount, Note: "Khách không đến → môi giới nhận toàn bộ phí"}
 	case model.DepositStatusNoShowBroker:
 		return settlementPlan{
 			Status:   status,
 			Refund:   deposit.Amount,
 			Penalty:  deposit.BrokerFee,
-			Note:     "Môi giới không đến → hoàn 100% khách + phạt môi giới",
+			Note:     "Môi giới không đến → hoàn 100% phí cho khách + phạt môi giới",
 		}
+	case model.DepositStatusRefunded:
+		// Dùng cho ca không bên nào xác nhận buổi xem: hoàn lại toàn bộ phí cho khách
+		return settlementPlan{Status: status, Refund: deposit.Amount, Note: "Hoàn 100% phí cho khách"}
+	case model.DepositStatusCompleted:
+		// Hết thời gian giữ phí mà khách không đặt cọc mua BĐS → phí thuộc về môi giới
+		return settlementPlan{Status: status, Transfer: deposit.Amount, Note: "Hết thời gian giữ phí → môi giới nhận phí"}
 	}
-	return settlementPlan{Status: status, Note: "Kết thúc đơn đặt cọc"}
+	return settlementPlan{Status: status, Note: "Kết thúc đơn đặt lịch"}
 }
 
 // settleWithNotify tất toán theo status chuẩn rồi gửi thông báo cho 2 bên.
@@ -1173,7 +1358,7 @@ func (s *depositService) notifySettlement(deposit *model.Deposit, status string)
 	}
 
 	s.notifyBoth(deposit, "settled_"+strings.ToLower(status),
-		fmt.Sprintf("Kết quả đơn đặt cọc #%d", deposit.ID),
+		fmt.Sprintf("Kết quả đơn đặt lịch xem nhà #%d", deposit.ID),
 		fmt.Sprintf("Buổi xem nhà đã kết thúc với kết quả: %s.\nSố tiền hoàn cho bạn: %s.", statusLabel(status), formatMoney(refund)),
 		fmt.Sprintf("Đơn #%d kết thúc với kết quả: %s.\nSố tiền bạn nhận được: %s.", deposit.ID, statusLabel(status), formatMoney(transfer)),
 	)
@@ -1189,24 +1374,178 @@ func parseViewingSlot(dateStr, startStr, endStr string) (time.Time, string, stri
 		return time.Time{}, "", "", errors.New("ngày xem nhà không hợp lệ (định dạng YYYY-MM-DD)")
 	}
 
-	todayStr := time.Now().Format(dateLayout)
+	now := time.Now()
+	todayStr := now.Format(dateLayout)
 	if viewingDate.Format(dateLayout) < todayStr {
 		return time.Time{}, "", "", errors.New("ngày xem nhà không được ở quá khứ")
 	}
 
 	start := strings.TrimSpace(startStr)
 	end := strings.TrimSpace(endStr)
-	if _, err := time.Parse(timeLayout, start); err != nil {
+	startAt, err := time.Parse(timeLayout, start)
+	if err != nil {
 		return time.Time{}, "", "", errors.New("giờ bắt đầu không hợp lệ (định dạng HH:MM)")
 	}
-	if _, err := time.Parse(timeLayout, end); err != nil {
+	endAt, err := time.Parse(timeLayout, end)
+	if err != nil {
 		return time.Time{}, "", "", errors.New("giờ kết thúc không hợp lệ (định dạng HH:MM)")
 	}
-	if start >= end {
+	if !startAt.Before(endAt) {
 		return time.Time{}, "", "", errors.New("giờ kết thúc phải sau giờ bắt đầu")
 	}
 
-	return viewingDate, start, end, nil
+	// Mỗi buổi xem chỉ có 1 khung cố định 1 tiếng: bắt đầu ở mốc giờ chẵn trong giờ làm việc
+	if endAt.Sub(startAt) != time.Duration(viewingSlotHours)*time.Hour || startAt.Minute() != 0 {
+		return time.Time{}, "", "", fmt.Errorf("mỗi khung xem nhà kéo dài đúng %d tiếng, bắt đầu từ mốc giờ chẵn", viewingSlotHours)
+	}
+	if startAt.Hour() < viewingSlotFirstHour || endAt.Hour() > viewingSlotLastHour {
+		return time.Time{}, "", "", fmt.Errorf(
+			"khung giờ xem nhà chỉ trong khoảng %02d:00 - %02d:00", viewingSlotFirstHour, viewingSlotLastHour)
+	}
+
+	// Đặt trong ngày hôm nay thì khung phải còn ở tương lai
+	if viewingDate.Format(dateLayout) == todayStr && !startAt.After(now) {
+		return time.Time{}, "", "", errors.New("khung giờ xem nhà hôm nay phải sau thời điểm hiện tại")
+	}
+
+	// Chuẩn hoá lại "HH:MM" để cột viewing_start/viewing_end luôn cùng định dạng
+	return viewingDate, startAt.Format(timeLayout), endAt.Format(timeLayout), nil
+}
+
+// normalizeContactInfo kiểm tra họ tên + SĐT khách để lại cho buổi xem.
+// Trả về giá trị đã chuẩn hoá để lưu snapshot lên deposit.
+func normalizeContactInfo(nameStr, phoneStr string) (string, string, error) {
+	name := strings.TrimSpace(nameStr)
+	if length := len([]rune(name)); length < 2 || length > 100 {
+		return "", "", errors.New("vui lòng nhập họ tên người liên hệ (2 - 100 ký tự)")
+	}
+
+	// Khách hay gõ SĐT kèm khoảng trắng/dấu chấm/gạch nối, hoặc dạng +84
+	phone := strings.NewReplacer(" ", "", ".", "", "-", "", "(", "", ")", "").Replace(strings.TrimSpace(phoneStr))
+	if strings.HasPrefix(phone, "+84") {
+		phone = "0" + strings.TrimPrefix(phone, "+84")
+	}
+	if !isVietnamesePhone(phone) {
+		return "", "", errors.New("số điện thoại liên hệ không hợp lệ (VD 0901234567)")
+	}
+
+	return name, phone, nil
+}
+
+// isVietnamesePhone — SĐT di động VN: 10 số, bắt đầu bằng 0
+func isVietnamesePhone(phone string) bool {
+	if len(phone) != 10 || phone[0] != '0' {
+		return false
+	}
+	for _, digit := range phone {
+		if digit < '0' || digit > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+// contactOf trả về tên + SĐT liên hệ của buổi xem:
+// ưu tiên thông tin khách nhập lúc đặt lịch, thiếu thì lấy theo hồ sơ user.
+func contactOf(deposit *model.Deposit) (string, string) {
+	name, phone := "", ""
+	if deposit.Customer != nil {
+		name, phone = deposit.Customer.Name, deposit.Customer.Phone
+	}
+	if deposit.ContactName != "" {
+		name = deposit.ContactName
+	}
+	if deposit.ContactPhone != "" {
+		phone = deposit.ContactPhone
+	}
+	return name, phone
+}
+
+// feeHoldDeadline — mốc hết hạn GIỮ PHÍ: hết giờ buổi xem + số ngày giữ phí.
+// Trong khoảng này khách đặt cọc mua BĐS thì hoàn 100% phí; quá hạn thì phí thuộc môi giới.
+func (s *depositService) feeHoldDeadline(deposit *model.Deposit) time.Time {
+	_, endAt, err := viewingRange(deposit)
+	if err != nil {
+		// Không ghép được mốc thời gian thì tính từ lúc gọi để đơn không bị treo vô hạn
+		endAt = time.Now()
+	}
+	return endAt.AddDate(0, 0, s.cfg.RefundWindowDays)
+}
+
+// roundCoord làm tròn toạ độ về ~3 chữ số thập phân (~100m).
+// Chỉ cần độ chính xác cấp phường để đối chiếu, không lưu vị trí chính xác của người dùng.
+func roundCoord(value float64) float64 {
+	return math.Round(value*1000) / 1000
+}
+
+// distanceMeters — khoảng cách Haversine giữa 2 toạ độ (mét).
+func distanceMeters(lat1, lng1, lat2, lng2 float64) float64 {
+	const earthRadiusMeters = 6371000
+
+	rad := math.Pi / 180
+	dLat := (lat2 - lat1) * rad
+	dLng := (lng2 - lng1) * rad
+	a := math.Sin(dLat/2)*math.Sin(dLat/2) +
+		math.Cos(lat1*rad)*math.Cos(lat2*rad)*math.Sin(dLng/2)*math.Sin(dLng/2)
+
+	return earthRadiusMeters * 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
+}
+
+// usableCheckinLocation — toạ độ gửi lên có dùng được làm bằng chứng không.
+// accuracy = 0 nghĩa là client không báo sai số, vẫn chấp nhận.
+func usableCheckinLocation(location dto.CheckinLocation) bool {
+	if location.Latitude == 0 && location.Longitude == 0 {
+		return false
+	}
+	if location.Latitude < -90 || location.Latitude > 90 {
+		return false
+	}
+	if location.Longitude < -180 || location.Longitude > 180 {
+		return false
+	}
+	if location.Accuracy < 0 {
+		return false
+	}
+	return location.Accuracy == 0 || location.Accuracy <= checkinMaxAccuracyMeters
+}
+
+// atEstate — toạ độ có nằm trong bán kính bất động sản không.
+// BĐS chưa có toạ độ ⇒ không kiểm chứng được, trả true để không chặn oan người đã tới thật.
+func atEstate(estate *model.RealEstate, location dto.CheckinLocation) bool {
+	if estate == nil || estate.Latitude == nil || estate.Longitude == nil {
+		return true
+	}
+	return distanceMeters(*estate.Latitude, *estate.Longitude, location.Latitude, location.Longitude) <= checkinMatchRadiusMeters
+}
+
+// RefundFeeOnPurchaseDeposit — luồng ĐẶT CỌC MUA bất động sản (làm sau) gọi hàm này khi
+// khách đặt cọc thành công: đánh dấu đã đặt cọc và hoàn 100% phí môi giới của buổi xem.
+// Chỉ hoàn khi đơn còn trong thời gian giữ phí và chưa tất toán.
+func (s *depositService) RefundFeeOnPurchaseDeposit(depositID uint64) error {
+	deposit, err := s.depositRepo.GetByID(depositID)
+	if err != nil {
+		return errors.New("không tìm thấy đơn đặt lịch")
+	}
+
+	now := time.Now()
+	if err := s.depositRepo.UpdateFields(deposit.ID, map[string]interface{}{
+		"purchase_deposit_at": now,
+	}); err != nil {
+		return err
+	}
+	deposit.PurchaseDepositAt = &now
+
+	// Hết thời gian giữ phí thì phí đã thuộc môi giới → không hoàn nữa
+	if deposit.ReportDeadline != nil && now.After(*deposit.ReportDeadline) {
+		return errors.New("đã quá thời gian giữ phí, không hoàn phí môi giới được nữa")
+	}
+	// Đơn đã tất toán trước đó thì chỉ ghi nhận dấu hiệu, không hoàn tiền lần nữa
+	if deposit.Status != model.DepositStatusCheckedIn {
+		return nil
+	}
+
+	return s.settleWithNotify(deposit, model.DepositStatusRefunded,
+		"Khách đặt cọc mua bất động sản → hoàn 100% phí môi giới")
 }
 
 // viewingRange ghép viewing_date + giờ bắt đầu/kết thúc thành mốc thời gian đầy đủ.
@@ -1271,9 +1610,13 @@ func containsString(list []string, value string) bool {
 	return false
 }
 
-func isVisitedStatus(status string) bool {
+// isRateableStatus — đánh giá môi giới được sau khi buổi xem đã diễn ra (đã check-in)
+// hoặc sau khi đơn đã tất toán. Các trạng thái VISITED_* giữ lại cho dữ liệu đơn cũ.
+func isRateableStatus(status string) bool {
 	switch status {
-	case model.DepositStatusVisitedBought, model.DepositStatusVisitedNotBuy, model.DepositStatusNoShowCustomer, model.DepositStatusNoShowBroker:
+	case model.DepositStatusCheckedIn, model.DepositStatusCompleted, model.DepositStatusRefunded,
+		model.DepositStatusVisitedBought, model.DepositStatusVisitedNotBuy,
+		model.DepositStatusNoShowCustomer, model.DepositStatusNoShowBroker:
 		return true
 	}
 	return false
@@ -1305,9 +1648,9 @@ func statusLabel(status string) string {
 	case model.DepositStatusVisitedBought:
 		return "Khách đến và mua nhà (hoàn 100%)"
 	case model.DepositStatusVisitedNotBuy:
-		return "Khách đến nhưng không mua (hoàn cọc - phí)"
+		return "Khách đến nhưng không mua (môi giới nhận phí)"
 	case model.DepositStatusNoShowCustomer:
-		return "Khách không đến (mất cọc)"
+		return "Khách không đến (môi giới nhận phí)"
 	case model.DepositStatusNoShowBroker:
 		return "Môi giới không đến (hoàn 100% + phạt)"
 	case model.DepositStatusDispute:

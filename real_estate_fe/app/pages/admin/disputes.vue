@@ -6,7 +6,7 @@
     <template v-else>
       <div class="flex flex-col justify-between gap-3 md:flex-row md:items-center">
         <p class="text-sm text-gray-500">
-          Tiền cọc của các đơn dưới đây đang bị tạm giữ. Chỉ giải ngân sau khi admin ra quyết định.
+          Phí môi giới của các đơn dưới đây đang bị tạm giữ. Chỉ giải ngân sau khi admin ra quyết định.
         </p>
         <div class="w-full md:w-56">
           <n-select v-model:value="statusFilter" :options="statusOptions" placeholder="Tất cả trạng thái" clearable />
@@ -37,7 +37,7 @@
               <!-- Đơn liên quan -->
               <div v-if="dispute.deposit" class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                 <div class="flex flex-col">
-                  <span class="text-xs text-gray-400">Đơn đặt cọc</span>
+                  <span class="text-xs text-gray-400">Đơn đặt lịch</span>
                   <span class="text-gray-800 font-medium">#{{ dispute.deposit.id }}</span>
                 </div>
                 <div class="flex flex-col">
@@ -45,7 +45,7 @@
                   <span class="text-gray-800 truncate">{{ dispute.deposit.real_estate_title || '—' }}</span>
                 </div>
                 <div class="flex flex-col">
-                  <span class="text-xs text-gray-400">Tiền cọc</span>
+                  <span class="text-xs text-gray-400">Phí môi giới</span>
                   <span class="text-gray-800 font-medium">{{ formatVnd(dispute.deposit.amount) }}</span>
                 </div>
                 <div class="flex flex-col">
@@ -106,7 +106,7 @@
 
               <!-- Hành động -->
               <div class="flex justify-end gap-2">
-                <n-button size="small" @click="openDetail(dispute.deposit_id)">Xem đơn đặt cọc</n-button>
+                <n-button size="small" @click="openDetail(dispute.deposit_id)">Xem đơn đặt lịch</n-button>
                 <n-button v-if="dispute.status !== 'RESOLVED'" size="small" type="primary" @click="openResolve(dispute)">
                   Ra quyết định
                 </n-button>
@@ -130,20 +130,20 @@
         <span class="font-semibold text-gray-800">Quyết định xử lý tranh chấp #{{ resolving?.id }}</span>
 
         <div v-if="resolving?.deposit" class="rounded-lg bg-gray-50 p-3 text-sm text-gray-600">
-          Tiền cọc đang giữ: <strong>{{ formatVnd(resolving.deposit.amount) }}</strong>
+          Phí môi giới đang giữ: <strong>{{ formatVnd(resolving.deposit.amount) }}</strong>
         </div>
 
         <n-radio-group v-model:value="resolution" class="flex flex-col gap-2">
           <n-radio value="REFUND_CUSTOMER">
             <div class="flex flex-col">
               <span class="text-sm text-gray-800">Hoàn toàn bộ cho khách</span>
-              <span class="text-xs text-gray-400">Khách nhận lại 100% tiền cọc</span>
+              <span class="text-xs text-gray-400">Khách nhận lại 100% phí môi giới</span>
             </div>
           </n-radio>
           <n-radio value="TRANSFER_BROKER">
             <div class="flex flex-col">
               <span class="text-sm text-gray-800">Chuyển toàn bộ cho môi giới</span>
-              <span class="text-xs text-gray-400">Môi giới nhận 100% tiền cọc</span>
+              <span class="text-xs text-gray-400">Môi giới nhận 100% phí môi giới</span>
             </div>
           </n-radio>
           <n-radio value="SPLIT">
@@ -154,7 +154,7 @@
           </n-radio>
         </n-radio-group>
 
-        <n-form-item v-if="resolution === 'SPLIT'" label="% tiền cọc hoàn cho khách" :show-feedback="false">
+        <n-form-item v-if="resolution === 'SPLIT'" label="% phí môi giới hoàn cho khách" :show-feedback="false">
           <n-slider v-model:value="splitPercent" :min="0" :max="100" :step="5" :marks="{ 0: '0%', 50: '50%', 100: '100%' }" />
         </n-form-item>
 

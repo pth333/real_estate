@@ -8,8 +8,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// InitDepositRoutes — API luồng đặt cọc escrow:
-// khách đặt cọc & check-in, môi giới xác nhận & báo kết quả, admin xử lý tranh chấp.
+// InitDepositRoutes — API luồng đặt lịch escrow:
+// khách đặt lịch & check-in, môi giới xác nhận & báo kết quả, admin xử lý tranh chấp.
 //
 // ⚠️ LƯU Ý QUAN TRỌNG (Fiber v2):
 // `Group.Group(prefix, handlers...)` sẽ APPEND handlers vào slice Handlers của group CHA.
@@ -47,6 +47,10 @@ func InitDepositRoutes(Router fiber.Router) {
 	depositGroup.Post("/:id/checkin",
 		middleware.AuthMiddleware, middleware.RequirePermission(model.PermissionDepositCheckin),
 		depositHandler.Checkin)
+	// Khách báo "tôi đã tới" bằng vị trí khi không nhập được OTP
+	depositGroup.Post("/:id/checkin-location",
+		middleware.AuthMiddleware, middleware.RequirePermission(model.PermissionDepositCheckin),
+		depositHandler.CheckinLocation)
 	depositGroup.Post("/:id/rating",
 		middleware.AuthMiddleware, middleware.RequirePermission(model.PermissionDepositRate),
 		depositHandler.RateBroker)

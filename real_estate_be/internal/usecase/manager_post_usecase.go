@@ -47,7 +47,7 @@ func NewManagerPostUseCase(managerRepo repo.ManagerPostRepository, realEstateRep
 }
 
 // promoteToBroker gán thêm role BROKER cho người đăng tin (nếu chưa có).
-// Nhờ đó môi giới mới có quyền xác nhận đơn đặt cọc xem nhà.
+// Nhờ đó môi giới mới có quyền xác nhận đơn đặt lịch xem nhà.
 // Dùng bảng nối user_roles nên không làm mất các role khác của user.
 func (u *managerPostUseCase) promoteToBroker(userID uint64) {
 	if err := repo.NewRbacRepository(global.DB).AddRoleByCode(userID, model.RoleBroker); err != nil {
@@ -180,7 +180,7 @@ func (s *managerPostUseCase) CreateRealEstate(req dto.CreateRealEstateRequest, u
 		return 0, err
 	}
 
-	// Người đăng tin trở thành môi giới → mở quyền nhận đơn đặt cọc xem nhà.
+	// Người đăng tin trở thành môi giới → mở quyền nhận đơn đặt lịch xem nhà.
 	s.promoteToBroker(userID)
 
 	if estate.Slug == "" {

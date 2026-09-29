@@ -34,8 +34,8 @@ func parseIDParam(c *fiber.Ctx) (uint64, error) {
 
 // ── Khách hàng ──────────────────────────────────────────
 
-// GetBookingOptions — mức cọc + phí môi giới hệ thống đề xuất cho 1 BĐS.
-// FE dùng để hiển thị trong form đặt cọc (khách không sửa được số tiền).
+// GetBookingOptions — phí môi giới + phí môi giới hệ thống đề xuất cho 1 BĐS.
+// FE dùng để hiển thị trong form đặt lịch (khách không sửa được số tiền).
 func (h *DepositHandler) GetBookingOptions(c *fiber.Ctx) error {
 	realEstateID, err := strconv.ParseUint(c.Query("real_estate_id"), 10, 64)
 	if err != nil || realEstateID == 0 {
@@ -49,7 +49,7 @@ func (h *DepositHandler) GetBookingOptions(c *fiber.Ctx) error {
 	return response.OK(c, result)
 }
 
-// CreateDeposit — khách đặt cọc xem nhà, trả về URL thanh toán.
+// CreateDeposit — khách đặt lịch xem nhà, trả về URL thanh toán.
 func (h *DepositHandler) CreateDeposit(c *fiber.Ctx) error {
 	customerID := currentUserID(c)
 
@@ -63,10 +63,10 @@ func (h *DepositHandler) CreateDeposit(c *fiber.Ctx) error {
 		return response.BadRequest(c, err.Error(), nil)
 	}
 
-	return response.Created(c, "Khởi tạo đặt cọc thành công, vui lòng thanh toán", result)
+	return response.Created(c, "Khởi tạo đặt lịch thành công, vui lòng thanh toán phí môi giới", result)
 }
 
-// ListMyDeposits — danh sách đơn đặt cọc của khách đang đăng nhập.
+// ListMyDeposits — danh sách đơn đặt lịch của khách đang đăng nhập.
 func (h *DepositHandler) ListMyDeposits(c *fiber.Ctx) error {
 	customerID := currentUserID(c)
 	page, _ := strconv.Atoi(c.Query("page", "1"))
@@ -74,7 +74,7 @@ func (h *DepositHandler) ListMyDeposits(c *fiber.Ctx) error {
 
 	items, total, err := h.service.ListCustomerDeposits(customerID, c.Query("status", ""), page, size)
 	if err != nil {
-		return response.InternalServerError(c, "Lấy danh sách đặt cọc thất bại", err.Error())
+		return response.InternalServerError(c, "Lấy danh sách đặt lịch thất bại", err.Error())
 	}
 
 	return response.Success(c, fiber.StatusOK, "", items, fiber.Map{"total": total, "page": page, "size": size})
@@ -85,7 +85,7 @@ func (h *DepositHandler) Checkin(c *fiber.Ctx) error {
 	customerID := currentUserID(c)
 	depositID, err := parseIDParam(c)
 	if err != nil || depositID == 0 {
-		return response.BadRequest(c, "ID đơn đặt cọc không hợp lệ", nil)
+		return response.BadRequest(c, "ID đơn đặt lịch không hợp lệ", nil)
 	}
 
 	var req dto.CheckinRequest
@@ -93,7 +93,28 @@ func (h *DepositHandler) Checkin(c *fiber.Ctx) error {
 		return response.BadRequest(c, "Dữ liệu gửi lên không hợp lệ", err.Error())
 	}
 
-	result, err := h.service.CustomerCheckin(depositID, customerID, req.OTP)
+	result, err := h.service.CustomerCheckin(depositID, customerID, req.OTP, dto.CheckinLocationRequest{CheckinLocation: req.CheckinLocation})
+	if err != nil {
+		return response.BadRequest(c, err.Error(), nil)
+	}
+	return response.OK(c, result)
+}
+
+// CheckinLocation — khách báo "tôi đã tới" bằng vị trí khi không nhập được OTP.
+// Nếu 2 bên ở gần nhau, hệ thống tự xác nhận buổi xem mà không cần mã OTP.
+func (h *DepositHandler) CheckinLocation(c *fiber.Ctx) error {
+	customerID := currentUserID(c)
+	depositID, err := parseIDParam(c)
+	if err != nil || depositID == 0 {
+		return response.BadRequest(c, "ID đơn đặt lịch không hợp lệ", nil)
+	}
+
+	var req dto.CheckinLocationRequest
+	if err := c.BodyParser(&req); err != nil {
+		return response.BadRequest(c, "Dữ liệu gửi lên không hợp lệ", err.Error())
+	}
+
+	result, err := h.service.CustomerArrived(depositID, customerID, req)
 	if err != nil {
 		return response.BadRequest(c, err.Error(), nil)
 	}
@@ -105,7 +126,7 @@ func (h *DepositHandler) RateBroker(c *fiber.Ctx) error {
 	customerID := currentUserID(c)
 	depositID, err := parseIDParam(c)
 	if err != nil || depositID == 0 {
-		return response.BadRequest(c, "ID đơn đặt cọc không hợp lệ", nil)
+		return response.BadRequest(c, "ID đơn đặt lịch không hợp lệ", nil)
 	}
 
 	var req dto.RateBrokerRequest
@@ -121,7 +142,7 @@ func (h *DepositHandler) RateBroker(c *fiber.Ctx) error {
 
 // ── Môi giới ────────────────────────────────────────────
 
-// ListBrokerDeposits — danh sách đơn đặt cọc môi giới đang phụ trách.
+// ListBrokerDeposits — danh sách đơn đặt lịch môi giới đang phụ trách.
 func (h *DepositHandler) ListBrokerDeposits(c *fiber.Ctx) error {
 	brokerID := currentUserID(c)
 	page, _ := strconv.Atoi(c.Query("page", "1"))
@@ -129,7 +150,7 @@ func (h *DepositHandler) ListBrokerDeposits(c *fiber.Ctx) error {
 
 	items, total, err := h.service.ListBrokerDeposits(brokerID, c.Query("status", ""), page, size)
 	if err != nil {
-		return response.InternalServerError(c, "Lấy danh sách đặt cọc thất bại", err.Error())
+		return response.InternalServerError(c, "Lấy danh sách đặt lịch thất bại", err.Error())
 	}
 
 	return response.Success(c, fiber.StatusOK, "", items, fiber.Map{"total": total, "page": page, "size": size})
@@ -140,7 +161,7 @@ func (h *DepositHandler) ConfirmDeposit(c *fiber.Ctx) error {
 	brokerID := currentUserID(c)
 	depositID, err := parseIDParam(c)
 	if err != nil || depositID == 0 {
-		return response.BadRequest(c, "ID đơn đặt cọc không hợp lệ", nil)
+		return response.BadRequest(c, "ID đơn đặt lịch không hợp lệ", nil)
 	}
 
 	result, err := h.service.ConfirmDeposit(depositID, brokerID)
@@ -150,12 +171,12 @@ func (h *DepositHandler) ConfirmDeposit(c *fiber.Ctx) error {
 	return response.OK(c, result)
 }
 
-// RejectDeposit — môi giới từ chối lịch kèm lý do, hệ thống hoàn 100% tiền cọc.
+// RejectDeposit — môi giới từ chối lịch kèm lý do, hệ thống hoàn 100% phí môi giới.
 func (h *DepositHandler) RejectDeposit(c *fiber.Ctx) error {
 	brokerID := currentUserID(c)
 	depositID, err := parseIDParam(c)
 	if err != nil || depositID == 0 {
-		return response.BadRequest(c, "ID đơn đặt cọc không hợp lệ", nil)
+		return response.BadRequest(c, "ID đơn đặt lịch không hợp lệ", nil)
 	}
 
 	var req dto.RejectDepositRequest
@@ -170,15 +191,23 @@ func (h *DepositHandler) RejectDeposit(c *fiber.Ctx) error {
 	return response.OK(c, result)
 }
 
-// GenerateOTP — môi giới sinh mã OTP check-in tại chỗ.
+// GenerateOTP — môi giới xác nhận đã tới nơi (kèm vị trí) và sinh mã OTP check-in tại chỗ.
 func (h *DepositHandler) GenerateOTP(c *fiber.Ctx) error {
 	brokerID := currentUserID(c)
 	depositID, err := parseIDParam(c)
 	if err != nil || depositID == 0 {
-		return response.BadRequest(c, "ID đơn đặt cọc không hợp lệ", nil)
+		return response.BadRequest(c, "ID đơn đặt lịch không hợp lệ", nil)
 	}
 
-	result, err := h.service.GenerateCheckinOTP(depositID, brokerID)
+	// Body có thể rỗng (client cũ / không có quyền định vị) → vẫn sinh OTP bình thường
+	var req dto.CheckinLocationRequest
+	if len(c.Body()) > 0 {
+		if err := c.BodyParser(&req); err != nil {
+			return response.BadRequest(c, "Dữ liệu gửi lên không hợp lệ", err.Error())
+		}
+	}
+
+	result, err := h.service.GenerateCheckinOTP(depositID, brokerID, req)
 	if err != nil {
 		return response.BadRequest(c, err.Error(), nil)
 	}
@@ -187,12 +216,12 @@ func (h *DepositHandler) GenerateOTP(c *fiber.Ctx) error {
 
 // ── Dùng chung 2 bên ────────────────────────────────────
 
-// GetDeposit — chi tiết 1 đơn đặt cọc.
+// GetDeposit — chi tiết 1 đơn đặt lịch.
 func (h *DepositHandler) GetDeposit(c *fiber.Ctx) error {
 	userID := currentUserID(c)
 	depositID, err := parseIDParam(c)
 	if err != nil || depositID == 0 {
-		return response.BadRequest(c, "ID đơn đặt cọc không hợp lệ", nil)
+		return response.BadRequest(c, "ID đơn đặt lịch không hợp lệ", nil)
 	}
 
 	result, err := h.service.GetDepositDetail(depositID, userID)
@@ -207,7 +236,7 @@ func (h *DepositHandler) SubmitReport(c *fiber.Ctx) error {
 	userID := currentUserID(c)
 	depositID, err := parseIDParam(c)
 	if err != nil || depositID == 0 {
-		return response.BadRequest(c, "ID đơn đặt cọc không hợp lệ", nil)
+		return response.BadRequest(c, "ID đơn đặt lịch không hợp lệ", nil)
 	}
 
 	var req dto.ReportResultRequest
@@ -227,7 +256,7 @@ func (h *DepositHandler) OpenDispute(c *fiber.Ctx) error {
 	userID := currentUserID(c)
 	depositID, err := parseIDParam(c)
 	if err != nil || depositID == 0 {
-		return response.BadRequest(c, "ID đơn đặt cọc không hợp lệ", nil)
+		return response.BadRequest(c, "ID đơn đặt lịch không hợp lệ", nil)
 	}
 
 	var req dto.CreateDisputeRequest
@@ -239,7 +268,7 @@ func (h *DepositHandler) OpenDispute(c *fiber.Ctx) error {
 	if err != nil {
 		return response.BadRequest(c, err.Error(), nil)
 	}
-	return response.Created(c, "Đã mở tranh chấp, tiền cọc được tạm giữ", result)
+	return response.Created(c, "Đã mở tranh chấp, phí môi giới được tạm giữ", result)
 }
 
 // AddEvidence — bổ sung bằng chứng cho tranh chấp đang mở.

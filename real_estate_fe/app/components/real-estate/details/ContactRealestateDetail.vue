@@ -40,7 +40,7 @@
                     <template #icon>
                         <IconWallet />
                     </template>
-                    Đặt cọc giữ lịch xem nhà
+                    Đặt lịch xem nhà
                 </n-button>
                 <n-button v-if="realEstateDetailStore.listing?.agent_phone" block ghost @click="handleCall">
                     <template #icon>
@@ -53,12 +53,12 @@
                 </n-button>
             </n-space>
 
-            <!-- Modal đặt cọc: mức cọc do hệ thống tính theo giá BĐS, tiền platform giữ -->
+            <!-- Modal đặt lịch: phí môi giới do hệ thống tính theo giá BĐS, tiền platform giữ -->
             <DepositBookingModal v-if="listingId" v-model:show="showBookingModal" :real-estate-id="listingId"
                 :estate-title="realEstateDetailStore.listing?.title" />
         </div>
 
-        <!-- Thanh CTA cố định đáy màn hình (chỉ mobile/tablet): luôn thấy nút gọi & đặt cọc khi cuộn -->
+        <!-- Thanh CTA cố định đáy màn hình (chỉ mobile/tablet): luôn thấy nút gọi & đặt lịch khi cuộn -->
         <Teleport to="body">
             <div class="fixed inset-x-0 bottom-0 z-40 flex items-center gap-2 border-t border-gray-200 bg-white/95 px-3 pt-2 backdrop-blur lg:hidden"
                 style="padding-bottom: max(0.5rem, env(safe-area-inset-bottom));">
@@ -73,7 +73,7 @@
                     <template #icon>
                         <IconWallet />
                     </template>
-                    Đặt cọc
+                    Đặt lịch
                 </n-button>
             </div>
         </Teleport>
@@ -90,20 +90,16 @@ const realEstateDetailStore = useRealEstateDetail()
 const authStore = useAuthStore()
 const route = useRoute()
 
-// Trạng thái mở modal đặt cọc
+// Trạng thái mở modal đặt lịch
 const showBookingModal = ref(false);
 
-// ID BĐS đang xem — bắt buộc phải có mới đặt cọc được
+// ID BĐS đang xem — bắt buộc phải có mới đặt lịch được
 const listingId = computed(() => realEstateDetailStore.listing?.id ?? 0);
 
-/**
- * Trang chi tiết BĐS là trang CÔNG KHAI nên khách vãng lai vẫn xem được.
- * Nhưng đặt cọc thì cần tài khoản → nhắc đăng nhập và quay lại đúng tin này.
- */
+
 function handleOpenBooking() {
     if (!authStore.isAuthenticated) {
-        window.message?.info('Vui lòng đăng nhập để đặt cọc giữ lịch xem nhà');
-        // navigateTo({ path: '/dang-nhap', query: { redirect: route.fullPath } });
+        window.message?.info('Vui lòng đăng nhập để đặt lịch xem nhà');
         return;
     }
     showBookingModal.value = true;

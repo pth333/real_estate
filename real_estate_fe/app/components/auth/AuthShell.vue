@@ -55,10 +55,10 @@
 
       <div class="relative max-w-md">
         <h2 class="text-2xl font-bold leading-snug text-white">
-          Tìm nhà an tâm,<br />đặt cọc minh bạch
+          Tìm nhà an tâm,<br />đặt lịch minh bạch
         </h2>
 
-        <!-- Đúng các giá trị nền tảng đang cung cấp cho luồng đặt cọc -->
+        <!-- Đúng các giá trị nền tảng đang cung cấp cho luồng đặt lịch -->
         <ul class="mt-8 flex flex-col gap-5">
           <li v-for="item in highlights" :key="item.title" class="flex items-start gap-3">
             <span class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15 text-white">
@@ -99,13 +99,13 @@ defineProps<{
 
 const highlights: { title: string; description: string; icon: Component }[] = [
   {
-    title: 'Tiền cọc được nền tảng giữ hộ',
+    title: 'Phí môi giới được nền tảng giữ hộ',
     description: 'Không chuyển thẳng cho môi giới, chỉ giải ngân khi buổi xem có kết quả rõ ràng.',
     icon: IconShieldCheck,
   },
   {
     title: 'Hoàn tiền tự động theo thoả thuận',
-    description: 'Môi giới từ chối hoặc không phản hồi trong 24 giờ là hoàn lại 100% tiền cọc.',
+    description: 'Môi giới từ chối hoặc không phản hồi trong 24 giờ là hoàn lại 100% phí môi giới.',
     icon: IconWallet,
   },
   {

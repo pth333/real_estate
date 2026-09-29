@@ -12,7 +12,6 @@ import (
 )
 
 // VNPayGateway — adapter cổng VNPay (mặc định sandbox).
-// Tham chiếu: https://sandbox.vnpayment.vn/apis/docs/thanh-toan-pay
 type VNPayGateway struct {
 	cfg Config
 }
@@ -48,6 +47,7 @@ func (g *VNPayGateway) CreatePaymentURL(req CreatePaymentRequest) (string, error
 		"vnp_CreateDate": now.Format("20060102150405"),
 		"vnp_ExpireDate": expire.Format("20060102150405"),
 	}
+
 	if req.BankCode != "" {
 		params["vnp_BankCode"] = req.BankCode
 	}

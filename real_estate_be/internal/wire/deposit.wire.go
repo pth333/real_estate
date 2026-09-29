@@ -11,7 +11,7 @@ import (
 	"github.com/google/wire"
 )
 
-// depositProviderSet — provider dùng chung cho mọi handler của luồng đặt cọc.
+// depositProviderSet — provider dùng chung cho mọi handler của luồng đặt lịch.
 var depositProviderSet = wire.NewSet(
 	providerDB,
 	providerPaymentGateway,

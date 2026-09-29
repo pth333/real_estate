@@ -4,9 +4,9 @@
       <!-- Tiêu đề + bộ lọc -->
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div class="flex flex-col">
-          <h1 class="text-xl font-bold text-gray-900">Đơn đặt cọc xem nhà của tôi</h1>
+          <h1 class="text-xl font-bold text-gray-900">Đơn đặt lịch xem nhà của tôi</h1>
           <p class="text-sm text-gray-500">
-            Tiền cọc được platform giữ an toàn và chỉ release khi buổi xem nhà có kết quả rõ ràng
+            Phí môi giới được platform giữ an toàn và chỉ release khi buổi xem nhà có kết quả rõ ràng
           </p>
         </div>
         <div class="w-full md:w-64">
@@ -45,8 +45,6 @@ import { formatVnd } from '~/utils/deposit'
 import DepositTable from '~/components/deposit/DepositTable.vue'
 import DepositDetailModal from '~/components/deposit/DepositDetailModal.vue'
 
-// Chặn ở tầng route: chỉ user có quyền xem đơn của mình mới vào được.
-// Tên file đặt tiếng Anh; giữ alias tiếng Việt cho URL người dùng đã quen.
 definePageMeta({
   requiresPermission: ['deposit.view.own'],
   alias: ['/tai-khoan/dat-coc'],
@@ -79,7 +77,7 @@ const summaryCards = computed(() => {
 
   return [
     { label: 'Tổng số đơn', value: String(total.value), className: 'text-gray-900' },
-    { label: 'Tiền đang được giữ', value: formatVnd(holding), className: 'text-amber-600' },
+    { label: 'Phí đang được giữ', value: formatVnd(holding), className: 'text-amber-600' },
     { label: 'Đã hoàn cho bạn', value: formatVnd(refunded), className: 'text-emerald-600' },
     { label: 'Chờ môi giới xác nhận', value: String(waiting), className: 'text-blue-600' },
   ]

@@ -2,25 +2,27 @@ package dto
 
 // ── Request ──────────────────────────────────────────────
 
-// CreateDepositRequest — khách điền form đặt cọc xem nhà.
-// KHÔNG nhận amount/broker_fee từ client: hệ thống tự tra chính sách theo giá BĐS
-// để tránh khách đặt cọc số tiền vô nghĩa làm mất tác dụng chống bùng.
+// CreateDepositRequest — khách điền form đặt lịch xem nhà.
+// KHÔNG nhận số tiền từ client: hệ thống tự tra phí môi giới theo giá BĐS
+// để tránh khách trả số tiền vô nghĩa làm mất tác dụng chống bùng.
 type CreateDepositRequest struct {
-	RealEstateID  uint64 `json:"real_estate_id"`
-	ViewingDate   string `json:"viewing_date"`  // "2006-01-02"
-	ViewingStart  string `json:"viewing_start"` // "HH:MM"
-	ViewingEnd    string `json:"viewing_end"`   // "HH:MM"
+	RealEstateID uint64 `json:"real_estate_id"`
+	ViewingDate  string `json:"viewing_date"`  // "2006-01-02"
+	ViewingStart string `json:"viewing_start"` // "HH:MM"
+	ViewingEnd   string `json:"viewing_end"`   // "HH:MM"
+	// Liên hệ của buổi xem — khách xác nhận lại trước khi trả phí (có thể khác hồ sơ)
+	ContactName   string `json:"contact_name"`
+	ContactPhone  string `json:"contact_phone"`
 	PaymentMethod string `json:"payment_method"` // VNPAY / MOMO / ZALOPAY
 	BankCode      string `json:"bank_code"`
 }
 
-// BookingOptionsResponse — mức cọc + phí môi giới hệ thống đề xuất cho 1 BĐS.
+// BookingOptionsResponse — phí môi giới hệ thống áp dụng cho 1 BĐS.
 // FE chỉ hiển thị, khách không sửa được.
 type BookingOptionsResponse struct {
 	RealEstateID    uint64  `json:"real_estate_id"`
 	RealEstateTitle string  `json:"real_estate_title"`
 	PriceVND        float64 `json:"price_vnd"`
-	Amount          float64 `json:"amount"`
 	BrokerFee       float64 `json:"broker_fee"`
 	// Nhãn phân khúc giá đang áp dụng, VD "Từ 3 đến 5 tỷ"
 	PolicyLabel string `json:"policy_label"`
@@ -33,9 +35,24 @@ type RejectDepositRequest struct {
 	Reason string `json:"reason"`
 }
 
-// CheckinRequest — khách nhập OTP do môi giới hiển thị tại chỗ
+// CheckinLocation — vị trí hiện tại của người bấm check-in (GPS từ trình duyệt).
+// Là tín hiệu bổ trợ cho OTP: 2 bên gần nhau ⇒ buổi xem đã diễn ra.
+type CheckinLocation struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+	// Sai số GPS (mét) — 0 nghĩa là client không báo
+	Accuracy float64 `json:"accuracy"`
+}
+
+// CheckinRequest — khách nhập OTP do môi giới hiển thị tại chỗ (kèm vị trí nếu có)
 type CheckinRequest struct {
 	OTP string `json:"otp"`
+	CheckinLocation
+}
+
+// CheckinLocationRequest — 1 bên xác nhận đã tới nơi kèm vị trí
+type CheckinLocationRequest struct {
+	CheckinLocation
 }
 
 // ReportResultRequest — 1 bên báo cáo kết quả buổi xem.
@@ -63,7 +80,7 @@ type AddEvidenceRequest struct {
 type ResolveDisputeRequest struct {
 	Resolution string `json:"resolution"` // REFUND_CUSTOMER / TRANSFER_BROKER / SPLIT
 	Note       string `json:"note"`
-	// Chỉ dùng khi resolution = SPLIT: % tiền cọc hoàn cho khách (0-100)
+	// Chỉ dùng khi resolution = SPLIT: % phí môi giới hoàn cho khách (0-100)
 	SplitCustomerPercent int `json:"split_customer_percent"`
 }
 
@@ -102,6 +119,7 @@ type DepositResponse struct {
 	RealEstateThumb   string  `json:"real_estate_thumbnail"`
 	ProjectID         *uint64 `json:"project_id"`
 
+	// Amount = số tiền khách đã trả cho buổi xem, chính là PHÍ MÔI GIỚI (không còn tiền cọc)
 	Amount        float64  `json:"amount"`
 	BrokerFee     float64  `json:"broker_fee"`
 	RefundAmount  *float64 `json:"refund_amount"`
@@ -117,13 +135,24 @@ type DepositResponse struct {
 
 	BrokerCheckin      bool   `json:"broker_checkin"`
 	CustomerCheckin    bool   `json:"customer_checkin"`
+	// Bằng chứng vị trí lúc check-in: thời điểm 2 bên xác nhận + khoảng cách giữa 2 bên.
+	// CheckinMatched = true nghĩa là 2 bên đã ở gần nhau ⇒ buổi xem chắc chắn diễn ra.
+	BrokerCheckinAt       string   `json:"broker_checkin_at"`
+	CustomerCheckinAt     string   `json:"customer_checkin_at"`
+	BrokerCheckinAcc      *float64 `json:"broker_checkin_accuracy"`
+	CustomerCheckinAcc    *float64 `json:"customer_checkin_accuracy"`
+	CheckinDistanceMeters *float64 `json:"checkin_distance_meters"`
+	CheckinMatched        bool     `json:"checkin_matched"`
 	BrokerReport       string `json:"broker_report"`
 	CustomerReport     string `json:"customer_report"`
 	// Bằng chứng kèm báo cáo mua/không mua của từng bên
 	BrokerReportEvidence   []string `json:"broker_report_evidence"`
 	CustomerReportEvidence []string `json:"customer_report_evidence"`
-	// Loại tài liệu khách xuất trình khi khai đã mua nhà
+	// Loại tài liệu khách xuất trình khi khai đã mua nhà (giữ cho dữ liệu đơn cũ)
 	CustomerPurchaseProof string `json:"customer_purchase_proof"`
+	// Thời điểm khách đặt cọc MUA bất động sản (rỗng = chưa đặt cọc).
+	// Trong thời gian giữ phí mà có mốc này ⇒ phí môi giới được hoàn 100% cho khách.
+	PurchaseDepositAt string `json:"purchase_deposit_at"`
 	BrokerConfirmedAt      string   `json:"broker_confirmed_at"`
 	RejectReason           string   `json:"reject_reason"`
 	ReportDeadline         string   `json:"report_deadline"`
@@ -186,7 +215,7 @@ type BrokerRatingResponse struct {
 
 // EscrowSummaryResponse — số liệu tổng quan quỹ escrow cho admin
 type EscrowSummaryResponse struct {
-	// Tổng tiền đang giữ (tiền cọc đã thanh toán, chưa release)
+	// Tổng tiền đang giữ (phí môi giới đã thanh toán, chưa release)
 	HoldingAmount float64 `json:"holding_amount"`
 	// Tổng đã hoàn cho khách
 	RefundedAmount float64 `json:"refunded_amount"`
@@ -208,7 +237,7 @@ type PaymentCallbackResponse struct {
 	Message   string `json:"message"`
 }
 
-// CreateDepositResponse — kết quả tạo đặt cọc: kèm URL để redirect khách đi thanh toán
+// CreateDepositResponse — kết quả tạo đặt lịch: kèm URL để redirect khách đi thanh toán
 type CreateDepositResponse struct {
 	Deposit    DepositResponse `json:"deposit"`
 	PaymentURL string          `json:"payment_url"`
@@ -220,4 +249,7 @@ type CreateDepositResponse struct {
 type CheckinOTPResponse struct {
 	OTP       string `json:"otp"`
 	ExpiresAt string `json:"expires_at"`
+	// Cảnh báo khi vị trí gửi lên chưa đủ tin cậy (ngoài bán kính BĐS / sai số GPS lớn).
+	// Rỗng nghĩa là vị trí đã được ghi nhận làm bằng chứng.
+	LocationWarning string `json:"location_warning"`
 }

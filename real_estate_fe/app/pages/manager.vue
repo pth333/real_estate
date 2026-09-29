@@ -1,6 +1,6 @@
 <template>
   <div class="flex h-screen flex-col overflow-hidden bg-gray-50">
-    <DashboardTopbar title="Khu vực quản lý" subtitle="Tin đăng, dự án và đơn đặt cọc của bạn" :icon="IconCreateOutline" />
+    <DashboardTopbar title="Khu vực quản lý" subtitle="Tin đăng, dự án và đơn đặt lịch của bạn" :icon="IconCreateOutline" />
 
     <div class="flex flex-1 overflow-hidden">
       <DashboardSidebar :active-key="activeKey" :groups="menuGroups" :cta="primaryAction" />
@@ -87,8 +87,8 @@ const menuGroups: DashboardMenuGroup[] = [
       },
       {
         key: 'deposits',
-        label: 'Đơn đặt cọc',
-        pageTitle: 'Đơn đặt cọc xem nhà',
+        label: 'Đơn đặt lịch',
+        pageTitle: 'Đơn đặt lịch xem nhà',
         path: '/nguoi-ban/quan-ly-dat-coc',
         icon: IconWallet,
         // Chỉ môi giới (có quyền xem đơn được giao) mới thấy mục này

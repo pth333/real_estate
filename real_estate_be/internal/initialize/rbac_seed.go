@@ -17,7 +17,7 @@ type permissionSeed struct {
 
 var permissionSeeds = []permissionSeed{
 	// ── Khách hàng ──
-	{model.PermissionDepositCreate, "Tạo đơn đặt cọc xem nhà", "deposit"},
+	{model.PermissionDepositCreate, "Tạo đơn đặt lịch xem nhà", "deposit"},
 	{model.PermissionDepositViewOwn, "Xem danh sách đơn của mình", "deposit"},
 	{model.PermissionDepositCheckin, "Check-in OTP tại buổi xem", "deposit"},
 	{model.PermissionDepositRate, "Đánh giá môi giới", "deposit"},
@@ -35,8 +35,8 @@ var permissionSeeds = []permissionSeed{
 	{model.PermissionBrokerDepositOtp, "Sinh mã OTP check-in", "broker"},
 
 	// ── Admin ──
-	{model.PermissionAdminDepositList, "Xem tất cả đơn đặt cọc", "admin"},
-	{model.PermissionAdminDepositView, "Xem chi tiết mọi đơn đặt cọc", "admin"},
+	{model.PermissionAdminDepositList, "Xem tất cả đơn đặt lịch", "admin"},
+	{model.PermissionAdminDepositView, "Xem chi tiết mọi đơn đặt lịch", "admin"},
 	{model.PermissionAdminDepositApprove, "Duyệt tài liệu mua nhà", "admin"},
 	{model.PermissionAdminEscrowView, "Xem tổng quan escrow", "admin"},
 	{model.PermissionAdminDisputeList, "Xem danh sách tranh chấp", "admin"},
@@ -59,7 +59,7 @@ var roleSeeds = []roleSeed{
 	{
 		Code:        model.RoleCustomer,
 		Name:        "Khách hàng",
-		Description: "Tìm kiếm BĐS, đặt cọc giữ lịch xem nhà, đánh giá môi giới",
+		Description: "Tìm kiếm BĐS, đặt lịch giữ lịch xem nhà, đánh giá môi giới",
 		Permissions: []string{
 			model.PermissionDepositCreate,
 			model.PermissionDepositViewOwn,

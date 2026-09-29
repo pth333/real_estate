@@ -17,8 +17,6 @@
       </n-button>
     </n-form>
 
-    <n-alert v-if="apiError" type="error" :title="apiError" closable class="mt-4" />
-
     <template #footer>
       <p class="text-sm text-gray-500">
         Chưa có tài khoản?
@@ -99,7 +97,6 @@ async function handleLogin() {
     // Quay lại đúng trang người dùng định vào trước khi bị chặn đăng nhập
     await navigateTo(resolveRedirect())
   } catch (err: unknown) {
-    apiError.value = err instanceof Error ? err.message : 'Đăng nhập thất bại'
   } finally {
     loading.value = false
   }

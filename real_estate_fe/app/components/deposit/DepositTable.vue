@@ -1,6 +1,6 @@
 <template>
   <n-data-table :columns="columns" :data="items" :loading="loading" :bordered="false" :single-line="false"
-    flex-height class="flex-1 min-h-0" :scroll-x="980" :row-props="rowProps" />
+    flex-height class="flex-1 min-h-0" :scroll-x="1120" :row-props="rowProps" />
 </template>
 
 <script setup lang="ts">
@@ -72,14 +72,18 @@ const columns = computed<DataTableColumns<Deposit>>(() => [
     render: (row) => h('span', { class: 'text-sm text-gray-600 whitespace-nowrap' }, formatSlot(row)),
   },
   {
-    title: 'Tiền cọc',
-    key: 'amount',
+    title: 'Phí môi giới',
+    key: 'broker_fee',
     width: 130,
     render: (row) =>
-      h('div', { class: 'flex flex-col gap-0.5' }, [
-        h('span', { class: 'text-sm font-semibold text-gray-800 whitespace-nowrap' }, formatVnd(row.amount)),
-        h('span', { class: 'text-xs text-gray-400 whitespace-nowrap' }, `Phí: ${formatVnd(row.broker_fee)}`),
-      ]),
+      h('span', { class: 'text-sm font-semibold text-gray-800 whitespace-nowrap' }, formatVnd(row.broker_fee)),
+  },
+  {
+    // Cột chừa sẵn cho tiền đặt cọc — nghiệp vụ cọc làm sau nên hiện chưa có số
+    title: 'Đặt cọc',
+    key: 'deposit_amount',
+    width: 120,
+    render: () => h('span', { class: 'text-sm text-gray-400' }, '—'),
   },
   {
     title: 'Trạng thái',

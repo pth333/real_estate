@@ -23,7 +23,7 @@
       <n-alert v-if="pendingApprovalCount > 0" type="warning" :bordered="false" class="cursor-pointer"
         @click="filterPendingApproval">
         Có <strong>{{ pendingApprovalCount }}</strong> đơn đang chờ duyệt tài liệu mua nhà. Duyệt xong hệ thống mới
-        hoàn tiền cọc cho khách và trừ 1 căn vào tồn kho của dự án.
+        hoàn phí môi giới cho khách và trừ 1 căn vào tồn kho của dự án.
         <template #icon>
           <n-icon>
             <IconShieldCheck />
@@ -34,7 +34,7 @@
       <!-- Trạng thái đơn -->
       <div class="bg-white rounded-xl border border-gray-200 p-5 flex flex-col gap-4">
         <div class="flex items-center justify-between">
-          <h2 class="text-base font-semibold text-gray-800">Đơn đặt cọc theo trạng thái</h2>
+          <h2 class="text-base font-semibold text-gray-800">Đơn đặt lịch theo trạng thái</h2>
           <n-button text type="primary" @click="openDisputes">Xem tranh chấp đang mở ({{ summary?.open_disputes ?? 0 }})</n-button>
         </div>
         <n-spin :show="loading">
@@ -51,7 +51,7 @@
       <!-- Danh sách đơn gần đây -->
       <div class="bg-white rounded-xl border border-gray-200 p-5 flex flex-col gap-4 h-[520px] min-h-0">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <h2 class="text-base font-semibold text-gray-800">Tất cả đơn đặt cọc</h2>
+          <h2 class="text-base font-semibold text-gray-800">Tất cả đơn đặt lịch</h2>
           <div class="w-full md:w-64">
             <n-select v-model:value="statusFilter" :options="statusOptions" placeholder="Tất cả trạng thái" clearable />
           </div>
@@ -131,9 +131,9 @@ function filterPendingApproval() {
 
 const cards = computed(() => [
   {
-    label: 'Tiền đang giữ (escrow)',
+    label: 'Phí đang giữ (escrow)',
     value: formatVnd(summary.value?.holding_amount ?? 0),
-    hint: 'Tiền cọc chưa release cho bên nào',
+    hint: 'Phí môi giới chưa release cho bên nào',
     icon: IconWallet,
     iconClass: 'text-amber-500',
     valueClass: 'text-amber-600',
@@ -149,7 +149,7 @@ const cards = computed(() => [
   {
     label: 'Đã chuyển cho môi giới',
     value: formatVnd(summary.value?.transferred_amount ?? 0),
-    hint: 'Cọc + phí môi giới đã release',
+    hint: 'Phí môi giới đã release cho môi giới',
     icon: IconShieldCheck,
     iconClass: 'text-blue-500',
     valueClass: 'text-blue-600',

@@ -25,7 +25,7 @@ redis:
 recommendation:
   addr: recommendation:50051
 
-# ── Luồng đặt cọc escrow ─────────────────────────────
+# ── Đặt lịch xem nhà + cổng thanh toán phí môi giới ─────
 payment:
   return_url: http://soihieuland.io.vn/payment/result
   ipn_url: http://136.85.81.118/api/2026/deposits/payment/ipn
@@ -37,13 +37,15 @@ payment:
     expire_minutes: 15
 
 deposit:
-  # Mức cọc/phí dự phòng khi BĐS chưa có giá (bình thường tra bảng deposit_policies)
-  default_amount: 5000000
+  # Phí môi giới dự phòng khi BĐS chưa có giá (bình thường tra bảng deposit_policies)
   default_broker_fee: 200000
   broker_confirm_hours: 24
   otp_valid_minutes: 10
   checkin_grace_hours: 2
   report_window_hours: 24
+  # Số ngày GIỮ PHÍ sau buổi xem: khách đặt cọc mua BĐS trong khoảng này thì hoàn 100% phí,
+  # quá hạn mà không đặt cọc thì phí thuộc về môi giới
+  refund_window_days: 4
   dispute_evidence_hours: 48
   payment_timeout_minutes: 30
   cron_interval_seconds: 60

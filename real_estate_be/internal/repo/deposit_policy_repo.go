@@ -7,7 +7,7 @@ import (
 )
 
 type IDepositPolicyRepository interface {
-	// GetByPrice tra chính sách cọc theo giá BĐS (khoảng giá nửa khoảng [min, max))
+	// GetByPrice tra chính sách phí môi giới theo giá BĐS (khoảng giá nửa khoảng [min, max))
 	GetByPrice(priceVND float64) (*model.DepositPolicy, error)
 	ListActive() ([]model.DepositPolicy, error)
 }

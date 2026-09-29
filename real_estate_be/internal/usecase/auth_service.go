@@ -66,11 +66,11 @@ func (h *AuthService) Register(req dto.CreateUserRequest) error {
 func (h *AuthService) Login(req dto.LoginRequest) (string, string, *dto.UserResponse, error) {
 	user, err := h.repo.FindByEmail(req.Email)
 	if err != nil {
-		return "", "", nil, err
+		return "", "", nil, errors.New("Tài khoản không chính xác!")
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
-		return "", "", nil, err
+		return "", "", nil, errors.New("Mật khẩu không chính xác!")
 	}
 
 	accessToken, err := jwt.GenerateAccessToken(user.Email, user.ID)
@@ -108,9 +108,7 @@ func (h *AuthService) buildUserResponse(user *model.User) (*dto.UserResponse, er
 	}, nil
 }
 
-// GetUserCurrentInfo đọc lại user + quyền từ DB theo user_id trong token.
 // Dùng cho GET /auth/user-current-info: FE gọi lúc khởi động để luôn có role/permission
-// mới nhất (sau khi admin đổi role không cần đăng nhập lại mới thấy đúng giao diện).
 func (h *AuthService) GetUserCurrentInfo(userID uint64) (*dto.UserResponse, error) {
 	user, err := h.repo.FindByID(userID)
 	if err != nil {

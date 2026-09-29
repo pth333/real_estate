@@ -25,7 +25,7 @@ func Run() {
 	ctx := context.Background()
 	StartKafkaConsumers(ctx, global.DB)
 
-	// Start cron jobs của luồng đặt cọc (auto reject 24h, nhắc lịch, quá hạn báo cáo)
+	// Start cron jobs của luồng đặt lịch (auto reject 24h, nhắc lịch, quá hạn báo cáo)
 	startDepositScheduler(ctx)
 
 	// Init routes
@@ -33,7 +33,7 @@ func Run() {
 	app.Listen(":8000")
 }
 
-// startDepositScheduler khởi động scheduler đặt cọc trong 1 goroutine riêng.
+// startDepositScheduler khởi động scheduler đặt lịch trong 1 goroutine riêng.
 func startDepositScheduler(ctx context.Context) {
 	depositService, err := wire.InitializeDepositService()
 	if err != nil {

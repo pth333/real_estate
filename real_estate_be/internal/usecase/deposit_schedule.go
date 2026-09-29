@@ -56,9 +56,9 @@ func (s *depositService) openReportWindows(now time.Time) {
 
 		s.notifyBoth(deposit, "report_window_opened",
 			fmt.Sprintf("Xác nhận kết quả buổi xem nhà #%d", deposit.ID),
-			fmt.Sprintf("Hệ thống chưa ghi nhận check-in cho buổi xem nhà #%d.\nVui lòng báo cáo kết quả trong %d giờ tới. Quá hạn, tiền cọc sẽ được chuyển cho admin xác minh.",
+			fmt.Sprintf("Hệ thống chưa ghi nhận check-in cho buổi xem nhà #%d.\nVui lòng báo cáo kết quả trong %d giờ tới. Quá hạn, phí môi giới sẽ được chuyển cho admin xác minh.",
 				deposit.ID, s.cfg.ReportWindowHours),
-			fmt.Sprintf("Hệ thống chưa ghi nhận check-in cho buổi xem nhà #%d.\nVui lòng báo cáo kết quả trong %d giờ tới. Quá hạn, tiền cọc sẽ được chuyển cho admin xác minh.",
+			fmt.Sprintf("Hệ thống chưa ghi nhận check-in cho buổi xem nhà #%d.\nVui lòng báo cáo kết quả trong %d giờ tới. Quá hạn, phí môi giới sẽ được chuyển cho admin xác minh.",
 				deposit.ID, s.cfg.ReportWindowHours),
 		)
 	}
@@ -118,12 +118,13 @@ func (s *depositService) sendViewingReminders(now time.Time) {
 
 	for i := range items {
 		deposit := &items[i]
+		contactName, contactPhone := contactOf(deposit)
 		s.notifyBoth(deposit, "viewing_reminder",
 			fmt.Sprintf("Nhắc lịch xem nhà ngày mai - đơn #%d", deposit.ID),
 			fmt.Sprintf("Bạn có lịch xem nhà vào ngày mai.\nĐịa chỉ: %s\nThời gian: %s - %s\nMôi giới: %s - %s",
 				estateAddress(deposit), deposit.ViewingStart, deposit.ViewingEnd, deposit.Broker.Name, deposit.Broker.Phone),
 			fmt.Sprintf("Bạn có lịch dẫn khách xem nhà vào ngày mai.\nĐịa chỉ: %s\nThời gian: %s - %s\nKhách: %s - %s",
-				estateAddress(deposit), deposit.ViewingStart, deposit.ViewingEnd, deposit.Customer.Name, deposit.Customer.Phone),
+				estateAddress(deposit), deposit.ViewingStart, deposit.ViewingEnd, contactName, contactPhone),
 		)
 
 		if err := s.depositRepo.UpdateFields(deposit.ID, map[string]interface{}{
@@ -134,49 +135,88 @@ func (s *depositService) sendViewingReminders(now time.Time) {
 	}
 }
 
-// escalateOverdueReports — quá hạn báo cáo mà chưa có kết quả → chuyển admin (tiền vẫn freeze).
+// escalateOverdueReports — quá hạn báo cáo mà chưa có kết quả → xử lý theo log check-in.
 func (s *depositService) escalateOverdueReports(now time.Time) {
-	// Chưa check-in được và đã hết cửa sổ 24h báo cáo
+	// Chưa check-in được và đã hết cửa sổ 24h báo cáo.
+	// Chỉ còn phí môi giới nên không thể treo tiền chờ admin xử tay: áp suy đoán theo
+	// LOG CHECK-IN (vị trí/OTP) — bên có căn cứ thắng khi bên kia im lặng.
+	// Admin chỉ nhận ca 2 bên đều có log mà mâu thuẫn.
 	notCheckedIn, err := s.depositRepo.ListReportDeadlinePassed(now)
 	if err != nil {
 		log.Printf("⚠️ [DepositCron] không lấy được đơn quá hạn báo cáo: %v", err)
 	}
 	for i := range notCheckedIn {
 		deposit := &notCheckedIn[i]
-		reason := "Hết thời hạn báo cáo kết quả mà hai bên chưa thống nhất được"
-		if deposit.BrokerReport != "" || deposit.CustomerReport != "" {
-			reason = "Hết thời hạn báo cáo, chỉ một bên gửi báo cáo kết quả"
-		}
-		if err := s.openSystemDispute(deposit, reason); err != nil {
-			log.Printf("⚠️ [DepositCron] chuyển đơn %d sang tranh chấp thất bại: %v", deposit.ID, err)
+		if err := s.settleOverdueByCheckinLog(deposit); err != nil {
+			log.Printf("⚠️ [DepositCron] xử lý đơn quá hạn %d thất bại: %v", deposit.ID, err)
 		}
 	}
 
-	// Đã check-in nhưng quá hạn báo cáo kết quả mua/không mua.
-	// Nguyên tắc "ai claim quyền lợi thì phải chứng minh": bên im lặng coi như
-	// không chứng minh được, nên áp theo báo cáo của bên đã gửi (báo cáo đã kèm
-	// bằng chứng, riêng khách khai BOUGHT thì đã kèm tài liệu mua bán).
-	// Chỉ khi cả 2 cùng im lặng mới chuyển admin.
+	// Đã check-in xong và hết thời gian giữ phí (4 ngày sau buổi xem).
+	// Phần mua/không mua đã bỏ: phí thuộc môi giới, TRỪ KHI khách đặt cọc mua BĐS trong thời gian giữ.
 	checkedIn, err := s.depositRepo.ListCheckedInBefore(now)
 	if err != nil {
-		log.Printf("⚠️ [DepositCron] không lấy được đơn check-in quá hạn báo cáo: %v", err)
+		log.Printf("⚠️ [DepositCron] không lấy được đơn hết thời gian giữ phí: %v", err)
 	}
 	for i := range checkedIn {
 		deposit := &checkedIn[i]
 
-		switch {
-		case deposit.BrokerReport != "" && deposit.CustomerReport == "":
-			s.settleByReport(deposit, deposit.BrokerReport,
-				"Quá hạn báo cáo, khách không phản hồi nên áp theo báo cáo của môi giới")
-		case deposit.BrokerReport == "" && deposit.CustomerReport != "":
-			s.settleByReport(deposit, deposit.CustomerReport,
-				"Quá hạn báo cáo, môi giới không phản hồi nên áp theo báo cáo của khách")
-		default:
-			if err := s.openSystemDispute(deposit,
-				"Đã check-in nhưng quá hạn mà hai bên chưa báo cáo kết quả mua/không mua"); err != nil {
-				log.Printf("⚠️ [DepositCron] chuyển đơn %d sang tranh chấp thất bại: %v", deposit.ID, err)
-			}
+		// Đơn cũ còn báo cáo "đã mua nhà": giữ nguyên luồng duyệt tài liệu mua như trước
+		if deposit.BrokerReport == model.ReportBought || deposit.CustomerReport == model.ReportBought {
+			s.settleByReport(deposit, model.ReportBought, "Đơn cũ: một bên khai khách đã mua nhà")
+			continue
 		}
+
+		if err := s.releaseFeeAfterHold(deposit); err != nil {
+			log.Printf("⚠️ [DepositCron] tất toán đơn %d sau thời gian giữ phí thất bại: %v", deposit.ID, err)
+		}
+	}
+}
+
+// releaseFeeAfterHold — hết thời gian giữ phí (4 ngày sau buổi xem):
+// - Khách ĐÃ đặt cọc mua bất động sản → hoàn 100% phí cho khách.
+// - Khách KHÔNG đặt cọc mua → phí thuộc về môi giới.
+func (s *depositService) releaseFeeAfterHold(deposit *model.Deposit) error {
+	if deposit.PurchaseDepositAt != nil {
+		return s.settleWithNotify(deposit, model.DepositStatusRefunded,
+			"Khách đã đặt cọc mua bất động sản trong thời gian giữ phí → hoàn 100% phí")
+	}
+	return s.settleWithNotify(deposit, model.DepositStatusCompleted,
+		"Hết thời gian giữ phí mà khách không đặt cọc mua → phí thuộc về môi giới")
+}
+
+// settleOverdueByCheckinLog — hết hạn báo cáo mà chưa check-in: quyết định theo LOG check-in.
+//
+// Nguyên tắc: bên có căn cứ (vị trí/OTP) thắng khi bên kia không có gì; chỉ khi cả 2 đều
+// có log mà vẫn mâu thuẫn mới cần admin. Không ai có log ⇒ hoàn 100% cho khách, vì môi giới
+// là bên nắm công cụ sinh OTP để chứng minh mình đã tới mà đã không dùng.
+func (s *depositService) settleOverdueByCheckinLog(deposit *model.Deposit) error {
+	brokerPresent := deposit.BrokerCheckin != nil && *deposit.BrokerCheckin
+	customerPresent := deposit.CustomerCheckin != nil && *deposit.CustomerCheckin
+
+	switch {
+	case brokerPresent && !customerPresent:
+		note := "Quá hạn: chỉ môi giới có log check-in → môi giới nhận phí"
+		if deposit.CustomerReport == model.ReportAttended {
+			note = "Quá hạn: khách khai có mặt nhưng không có log vị trí/OTP → môi giới nhận phí"
+		}
+		return s.settleWithNotify(deposit, model.DepositStatusNoShowCustomer, note)
+
+	case !brokerPresent && customerPresent:
+		note := "Quá hạn: chỉ khách có log check-in → hoàn 100% phí cho khách"
+		if deposit.BrokerReport == model.ReportAttended {
+			note = "Quá hạn: môi giới khai có mặt nhưng không check-in tại chỗ → hoàn 100% phí cho khách"
+		}
+		return s.settleWithNotify(deposit, model.DepositStatusNoShowBroker, note)
+
+	case brokerPresent && customerPresent:
+		// Cả 2 đều có log nhưng vẫn chưa tất toán được (log/vị trí lệch nhau) → admin xác minh
+		return s.openSystemDispute(deposit,
+			"Hai bên đều có log check-in nhưng chưa thống nhất được kết quả buổi xem")
+
+	default:
+		return s.settleWithNotify(deposit, model.DepositStatusRefunded,
+			"Không bên nào xác nhận buổi xem → hoàn 100% phí cho khách")
 	}
 }
 
@@ -208,7 +248,7 @@ func (s *depositService) GetEscrowSummary() (*dto.EscrowSummaryResponse, error) 
 	refunded := sums[model.TransactionRefundFull] + sums[model.TransactionRefundPartial]
 	transferred := sums[model.TransactionTransferToBroker]
 	penalty := sums[model.TransactionPenaltyBroker]
-	// Tiền còn đang giữ = đã nạp - đã hoàn - đã chuyển cho môi giới
+	// Phí còn đang giữ = đã thu - đã hoàn - đã chuyển cho môi giới
 	holding := sums[model.TransactionDeposit] - refunded - transferred
 
 	counts, err := s.depositRepo.CountByStatus()

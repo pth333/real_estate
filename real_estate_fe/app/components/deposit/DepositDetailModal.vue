@@ -4,7 +4,7 @@
       <!-- Header -->
       <div class="flex items-center justify-between gap-3 px-6 py-4 border-b border-gray-100 flex-shrink-0">
         <div class="flex items-center gap-3">
-          <span class="font-semibold text-gray-800">Đơn đặt cọc #{{ deposit?.id ?? depositId }}</span>
+          <span class="font-semibold text-gray-800">Đơn đặt lịch #{{ deposit?.id ?? depositId }}</span>
           <DepositStatusTag v-if="deposit" :status="deposit.status" size="medium" />
         </div>
         <n-button quaternary circle @click="close">
@@ -20,7 +20,7 @@
       <div class="px-6 py-5 overflow-y-auto flex-1">
         <n-spin :show="loading">
           <DepositSummaryCard v-if="deposit" :deposit="deposit" />
-          <n-empty v-else-if="!loading" description="Không tìm thấy đơn đặt cọc" />
+          <n-empty v-else-if="!loading" description="Không tìm thấy đơn đặt lịch" />
         </n-spin>
       </div>
 

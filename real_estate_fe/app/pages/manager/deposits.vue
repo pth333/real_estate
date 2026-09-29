@@ -11,7 +11,7 @@
     <!-- Nhắc việc cần làm -->
     <n-alert v-if="pendingCount > 0" type="warning" :bordered="false" class="flex-shrink-0">
       Bạn có <strong>{{ pendingCount }}</strong> đơn chờ xác nhận. Quá 24 giờ không phản hồi, hệ thống sẽ tự động
-      từ chối và hoàn 100% tiền cọc cho khách.
+      từ chối và hoàn 100% phí môi giới cho khách.
     </n-alert>
 
     <!-- Bảng -->

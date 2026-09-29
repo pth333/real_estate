@@ -38,7 +38,7 @@ type RealEstateRepository interface {
 	GetFilterRanges() ([]model.FilterRange, error)
 	// Lấy 1 tin đăng theo ID (trang chi tiết -rs), kèm gom ảnh.
 	GetByID(id uint64) (*dto.RealEstateResponse, error)
-	// Lấy bản ghi model thô (cần user_id để xác định môi giới phụ trách khi đặt cọc).
+	// Lấy bản ghi model thô (cần user_id để xác định môi giới phụ trách khi đặt lịch).
 	GetModelByID(id uint64) (*model.RealEstate, error)
 
 	GetCategory() ([]model.Category, error)
@@ -438,7 +438,7 @@ func (r *realEstateRepo) GetByID(id uint64) (*dto.RealEstateResponse, error) {
 }
 
 // GetModelByID lấy bản ghi RealEstate thô theo ID (cần user_id của môi giới
-// đăng tin để gắn vào deposit khi khách đặt cọc).
+// đăng tin để gắn vào deposit khi khách đặt lịch).
 func (r *realEstateRepo) GetModelByID(id uint64) (*model.RealEstate, error) {
 	var item model.RealEstate
 	if err := r.db.First(&item, id).Error; err != nil {

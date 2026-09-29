@@ -2,18 +2,18 @@ package model
 
 import "time"
 
-// ── Trạng thái đặt cọc ──────────────────────────────────────────────
+// ── Trạng thái đặt lịch ──────────────────────────────────────────────
 // AWAITING_PAYMENT : vừa tạo, chưa thanh toán (giữ chỗ khung giờ)
-// PENDING          : đã thanh toán, tiền nằm ở escrow, chờ môi giới xác nhận
-// BROKER_REJECTED  : môi giới từ chối / quá 24h không phản hồi → hoàn 100%
+// PENDING          : đã thanh toán PHÍ MÔI GIỚI, tiền nằm ở escrow, chờ môi giới xác nhận
+// BROKER_REJECTED  : môi giới từ chối / quá 24h không phản hồi → hoàn 100% phí
 // BROKER_CONFIRMED : môi giới đã xác nhận lịch xem nhà
 // CHECKED_IN       : 2 bên đã check-in bằng OTP tại chỗ
 // PENDING_PURCHASE_APPROVAL : 2 bên khai khách ĐÃ MUA, chờ admin duyệt tài liệu mua bán
-//                     (tiền vẫn freeze, CHƯA trừ tồn kho dự án)
-// VISITED_BOUGHT   : admin đã duyệt tài liệu → khách mua nhà → hoàn 100% + trừ tồn kho dự án
-// VISITED_NOT_BUY  : khách đến nhưng không mua → hoàn (cọc - phí môi giới)
-// NO_SHOW_CUSTOMER : khách không đến → mất cọc
-// NO_SHOW_BROKER   : môi giới không đến → hoàn 100% + phạt môi giới
+//                     (phí vẫn freeze, CHƯA trừ tồn kho dự án)
+// VISITED_BOUGHT   : admin đã duyệt tài liệu → khách mua nhà → hoàn 100% phí + trừ tồn kho dự án
+// VISITED_NOT_BUY  : khách đến nhưng không mua → môi giới nhận phí, khách không được hoàn
+// NO_SHOW_CUSTOMER : khách không đến → môi giới nhận toàn bộ phí
+// NO_SHOW_BROKER   : môi giới không đến → hoàn 100% phí + phạt môi giới
 // DISPUTE          : tranh chấp, tiền bị freeze chờ admin xử lý
 // REFUNDED         : đã hoàn tiền xong (kết thúc ở nhánh hoàn tiền)
 // COMPLETED        : đã tất toán xong (kết thúc ở nhánh chuyển tiền môi giới)
@@ -72,19 +72,26 @@ var PurchaseProofTypes = []string{
 type Deposit struct {
 	ID uint64 `gorm:"primaryKey" json:"id"`
 
-	// FK tới bảng users (khách đặt cọc / môi giới phụ trách)
+	// FK tới bảng users (khách đặt lịch / môi giới phụ trách)
 	CustomerID   uint64 `gorm:"column:customer_id;index" json:"customer_id"`
 	RealEstateID uint64 `gorm:"column:real_estate_id;index" json:"real_estate_id"`
 	BrokerID     uint64 `gorm:"column:broker_id;index" json:"broker_id"`
-	// Dự án của BĐS tại thời điểm đặt cọc — chốt sẵn để biết trừ tồn kho dự án nào
+	// Dự án của BĐS tại thời điểm đặt lịch — chốt sẵn để biết trừ tồn kho dự án nào
 	// khi admin duyệt tài liệu mua (BĐS có thể được đổi dự án sau này).
 	ProjectID *uint64 `gorm:"column:project_id;index" json:"project_id"`
 
 	// ── Tiền ──
+	// Amount = số tiền khách đã trả cho buổi xem, chính là PHÍ MÔI GIỚI (không còn phí môi giới).
+	// Giữ cùng giá trị với BrokerFee để logic tất toán escrow hiện có dùng lại được.
 	Amount        float64  `gorm:"column:amount;type:decimal(15,2)" json:"amount"`
 	BrokerFee     float64  `gorm:"column:broker_fee;type:decimal(15,2)" json:"broker_fee"`
 	RefundAmount  *float64 `gorm:"column:refund_amount;type:decimal(15,2)" json:"refund_amount"`
 	PenaltyAmount *float64 `gorm:"column:penalty_amount;type:decimal(15,2)" json:"penalty_amount"`
+
+	// ── Liên hệ của buổi xem (khách nhập lúc đặt lịch) ──
+	// Lưu snapshot để môi giới gọi đúng số khách để lại, không phụ thuộc hồ sơ user sau này.
+	ContactName  string `gorm:"column:contact_name;size:100" json:"contact_name"`
+	ContactPhone string `gorm:"column:contact_phone;size:20" json:"contact_phone"`
 
 	// ── Lịch xem nhà (giờ lưu dạng "HH:MM" để so sánh trùng khung giờ) ──
 	ViewingDate  time.Time `gorm:"column:viewing_date;type:date" json:"viewing_date"`
@@ -105,6 +112,27 @@ type Deposit struct {
 	// ── Xác nhận 2 bên ──
 	BrokerCheckin   *bool `gorm:"column:broker_checkin" json:"broker_checkin"`
 	CustomerCheckin *bool `gorm:"column:customer_checkin" json:"customer_checkin"`
+
+	// ── Bằng chứng vị trí khi check-in ──
+	// Toạ độ đã làm tròn ~100m trước khi lưu (hạn chế lưu vị trí chính xác của người dùng).
+	// Vị trí chỉ là tín hiệu bổ trợ: 2 bên gần nhau (≤ checkinMatchRadiusMeters) là bằng chứng
+	// mạnh nhất rằng buổi xem đã diễn ra; chỉ 1 bên có vị trí thì đối chiếu với toạ độ BĐS.
+	BrokerCheckinLat    *float64   `gorm:"column:broker_checkin_lat" json:"broker_checkin_lat"`
+	BrokerCheckinLng    *float64   `gorm:"column:broker_checkin_lng" json:"broker_checkin_lng"`
+	BrokerCheckinAcc    *float64   `gorm:"column:broker_checkin_accuracy" json:"broker_checkin_accuracy"`
+	BrokerCheckinAt     *time.Time `gorm:"column:broker_checkin_at" json:"broker_checkin_at"`
+	CustomerCheckinLat  *float64   `gorm:"column:customer_checkin_lat" json:"customer_checkin_lat"`
+	CustomerCheckinLng  *float64   `gorm:"column:customer_checkin_lng" json:"customer_checkin_lng"`
+	CustomerCheckinAcc  *float64   `gorm:"column:customer_checkin_accuracy" json:"customer_checkin_accuracy"`
+	CustomerCheckinAt   *time.Time `gorm:"column:customer_checkin_at" json:"customer_checkin_at"`
+	// Khoảng cách giữa 2 bên lúc check-in (mét) — NULL khi thiếu vị trí 1 bên
+	CheckinDistanceMeters *float64 `gorm:"column:checkin_distance_meters" json:"checkin_distance_meters"`
+	// true khi 2 bên check-in gần nhau → coi như đã gặp mặt, không cần OTP nữa
+	CheckinMatched bool `gorm:"column:checkin_matched;default:0" json:"checkin_matched"`
+
+	// ── Dấu hiệu khách đã đặt cọc MUA bất động sản (luồng đặt cọc mua làm sau) ──
+	// Khác NULL + nằm trong cửa sổ giữ phí ⇒ hoàn 100% phí môi giới cho khách.
+	PurchaseDepositAt *time.Time `gorm:"column:purchase_deposit_at" json:"purchase_deposit_at"`
 
 	// ── Báo cáo kết quả / điểm danh (xem hằng số Report*) ──
 	BrokerReport      string     `gorm:"column:broker_report;size:20" json:"broker_report"`
@@ -153,10 +181,10 @@ func (d *Deposit) IsFinished() bool {
 
 // Transaction — lịch sử mọi dòng tiền của một deposit (escrow ledger).
 const (
-	TransactionDeposit          = "DEPOSIT"          // khách nạp tiền cọc vào escrow
+	TransactionDeposit          = "DEPOSIT"          // khách nạp phí môi giới vào escrow
 	TransactionRefundFull       = "REFUND_FULL"      // hoàn 100% cho khách
 	TransactionRefundPartial    = "REFUND_PARTIAL"   // hoàn một phần cho khách
-	TransactionTransferToBroker = "TRANSFER_TO_BROKER" // chuyển phí/cọc cho môi giới
+	TransactionTransferToBroker = "TRANSFER_TO_BROKER" // chuyển phí môi giới cho môi giới
 	TransactionPenaltyBroker    = "PENALTY_BROKER"   // phạt trừ vào bảo lãnh môi giới
 )
 
@@ -206,19 +234,19 @@ type Dispute struct {
 
 func (Dispute) TableName() string { return "disputes" }
 
-// DepositPolicy — chính sách mức cọc đề xuất theo khoảng giá BĐS.
+// DepositPolicy — chính sách phí môi giới theo khoảng giá BĐS.
 // price_min/price_max dạng nửa khoảng [min, max): NULL = không giới hạn phía đó.
-// Số tiền cọc KHÔNG lấy từ khách nhập mà luôn tra bảng này theo giá BĐS.
+// Số tiền KHÔNG lấy từ khách nhập mà luôn tra bảng này theo giá BĐS.
+// Cột deposit_amount cũ đã bỏ: khách chỉ trả phí môi giới, không còn tiền cọc.
 type DepositPolicy struct {
-	ID            uint64   `gorm:"primaryKey" json:"id"`
-	Label         string   `gorm:"column:label;size:100" json:"label"`
-	PriceMin      *float64 `gorm:"column:price_min;type:decimal(15,2)" json:"price_min"`
-	PriceMax      *float64 `gorm:"column:price_max;type:decimal(15,2)" json:"price_max"`
-	DepositAmount float64  `gorm:"column:deposit_amount;type:decimal(15,2)" json:"deposit_amount"`
-	BrokerFee     float64  `gorm:"column:broker_fee;type:decimal(15,2)" json:"broker_fee"`
-	IsActive      int      `gorm:"column:is_active;default:1" json:"is_active"`
-	CreatedAt     time.Time `gorm:"column:created_at" json:"created_at"`
-	UpdatedAt     time.Time `gorm:"column:updated_at" json:"updated_at"`
+	ID        uint64   `gorm:"primaryKey" json:"id"`
+	Label     string   `gorm:"column:label;size:100" json:"label"`
+	PriceMin  *float64 `gorm:"column:price_min;type:decimal(15,2)" json:"price_min"`
+	PriceMax  *float64 `gorm:"column:price_max;type:decimal(15,2)" json:"price_max"`
+	BrokerFee float64  `gorm:"column:broker_fee;type:decimal(15,2)" json:"broker_fee"`
+	IsActive  int      `gorm:"column:is_active;default:1" json:"is_active"`
+	CreatedAt time.Time `gorm:"column:created_at" json:"created_at"`
+	UpdatedAt time.Time `gorm:"column:updated_at" json:"updated_at"`
 }
 
 func (DepositPolicy) TableName() string { return "deposit_policies" }

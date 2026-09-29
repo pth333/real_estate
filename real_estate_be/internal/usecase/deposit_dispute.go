@@ -22,10 +22,10 @@ func (s *depositService) OpenDispute(depositID, userID uint64, req dto.CreateDis
 		return nil, err
 	}
 	if deposit.Status == model.DepositStatusDispute {
-		return nil, errors.New("đơn đặt cọc này đang trong quá trình xử lý tranh chấp")
+		return nil, errors.New("đơn đặt lịch này đang trong quá trình xử lý tranh chấp")
 	}
 	if deposit.IsFinished() || deposit.Status == model.DepositStatusAwaitingPayment {
-		return nil, errors.New("đơn đặt cọc đã kết thúc, không thể mở tranh chấp")
+		return nil, errors.New("đơn đặt lịch đã kết thúc, không thể mở tranh chấp")
 	}
 	if strings.TrimSpace(req.Reason) == "" {
 		return nil, errors.New("vui lòng nhập lý do tranh chấp")
@@ -57,10 +57,10 @@ func (s *depositService) OpenDispute(depositID, userID uint64, req dto.CreateDis
 	deposit.Status = model.DepositStatusDispute
 
 	s.notifyBoth(deposit, "dispute_opened",
-		fmt.Sprintf("Đơn đặt cọc #%d đã bị tạm giữ để xử lý tranh chấp", deposit.ID),
-		fmt.Sprintf("Tranh chấp đã được mở cho đơn #%d.\nLý do: %s\nTiền cọc đang bị tạm giữ. Vui lòng upload bằng chứng trong %d giờ tới.",
+		fmt.Sprintf("Đơn đặt lịch #%d đã bị tạm giữ để xử lý tranh chấp", deposit.ID),
+		fmt.Sprintf("Tranh chấp đã được mở cho đơn #%d.\nLý do: %s\nPhí môi giới đang bị tạm giữ. Vui lòng upload bằng chứng trong %d giờ tới.",
 			deposit.ID, req.Reason, s.cfg.DisputeEvidenceHours),
-		fmt.Sprintf("Tranh chấp đã được mở cho đơn #%d.\nLý do: %s\nTiền cọc đang bị tạm giữ. Vui lòng upload bằng chứng trong %d giờ tới.",
+		fmt.Sprintf("Tranh chấp đã được mở cho đơn #%d.\nLý do: %s\nPhí môi giới đang bị tạm giữ. Vui lòng upload bằng chứng trong %d giờ tới.",
 			deposit.ID, req.Reason, s.cfg.DisputeEvidenceHours),
 	)
 
@@ -86,7 +86,7 @@ func (s *depositService) AddDisputeEvidence(disputeID, userID uint64, req dto.Ad
 		return nil, errors.New("tranh chấp đã được admin xử lý xong")
 	}
 	if dispute.Deposit == nil || (dispute.Deposit.CustomerID != userID && dispute.Deposit.BrokerID != userID) {
-		return nil, errors.New("bạn không thuộc đơn đặt cọc của tranh chấp này")
+		return nil, errors.New("bạn không thuộc đơn đặt lịch của tranh chấp này")
 	}
 	if dispute.EvidenceDeadline != nil && time.Now().After(*dispute.EvidenceDeadline) {
 		return nil, errors.New("đã quá hạn upload bằng chứng")
@@ -158,7 +158,7 @@ func (s *depositService) ResolveDispute(disputeID, adminID uint64, req dto.Resol
 
 	deposit, err := s.depositRepo.GetByID(dispute.DepositID)
 	if err != nil {
-		return nil, errors.New("không tìm thấy đơn đặt cọc của tranh chấp")
+		return nil, errors.New("không tìm thấy đơn đặt lịch của tranh chấp")
 	}
 
 	plan, err := s.buildDisputePlan(req, deposit)
@@ -206,14 +206,14 @@ func (s *depositService) buildDisputePlan(req dto.ResolveDisputeRequest, deposit
 		return settlementPlan{
 			Status: model.DepositStatusRefunded,
 			Refund: deposit.Amount,
-			Note:   "Admin quyết định hoàn toàn bộ tiền cọc cho khách",
+			Note:   "Admin quyết định hoàn toàn bộ phí môi giới cho khách",
 		}, nil
 
 	case model.DisputeResolutionTransferBroker:
 		return settlementPlan{
 			Status:   model.DepositStatusCompleted,
 			Transfer: deposit.Amount,
-			Note:     "Admin quyết định chuyển toàn bộ tiền cọc cho môi giới",
+			Note:     "Admin quyết định chuyển toàn bộ phí môi giới cho môi giới",
 		}, nil
 
 	case model.DisputeResolutionSplit:
@@ -256,10 +256,10 @@ func (s *depositService) openSystemDispute(deposit *model.Deposit, reason string
 	deposit.Status = model.DepositStatusDispute
 
 	s.notifyBoth(deposit, "dispute_opened",
-		fmt.Sprintf("Đơn đặt cọc #%d đang được tạm giữ để xác minh", deposit.ID),
-		fmt.Sprintf("Hệ thống ghi nhận mâu thuẫn ở đơn #%d.\nLý do: %s\nTiền cọc bị tạm giữ cho tới khi admin xử lý. Vui lòng upload bằng chứng trong %d giờ.",
+		fmt.Sprintf("Đơn đặt lịch #%d đang được tạm giữ để xác minh", deposit.ID),
+		fmt.Sprintf("Hệ thống ghi nhận mâu thuẫn ở đơn #%d.\nLý do: %s\nPhí môi giới bị tạm giữ cho tới khi admin xử lý. Vui lòng upload bằng chứng trong %d giờ.",
 			deposit.ID, reason, s.cfg.DisputeEvidenceHours),
-		fmt.Sprintf("Hệ thống ghi nhận mâu thuẫn ở đơn #%d.\nLý do: %s\nTiền cọc bị tạm giữ cho tới khi admin xử lý. Vui lòng upload bằng chứng trong %d giờ.",
+		fmt.Sprintf("Hệ thống ghi nhận mâu thuẫn ở đơn #%d.\nLý do: %s\nPhí môi giới bị tạm giữ cho tới khi admin xử lý. Vui lòng upload bằng chứng trong %d giờ.",
 			deposit.ID, reason, s.cfg.DisputeEvidenceHours),
 	)
 	return nil

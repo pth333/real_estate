@@ -33,11 +33,12 @@
 
     <!-- Dòng tiền -->
     <n-descriptions :column="2" size="small" bordered label-placement="left">
-      <n-descriptions-item label="Tiền cọc">
-        <span class="font-semibold text-gray-800">{{ formatVnd(deposit.amount) }}</span>
-      </n-descriptions-item>
       <n-descriptions-item label="Phí môi giới">
-        {{ formatVnd(deposit.broker_fee) }}
+        <span class="font-semibold text-gray-800">{{ formatVnd(deposit.broker_fee) }}</span>
+      </n-descriptions-item>
+      <!-- Cột chừa sẵn cho tiền đặt cọc — nghiệp vụ cọc làm sau nên hiện chưa có số -->
+      <n-descriptions-item label="Đặt cọc">
+        <span class="text-gray-400">—</span>
       </n-descriptions-item>
       <n-descriptions-item label="Đã hoàn cho khách">
         <span :class="deposit.refund_amount ? 'text-emerald-600 font-semibold' : 'text-gray-400'">
@@ -62,11 +63,18 @@
       <n-descriptions-item label="Thời điểm thanh toán">
         {{ deposit.paid_at ? fromNow(deposit.paid_at) : 'Chưa thanh toán' }}
       </n-descriptions-item>
-      <n-descriptions-item label="Check-in OTP">
-        <span class="text-xs">
-          Môi giới: {{ deposit.broker_checkin ? 'đã xác nhận' : 'chưa' }} ·
-          Khách: {{ deposit.customer_checkin ? 'đã xác nhận' : 'chưa' }}
-        </span>
+      <n-descriptions-item label="Xác nhận có mặt">
+        <div class="flex flex-col gap-0.5 text-xs">
+          <span>Môi giới: {{ checkinSideLabel(deposit.broker_checkin, deposit.broker_checkin_at) }}</span>
+          <span>Khách: {{ checkinSideLabel(deposit.customer_checkin, deposit.customer_checkin_at) }}</span>
+          <!-- Bằng chứng vị trí: 2 bên ở gần nhau ⇒ buổi xem chắc chắn đã diễn ra -->
+          <span v-if="deposit.checkin_matched" class="font-semibold text-emerald-600">
+            Hai bên đã gặp nhau (cách {{ formatDistance(deposit.checkin_distance_meters) }})
+          </span>
+          <span v-else-if="deposit.checkin_distance_meters !== null" class="text-amber-600">
+            Vị trí 2 bên lệch {{ formatDistance(deposit.checkin_distance_meters) }}
+          </span>
+        </div>
       </n-descriptions-item>
     </n-descriptions>
 
@@ -102,8 +110,13 @@
       </div>
 
       <span v-if="deposit.report_deadline" class="text-xs text-gray-400">
-        Hạn báo cáo: {{ formatDate(deposit.report_deadline) }}
+        Hạn giữ phí: {{ formatDate(deposit.report_deadline) }} — khách đặt cọc mua BĐS trước mốc này thì được hoàn 100% phí, quá hạn thì phí thuộc về môi giới.
       </span>
+    </div>
+
+    <!-- Thời điểm khách đặt cọc mua BĐS (nếu đã đặt cọc) -->
+    <div v-if="deposit.purchase_deposit_at" class="rounded-lg bg-emerald-50 border border-emerald-100 p-3 text-sm text-emerald-700">
+      Khách đã đặt cọc mua bất động sản lúc {{ fromNow(deposit.purchase_deposit_at) }} — phí môi giới được hoàn 100% cho khách.
     </div>
 
     <!-- Lý do môi giới từ chối -->
@@ -148,7 +161,7 @@ import { computed } from 'vue'
 import type { Deposit } from '~/types/deposit'
 import { PAYMENT_METHOD_LABEL, PURCHASE_PROOF_LABEL } from '~/types/deposit'
 import { formatDate, fromNow } from '~/utils/format'
-import { formatSlot, formatVnd, reportLabel } from '~/utils/deposit'
+import { formatSlot, formatVnd, reportLabel, formatDistance } from '~/utils/deposit'
 import { NDescriptions, NDescriptionsItem, NImage, NRate, NTag } from 'naive-ui'
 
 const props = defineProps<{ deposit: Deposit }>()
@@ -156,6 +169,14 @@ const props = defineProps<{ deposit: Deposit }>()
 const isCheckedIn = computed(
   () => props.deposit.status === 'CHECKED_IN' || props.deposit.status.startsWith('VISITED'),
 )
+
+/** "đã xác nhận 10:05" / "chưa xác nhận" cho từng bên */
+function checkinSideLabel(done: boolean, at: string): string {
+  if (!done) return 'chưa xác nhận'
+  if (!at) return 'đã xác nhận'
+  const time = new Date(at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+  return `đã xác nhận lúc ${time}`
+}
 
 const disputeTagType = computed(() => {
   switch (props.deposit.dispute?.status) {

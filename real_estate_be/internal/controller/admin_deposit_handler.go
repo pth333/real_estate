@@ -10,7 +10,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// AdminDepositHandler — Admin panel: quản lý tranh chấp, tổng quan escrow, toàn bộ đơn đặt cọc.
+// AdminDepositHandler — Admin panel: quản lý tranh chấp, tổng quan escrow, toàn bộ đơn đặt lịch.
 type AdminDepositHandler struct {
 	service usecase.IDepositService
 }
@@ -19,25 +19,25 @@ func NewAdminDepositHandler(service usecase.IDepositService) *AdminDepositHandle
 	return &AdminDepositHandler{service: service}
 }
 
-// ListDeposits — tất cả đơn đặt cọc, lọc theo trạng thái.
+// ListDeposits — tất cả đơn đặt lịch, lọc theo trạng thái.
 func (h *AdminDepositHandler) ListDeposits(c *fiber.Ctx) error {
 	page, _ := strconv.Atoi(c.Query("page", "1"))
 	size, _ := strconv.Atoi(c.Query("size", "10"))
 
 	items, total, err := h.service.ListAllDeposits(c.Query("status", ""), page, size)
 	if err != nil {
-		return response.InternalServerError(c, "Lấy danh sách đặt cọc thất bại", err.Error())
+		return response.InternalServerError(c, "Lấy danh sách đặt lịch thất bại", err.Error())
 	}
 
 	return response.Success(c, fiber.StatusOK, "", items, fiber.Map{"total": total, "page": page, "size": size})
 }
 
-// GetDeposit — chi tiết 1 đơn đặt cọc cho admin.
+// GetDeposit — chi tiết 1 đơn đặt lịch cho admin.
 // Route riêng vì GET /deposits/:id chỉ mở cho khách và môi giới của đơn đó.
 func (h *AdminDepositHandler) GetDeposit(c *fiber.Ctx) error {
 	depositID, err := parseIDParam(c)
 	if err != nil || depositID == 0 {
-		return response.BadRequest(c, "ID đơn đặt cọc không hợp lệ", nil)
+		return response.BadRequest(c, "ID đơn đặt lịch không hợp lệ", nil)
 	}
 
 	result, err := h.service.GetDepositForAdmin(depositID)
@@ -53,7 +53,7 @@ func (h *AdminDepositHandler) DecidePurchase(c *fiber.Ctx) error {
 	adminID := currentUserID(c)
 	depositID, err := parseIDParam(c)
 	if err != nil || depositID == 0 {
-		return response.BadRequest(c, "ID đơn đặt cọc không hợp lệ", nil)
+		return response.BadRequest(c, "ID đơn đặt lịch không hợp lệ", nil)
 	}
 
 	var req dto.PurchaseDecisionRequest
@@ -65,7 +65,7 @@ func (h *AdminDepositHandler) DecidePurchase(c *fiber.Ctx) error {
 		return response.BadRequest(c, err.Error(), nil)
 	}
 	if req.Approved {
-		return response.OK(c, "Đã duyệt tài liệu mua nhà, hoàn 100% tiền cọc và trừ 1 căn của dự án")
+		return response.OK(c, "Đã duyệt tài liệu mua nhà, hoàn 100% phí môi giới và trừ 1 căn của dự án")
 	}
 	return response.OK(c, "Đã từ chối tài liệu, đơn chuyển sang tranh chấp để xử lý tiếp")
 }

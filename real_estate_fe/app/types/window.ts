@@ -58,11 +58,11 @@ export class UserMenu {
     this.roles = roles;
     this.options = [
       // Mục dành cho khách hàng
-      new UserMenuOption("my-deposits", "Đơn đặt cọc của tôi", "/account/deposits", ["CUSTOMER"]),
+      new UserMenuOption("my-deposits", "Đơn đặt lịch của tôi", "/tai-khoan/dat-coc", ["CUSTOMER"]),
       // Mục dành cho môi giới
       new UserMenuOption("manage-projects", "Quản lý dự án", "/nguoi-ban/quan-ly-du-an", ["BROKER"]),
       new UserMenuOption("manage-posts", "Quản lý bài viết", "/nguoi-ban/quan-ly-tin-dang", ["BROKER"]),
-      new UserMenuOption("manage-deposits", "Đơn đặt cọc xem nhà", "/nguoi-ban/quan-ly-dat-coc",["BROKER"]),
+      new UserMenuOption("manage-deposits", "Đơn đặt lịch xem nhà", "/nguoi-ban/quan-ly-dat-coc",["BROKER"]),
       new UserMenuOption("manage-customers", "Quản lý khách hàng", "/nguoi-ban/quan-ly-khach-hang", ["BROKER"]),
       new UserMenuOption("manage-favorites", "Quản lý yêu thích", "/nguoi-ban/quan-ly-yeu-thich", ["BROKER", "CUSTOMER"]),
       // Mục chỉ admin thấy

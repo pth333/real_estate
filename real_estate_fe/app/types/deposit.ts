@@ -1,5 +1,5 @@
 /**
- * Kiểu dữ liệu luồng đặt cọc escrow (khớp DTO backend internal/dto/deposit.go).
+ * Kiểu dữ liệu luồng đặt lịch escrow (khớp DTO backend internal/dto/deposit.go).
  */
 
 export type DepositStatus =
@@ -37,8 +37,16 @@ export const PURCHASE_PROOF_LABEL: Record<string, string> = {
   PAYMENT_SLIP: 'Biên nhận chuyển tiền',
 }
 
-/** Vai trò của người đang xem đơn đặt cọc */
+/** Vai trò của người đang xem đơn đặt lịch */
 export type DepositActorRole = 'CUSTOMER' | 'BROKER' | 'ADMIN'
+
+/** Vị trí GPS của người bấm check-in — bằng chứng bổ trợ cho OTP */
+export interface CheckinLocation {
+  latitude: number
+  longitude: number
+  /** Sai số GPS (mét) — 0 nghĩa là trình duyệt không báo */
+  accuracy: number
+}
 
 export interface DepositDispute {
   id: number
@@ -84,6 +92,7 @@ export interface Deposit {
   real_estate_thumbnail: string
   project_id: number | null
 
+  /** Số tiền khách đã trả cho buổi xem — chính là phí môi giới (không còn tiền cọc) */
   amount: number
   broker_fee: number
   refund_amount: number | null
@@ -99,6 +108,17 @@ export interface Deposit {
 
   broker_checkin: boolean
   customer_checkin: boolean
+  /** Thời điểm 2 bên xác nhận có mặt (bằng chứng vị trí) */
+  broker_checkin_at: string
+  customer_checkin_at: string
+  broker_checkin_accuracy: number | null
+  customer_checkin_accuracy: number | null
+  /** Khoảng cách giữa 2 bên lúc check-in (mét) — null khi thiếu vị trí 1 bên */
+  checkin_distance_meters: number | null
+  /** Thời điểm khách đặt cọc mua BĐS — có mốc này (trong thời gian giữ phí) thì phí được hoàn */
+  purchase_deposit_at: string
+  /** true khi 2 bên ở gần nhau ⇒ buổi xem đã diễn ra */
+  checkin_matched: boolean
   broker_report: string
   customer_report: string
   /** Bằng chứng ảnh kèm báo cáo mua/không mua của từng bên */
@@ -135,15 +155,18 @@ export interface CreateDepositPayload {
   viewing_date: string
   viewing_start: string
   viewing_end: string
+  /** Họ tên người liên hệ cho buổi xem (khách xác nhận lại, có thể khác hồ sơ) */
+  contact_name: string
+  /** SĐT người liên hệ cho buổi xem */
+  contact_phone: string
   payment_method: PaymentMethod
 }
 
-/** Mức cọc + phí môi giới hệ thống đề xuất theo giá BĐS (khách không sửa được) */
+/** Phí môi giới hệ thống áp dụng theo giá BĐS (khách không sửa được) */
 export interface BookingOptions {
   real_estate_id: number
   real_estate_title: string
   price_vnd: number
-  amount: number
   broker_fee: number
   /** Nhãn phân khúc giá đang áp dụng, VD "Từ 3 đến 5 tỷ" */
   policy_label: string
@@ -161,6 +184,8 @@ export interface CreateDepositResult {
 export interface CheckinOtpResult {
   otp: string
   expires_at: string
+  /** Cảnh báo khi chưa ghi nhận được vị trí môi giới tại BĐS (rỗng = đã có bằng chứng) */
+  location_warning: string
 }
 
 export interface PaymentCallbackResult {
@@ -179,7 +204,7 @@ export interface EscrowSummary {
   open_disputes: number
 }
 
-// Nhãn + màu tag Naive UI cho từng trạng thái đặt cọc
+// Nhãn + màu tag Naive UI cho từng trạng thái đặt lịch
 export const DEPOSIT_STATUS_META: Record<
   DepositStatus,
   { label: string; type: 'default' | 'info' | 'success' | 'warning' | 'error' }

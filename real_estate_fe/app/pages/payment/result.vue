@@ -29,7 +29,7 @@
 
       <div class="flex gap-2 mt-2 w-full">
         <n-button class="flex-1" @click="goHome">Về trang chủ</n-button>
-        <n-button class="flex-1" type="primary" @click="goToMyDeposits">Xem đơn đặt cọc</n-button>
+        <n-button class="flex-1" type="primary" @click="goToMyDeposits">Xem đơn đặt lịch</n-button>
       </div>
     </div>
   </div>
@@ -43,9 +43,6 @@ import DepositStatusTag from '~/components/deposit/DepositStatusTag.vue'
 import IconCheck from '~/icons/IconCheck.vue'
 import IconXCircle from '~/icons/IconXCircle.vue'
 
-// Tên file đặt tiếng Anh; giữ alias tiếng Việt vì URL này nằm trong
-// payment.return_url của backend (cổng thanh toán redirect về) — đổi URL sẽ
-// làm hỏng cấu hình đang chạy.
 definePageMeta({
   layout: 'empty',
   alias: ['/thanh-toan/ket-qua'],
@@ -96,6 +93,6 @@ function goHome() {
 }
 
 function goToMyDeposits() {
-  navigateTo('/account/deposits')
+  navigateTo('/tai-khoan/dat-coc')
 }
 </script>

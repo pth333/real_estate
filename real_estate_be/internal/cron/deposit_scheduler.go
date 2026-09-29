@@ -8,7 +8,7 @@ import (
 	"real_estate_be/internal/usecase"
 )
 
-// DepositScheduler chạy các job định kỳ của luồng đặt cọc:
+// DepositScheduler chạy các job định kỳ của luồng đặt lịch:
 // tự huỷ đơn chưa thanh toán, tự từ chối đơn quá hạn xác nhận, nhắc lịch trước 24h,
 // và đẩy các đơn quá hạn báo cáo sang tranh chấp.
 type DepositScheduler struct {

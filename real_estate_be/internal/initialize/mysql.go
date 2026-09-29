@@ -72,7 +72,7 @@ func MigrateDb(db *gorm.DB) {
 		&model.Notification{},
 		// Bảng dự án — cần có để tạo cột sold_units (tồn kho đã bán)
 		&model.RealEstateProject{},
-		// Luồng đặt cọc escrow
+		// Luồng đặt lịch escrow
 		&model.Deposit{},
 		&model.Transaction{},
 		&model.Dispute{},
@@ -96,9 +96,9 @@ func MigrateDb(db *gorm.DB) {
 	log.Println("✅ DB migration completed")
 }
 
-// seedDepositPolicies chèn chính sách mức cọc theo khoảng giá khi bảng còn trống.
-// Khoản cọc này là cọc GIỮ LỊCH XEM NHÀ (chống bùng + trả công môi giới),
-// không phải cọc mua bán → mức tiền nhỏ và cố định theo phân khúc, không scale theo giá nhà.
+// seedDepositPolicies chèn chính sách PHÍ MÔI GIỚI theo khoảng giá khi bảng còn trống.
+// Đây là phí GIỮ LỊCH XEM NHÀ (trả công môi giới + chống bùng), khách trả trước cho platform giữ;
+// không phải phí môi giới mua bán → mức tiền nhỏ và cố định theo phân khúc, không scale theo giá nhà.
 // Khoảng giá dạng nửa khoảng [price_min, price_max): NULL = không giới hạn phía đó.
 func seedDepositPolicies(db *gorm.DB) {
 	var count int64
@@ -110,17 +110,17 @@ func seedDepositPolicies(db *gorm.DB) {
 	billion := func(value float64) *float64 { return &value }
 
 	policies := []model.DepositPolicy{
-		{Label: "Dưới 1 tỷ", PriceMax: billion(1_000_000_000), DepositAmount: 2_000_000, BrokerFee: 200_000},
-		{Label: "Từ 1 đến 3 tỷ", PriceMin: billion(1_000_000_000), PriceMax: billion(3_000_000_000), DepositAmount: 3_000_000, BrokerFee: 300_000},
-		{Label: "Từ 3 đến 5 tỷ", PriceMin: billion(3_000_000_000), PriceMax: billion(5_000_000_000), DepositAmount: 5_000_000, BrokerFee: 500_000},
-		{Label: "Từ 5 đến 10 tỷ", PriceMin: billion(5_000_000_000), PriceMax: billion(10_000_000_000), DepositAmount: 8_000_000, BrokerFee: 800_000},
-		{Label: "Trên 10 tỷ", PriceMin: billion(10_000_000_000), DepositAmount: 15_000_000, BrokerFee: 1_500_000},
+		{Label: "Dưới 1 tỷ", PriceMax: billion(1_000_000_000), BrokerFee: 200_000},
+		{Label: "Từ 1 đến 3 tỷ", PriceMin: billion(1_000_000_000), PriceMax: billion(3_000_000_000), BrokerFee: 300_000},
+		{Label: "Từ 3 đến 5 tỷ", PriceMin: billion(3_000_000_000), PriceMax: billion(5_000_000_000), BrokerFee: 500_000},
+		{Label: "Từ 5 đến 10 tỷ", PriceMin: billion(5_000_000_000), PriceMax: billion(10_000_000_000), BrokerFee: 800_000},
+		{Label: "Trên 10 tỷ", PriceMin: billion(10_000_000_000), BrokerFee: 1_500_000},
 	}
 
 	if err := db.Create(&policies).Error; err != nil {
 		panic(err)
 	}
-	log.Printf("✅ [Deposit] đã seed %d chính sách mức cọc theo khoảng giá", len(policies))
+	log.Printf("✅ [Deposit] đã seed %d chính sách phí môi giới theo khoảng giá", len(policies))
 }
 
 // seedAdminUser gán role ADMIN cho tài khoản cấu hình ở admin.email.
