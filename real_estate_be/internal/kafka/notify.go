@@ -43,7 +43,6 @@ func NewNotifyConsumer(repo repo.INotificationRepository) *NotifyConsumer {
 }
 
 func (n *NotifyConsumer) Start(ctx context.Context) {
-	log.Println("🔔 [NotifyConsumer] starting...")
 	n.consumer.Start(ctx)
 }
 

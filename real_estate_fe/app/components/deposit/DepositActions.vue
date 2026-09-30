@@ -2,49 +2,69 @@
   <div v-if="hasAnyAction" class="rounded-lg border border-emerald-100 bg-emerald-50/50 p-4 flex flex-col gap-3">
     <span class="text-xs font-semibold uppercase tracking-wide text-emerald-700">Thao tác của bạn</span>
 
-    <n-space>
-      <!-- Môi giới -->
-      <n-button v-if="isBroker && deposit.can_confirm" type="primary" :loading="processing" @click="confirmDeposit">
+    <div class="flex flex-wrap items-center gap-2">
+      <!-- Môi giới: 1 chạm = xác nhận đã tới, hệ thống tự ghi vị trí + sinh mã cho khách -->
+      <n-button v-if="isBroker && deposit.can_confirm" key="confirm-schedule" type="primary" :loading="processing"
+        @click="confirmDeposit">
         Xác nhận lịch
       </n-button>
-      <n-button v-if="isBroker && deposit.can_confirm" type="error" ghost @click="openModal('reject')">
+      <n-button v-if="isBroker && deposit.can_confirm" key="reject" type="error" ghost @click="openModal('reject')">
         Từ chối
       </n-button>
-      <n-button v-if="isBroker && canGenerateOtp" type="warning" :loading="processing" @click="generateOtp">
-        Sinh mã OTP check-in
+      <n-button v-if="isBroker && canGenerateOtp" key="broker-arrived" type="warning" :loading="processing"
+        @click="generateOtp">
+        Tôi đã tới — sinh mã OTP
       </n-button>
 
-      <!-- Khách -->
-      <n-button v-if="isCustomer && canCheckin" type="primary" @click="openModal('checkin')">
-        Nhập OTP check-in
+      <!-- Khách: 1 chạm = xác nhận đã tới, hệ thống tự ghi vị trí (không cần nhập gì) -->
+      <n-button v-if="isCustomer && canCheckin" key="customer-otp" type="primary" @click="openModal('checkin')">
+        Nhập mã OTP từ môi giới
       </n-button>
-      <!-- Không nhập được mã (mất mạng, hết pin, mã hết hạn) → xác nhận bằng vị trí -->
-      <n-button v-if="isCustomer && canCheckin" secondary :loading="processing" @click="confirmArrived">
-        Tôi đã tới (không có mã)
+      <n-button v-if="isCustomer && canCheckin" key="customer-arrived" type="warning" :loading="processing"
+        @click="confirmArrived">
+        Tôi đã tới
       </n-button>
-      <n-button v-if="isCustomer && canRate" secondary @click="openModal('rating')">
+      <n-button v-if="isCustomer && canRate" key="rate" secondary @click="openModal('rating')">
         Đánh giá môi giới
       </n-button>
 
       <!-- Dùng chung -->
-      <n-button v-if="canReport" type="info" ghost @click="openModal('report')">
+      <n-button v-if="canReport" key="report" type="info" ghost @click="openModal('report')">
         Báo cáo kết quả
       </n-button>
-      <n-button v-if="canAddEvidence" warning ghost @click="openModal('evidence')">
+      <n-button v-if="canAddEvidence" key="evidence" warning ghost @click="openModal('evidence')">
         Gửi bằng chứng
       </n-button>
-      <n-button v-if="canOpenDispute" type="error" ghost @click="openModal('dispute')">
+      <n-button v-if="canOpenDispute" key="dispute" type="error" ghost @click="openModal('dispute')">
         Mở tranh chấp
       </n-button>
 
       <!-- Admin duyệt tài liệu mua nhà -->
-      <n-button v-if="canApprovePurchase" type="primary" @click="openModal('purchase')">
+      <n-button v-if="canApprovePurchase" key="purchase-approve" type="primary" @click="openModal('purchase')">
         Duyệt tài liệu mua nhà
       </n-button>
-      <n-button v-if="canApprovePurchase" type="error" ghost @click="openModal('purchaseReject')">
+      <n-button v-if="canApprovePurchase" key="purchase-reject" type="error" ghost @click="openModal('purchaseReject')">
         Từ chối tài liệu
       </n-button>
-    </n-space>
+    </div>
+
+    <!-- Cảnh báo bằng chứng vị trí: HIỂN THỊ CỨNG (theo dữ liệu đơn, không phải toast) -->
+    <n-alert v-if="evidenceWarning || actionWarning" type="warning" :bordered="false" class="text-xs">
+      {{ evidenceWarning || actionWarning }}
+    </n-alert>
+
+    <!-- Khách: nhập mã OTP là cách duy nhất để đơn chuyển sang "Đã check-in" -->
+    <n-alert v-if="isCustomer && canCheckin" type="info" :bordered="false" class="text-xs">
+      <strong>Nhập mã OTP từ môi giới</strong> để xác nhận buổi xem (chỉ khi đó đơn mới chuyển sang "Đã check-in").<br />
+      Môi giới chưa đưa mã? Bấm <strong>Tôi đã tới</strong> — hệ thống tự ghi nhận vị trí của bạn làm bằng chứng
+      bạn đã có mặt. Nếu môi giới không đến, bạn được hoàn 100% phí môi giới.
+    </n-alert>
+
+    <!-- Môi giới: vị trí là căn cứ chuyển phí, khách nhập mã OTP là căn cứ chắc nhất -->
+    <n-alert v-if="isBroker && canGenerateOtp" type="info" :bordered="false" class="text-xs">
+      Bấm <strong>Tôi đã tới — sinh mã OTP</strong> rồi đọc mã cho khách nhập: khách nhập mã là căn cứ chắc chắn
+      nhất cho buổi xem. Vị trí của bạn cũng được ghi nhận làm bằng chứng (nên bật định vị đúng chỗ).
+    </n-alert>
 
     <!-- Từ chối lịch -->
     <n-modal v-model:show="modalVisible.reject" :mask-closable="false">
@@ -81,6 +101,9 @@
         <p class="text-sm text-gray-500">Nhập mã 6 số do môi giới hiển thị để xác nhận bạn đã gặp môi giới.</p>
         <n-alert v-if="locationHint" type="info" :bordered="false" class="text-xs">
           {{ locationHint }}
+        </n-alert>
+        <n-alert type="warning" :bordered="false" class="text-xs">
+          Môi giới chưa đưa mã? Đóng hộp này và bấm <strong>Tôi đã tới</strong> — hệ thống tự ghi nhận vị trí của bạn.
         </n-alert>
         <n-input v-model:value="checkinOtp" placeholder="Nhập 6 số" :maxlength="6" size="large" />
         <div class="flex justify-end gap-2">
@@ -221,7 +244,7 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
-import { NButton, NInput, NModal, NRadio, NRadioGroup, NRate, NSpace } from 'naive-ui'
+import { NButton, NInput, NModal, NRadio, NRadioGroup, NRate } from 'naive-ui'
 import type { Deposit, DepositActorRole } from '~/types/deposit'
 import { PURCHASE_PROOF_LABEL, PURCHASE_PROOF_OPTIONS } from '~/types/deposit'
 import { useDepositService } from '~/services/deposit.service'
@@ -250,6 +273,8 @@ const rejectReason = ref('')
 const otpCode = ref('')
 const otpExpiresAt = ref('')
 const checkinOtp = ref('')
+// Lỗi tức thời khi xin quyền vị trí / gọi API (cảnh báo bằng chứng thì tính từ dữ liệu đơn, xem evidenceWarning)
+const actionWarning = ref('')
 const reportValue = ref('')
 const purchaseProofValue = ref<string | null>(null)
 const disputeReason = ref('')
@@ -259,9 +284,29 @@ const purchaseNote = ref('')
 
 const options = computed(() => reportOptions(props.deposit, isBroker.value))
 
-// Giải thích vì sao xin vị trí — toạ độ chỉ lưu ở mức ~100m và dùng làm bằng chứng buổi xem
+/**
+ * Cảnh báo bằng chứng vị trí — tính TỪ DỮ LIỆU ĐƠN nên hiển thị cứng:
+ * mở lại chi tiết đơn, refresh trang vẫn còn, chỉ mất khi tình trạng thực sự được xử lý
+ * (bấm lại với định vị đúng chỗ ⇒ evidence = AT_ESTATE, hoặc đơn đã check-in).
+ */
+const evidenceWarning = computed(() => {
+  if (props.deposit.status !== 'BROKER_CONFIRMED') return ''
+
+  const mine = isBroker.value ? props.deposit.broker_checkin_evidence : props.deposit.customer_checkin_evidence
+  const role = isBroker.value ? 'môi giới' : 'khách'
+
+  if (mine === 'FAR') {
+    return `Vị trí bạn gửi khá xa bất động sản nên chưa đủ căn cứ xác nhận ${role} đã tới — trừ khi khách nhập mã OTP (lúc đó hệ thống coi như 2 bên đã gặp nhau). Hãy bật định vị đúng chỗ rồi bấm lại.`
+  }
+  if (mine === 'NO_LOCATION') {
+    return `Chưa ghi nhận được vị trí của bạn nên chưa đủ căn cứ xác nhận ${role} đã tới — trừ khi khách nhập mã OTP. Hãy bật định vị rồi bấm lại.`
+  }
+  return ''
+})
+
+// Hệ thống tự lấy vị trí khi khách bấm xác nhận — chỉ lưu toạ độ làm tròn ~100m, không lưu vị trí chính xác
 const locationHint = computed(() =>
-  'Hệ thống sẽ ghi nhận vị trí của bạn (chỉ lưu toạ độ làm tròn ~100m) để xác nhận hai bên đã gặp nhau tại buổi xem.',
+  'Hệ thống tự ghi nhận vị trí của bạn (chỉ lưu toạ độ làm tròn ~100m), bạn không phải nhập gì.',
 )
 
 // Báo cáo mua/không mua (đã check-in) bắt buộc kèm ảnh; báo điểm danh thì không
@@ -371,14 +416,13 @@ async function rejectDeposit() {
 async function generateOtp() {
   processing.value = true
   try {
-    // Kèm vị trí: chỉ khi môi giới ở gần BĐS thì hệ thống mới tính là đã tới
+    // Kèm vị trí: hệ thống dùng toạ độ làm căn cứ chuyển phí cho môi giới
     const location = await getCurrentLocation()
     const result = await depositService.generateOtp(props.deposit.id, location)
     otpCode.value = result.otp
     otpExpiresAt.value = new Date(result.expires_at).toLocaleTimeString('vi-VN')
-    if (result.location_warning) {
-      window.message?.warning(result.location_warning)
-    }
+    // Cảnh báo bằng chứng tính từ dữ liệu đơn (evidenceWarning) nên không cần set ở đây
+    actionWarning.value = ''
     openModal('otp')
     emit('changed')
   } catch (error: unknown) {
@@ -389,21 +433,23 @@ async function generateOtp() {
   }
 }
 
-/** Khách báo đã tới bằng vị trí khi không nhập được OTP (2 bên gần nhau ⇒ tự xác nhận) */
+/** Khách xác nhận đã tới — 1 chạm, hệ thống tự lấy vị trí (không cần mã OTP của môi giới) */
 async function confirmArrived() {
   processing.value = true
   try {
     const location = await getCurrentLocation()
     if (!location) {
-      window.message?.warning('Chưa lấy được vị trí. Vui lòng cho phép truy cập vị trí rồi thử lại.')
+      // Lỗi này không phải toast: khách cần thấy để biết phải bật quyền vị trí rồi bấm lại
+      actionWarning.value = 'Cần quyền truy cập vị trí để xác nhận bạn đã tới. Hãy cho phép truy cập vị trí rồi bấm lại "Tôi đã tới".'
       return
     }
     await depositService.checkinLocation(props.deposit.id, location)
-    window.message?.success('Đã ghi nhận vị trí của bạn tại buổi xem nhà')
+    actionWarning.value = ''
+    window.message?.success('Đã xác nhận bạn có mặt tại buổi xem nhà')
     emit('changed')
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Không ghi nhận được vị trí'
-    window.message?.error(message)
+    const message = error instanceof Error ? error.message : 'Không xác nhận được'
+    actionWarning.value = message
   } finally {
     processing.value = false
   }
@@ -418,7 +464,7 @@ async function submitCheckin() {
     // Vị trí là bằng chứng bổ trợ: không lấy được vẫn check-in được bằng OTP
     const location = await getCurrentLocation()
     await depositService.checkin(props.deposit.id, checkinOtp.value.trim(), location).then(() => undefined)
-  }, 'Check-in thành công, vui lòng báo cáo kết quả sau buổi xem')
+  }, 'Check-in thành công, hệ thống đã ghi nhận 2 bên gặp nhau')
   if (ok) {
     closeModal('checkin')
     checkinOtp.value = ''

@@ -69,100 +69,152 @@ var PurchaseProofTypes = []string{
 	PurchaseProofPaymentSlip,
 }
 
+// Deposit — một lượt ĐẶT LỊCH XEM NHÀ (bảng `deposits`). Kèm phần giữ phí môi giới (escrow).
+//
+// Vòng đời tiền: khách trả PHÍ MÔI GIỚI (= Amount = BrokerFee) → platform giữ →
+// trong RefundWindowDays (mặc định 4 ngày) sau buổi xem:
+//   - khách ĐẶT CỌC MUA BĐS  ⇒ hoàn 100% phí cho khách (REFUNDED)
+//   - không đặt cọc          ⇒ phí thuộc về môi giới (COMPLETED)
 type Deposit struct {
+	// Khoá chính
 	ID uint64 `gorm:"primaryKey" json:"id"`
 
-	// FK tới bảng users (khách đặt lịch / môi giới phụ trách)
-	CustomerID   uint64 `gorm:"column:customer_id;index" json:"customer_id"`
+	// ── Ai liên quan ──
+	// Khách đặt lịch (người trả phí) — FK tới bảng users
+	CustomerID uint64 `gorm:"column:customer_id;index" json:"customer_id"`
+	// Bất động sản được xem — FK tới bảng real_estates (cũng dùng để đối chiếu toạ độ BĐS khi check-in)
 	RealEstateID uint64 `gorm:"column:real_estate_id;index" json:"real_estate_id"`
-	BrokerID     uint64 `gorm:"column:broker_id;index" json:"broker_id"`
-	// Dự án của BĐS tại thời điểm đặt lịch — chốt sẵn để biết trừ tồn kho dự án nào
-	// khi admin duyệt tài liệu mua (BĐS có thể được đổi dự án sau này).
+	// Môi giới phụ trách — FK tới bảng users, lấy từ chủ tin lúc tạo đơn
+	BrokerID uint64 `gorm:"column:broker_id;index" json:"broker_id"`
+	// Dự án của BĐS tại thời điểm đặt lịch — chốt sẵn để biết trừ tồn kho dự án nào.
+	// Hiện chỉ dùng cho luồng "khách khai đã mua nhà" (đang tạm bỏ, chờ luồng đặt cọc mua làm sau).
 	ProjectID *uint64 `gorm:"column:project_id;index" json:"project_id"`
 
 	// ── Tiền ──
-	// Amount = số tiền khách đã trả cho buổi xem, chính là PHÍ MÔI GIỚI (không còn phí môi giới).
-	// Giữ cùng giá trị với BrokerFee để logic tất toán escrow hiện có dùng lại được.
-	Amount        float64  `gorm:"column:amount;type:decimal(15,2)" json:"amount"`
-	BrokerFee     float64  `gorm:"column:broker_fee;type:decimal(15,2)" json:"broker_fee"`
-	RefundAmount  *float64 `gorm:"column:refund_amount;type:decimal(15,2)" json:"refund_amount"`
+	// SỐ TIỀN THỰC THU của đơn = phí môi giới (đơn cũ có thể là tiền cọc cũ).
+	// Mọi khoản tất toán (hoàn khách / chuyển môi giới / phạt) đều tính theo Amount ⇒ BẮT BUỘC gán khi tạo đơn.
+	Amount float64 `gorm:"column:amount;type:decimal(15,2)" json:"amount"`
+	// Mức phí môi giới theo chính sách giá BĐS (bảng deposit_policies) — dùng lúc tạo đơn
+	BrokerFee float64 `gorm:"column:broker_fee;type:decimal(15,2)" json:"broker_fee"`
+	// Số tiền đã hoàn cho khách — NULL = chưa tất toán
+	RefundAmount *float64 `gorm:"column:refund_amount;type:decimal(15,2)" json:"refund_amount"`
+	// Tiền phạt trừ vào bảo lãnh môi giới (ca môi giới không đến)
 	PenaltyAmount *float64 `gorm:"column:penalty_amount;type:decimal(15,2)" json:"penalty_amount"`
 
 	// ── Liên hệ của buổi xem (khách nhập lúc đặt lịch) ──
 	// Lưu snapshot để môi giới gọi đúng số khách để lại, không phụ thuộc hồ sơ user sau này.
-	ContactName  string `gorm:"column:contact_name;size:100" json:"contact_name"`
+	// Họ tên người liên hệ khách điền trong form đặt lịch
+	ContactName string `gorm:"column:contact_name;size:100" json:"contact_name"`
+	// SĐT người liên hệ khách điền (đã chuẩn hoá về dạng 0xxxxxxxxx)
 	ContactPhone string `gorm:"column:contact_phone;size:20" json:"contact_phone"`
 
 	// ── Lịch xem nhà (giờ lưu dạng "HH:MM" để so sánh trùng khung giờ) ──
-	ViewingDate  time.Time `gorm:"column:viewing_date;type:date" json:"viewing_date"`
-	ViewingStart string    `gorm:"column:viewing_start;size:5" json:"viewing_start"`
-	ViewingEnd   string    `gorm:"column:viewing_end;size:5" json:"viewing_end"`
+	// Ngày xem (date)
+	ViewingDate time.Time `gorm:"column:viewing_date;type:date" json:"viewing_date"`
+	// Giờ bắt đầu khung xem — khung cố định 1 tiếng, mốc giờ chẵn trong 08:00–18:00
+	ViewingStart string `gorm:"column:viewing_start;size:5" json:"viewing_start"`
+	// Giờ kết thúc = ViewingStart + 1 tiếng (khách không sửa được)
+	ViewingEnd string `gorm:"column:viewing_end;size:5" json:"viewing_end"`
 
+	// Trạng thái đơn — xem hằng số DepositStatus* ở đầu file
 	Status string `gorm:"column:status;index;default:AWAITING_PAYMENT" json:"status"`
 
 	// ── Thanh toán ──
-	PaymentMethod string     `gorm:"column:payment_method;size:20" json:"payment_method"`
-	PaymentRef    string     `gorm:"column:payment_ref;size:100;index" json:"payment_ref"`
-	PaidAt        *time.Time `gorm:"column:paid_at" json:"paid_at"`
+	// Cổng khách chọn: VNPAY / MOMO / ZALOPAY
+	PaymentMethod string `gorm:"column:payment_method;size:20" json:"payment_method"`
+	// Mã giao dịch gửi sang cổng thanh toán (cổng trả lại trong callback để tìm đơn)
+	PaymentRef string `gorm:"column:payment_ref;size:100;index" json:"payment_ref"`
+	// Thời điểm cổng xác nhận đã thu phí — NULL = chưa thanh toán
+	PaidAt *time.Time `gorm:"column:paid_at" json:"paid_at"`
 
-	// ── OTP check-in (môi giới generate, khách nhập) ──
-	OTPHash      string     `gorm:"column:otp_hash" json:"-"`
+	// ── OTP check-in (môi giới sinh, khách nhập) ──
+	// Hash bcrypt của mã OTP 6 số (không bao giờ trả ra JSON)
+	OTPHash string `gorm:"column:otp_hash" json:"-"`
+	// Hạn hiệu lực OTP (OTPValidMinutes, mặc định 10 phút)
 	OTPExpiresAt *time.Time `gorm:"column:otp_expires_at" json:"otp_expires_at"`
 
-	// ── Xác nhận 2 bên ──
-	BrokerCheckin   *bool `gorm:"column:broker_checkin" json:"broker_checkin"`
+	// ── Cờ 2 bên ĐÃ THAO TÁC check-in (chỉ để hiển thị; tiền quyết định theo toạ độ bên dưới) ──
+	// true khi môi giới bấm "Tôi đã tới — sinh mã OTP" trong cửa sổ check-in
+	BrokerCheckin *bool `gorm:"column:broker_checkin" json:"broker_checkin"`
+	// true khi khách nhập đúng OTP hoặc bấm "Tôi đã tới"
 	CustomerCheckin *bool `gorm:"column:customer_checkin" json:"customer_checkin"`
 
-	// ── Bằng chứng vị trí khi check-in ──
+	// ── Bằng chứng VỊ TRÍ khi check-in (đây là căn cứ để tất toán tiền) ──
 	// Toạ độ đã làm tròn ~100m trước khi lưu (hạn chế lưu vị trí chính xác của người dùng).
-	// Vị trí chỉ là tín hiệu bổ trợ: 2 bên gần nhau (≤ checkinMatchRadiusMeters) là bằng chứng
-	// mạnh nhất rằng buổi xem đã diễn ra; chỉ 1 bên có vị trí thì đối chiếu với toạ độ BĐS.
-	BrokerCheckinLat    *float64   `gorm:"column:broker_checkin_lat" json:"broker_checkin_lat"`
-	BrokerCheckinLng    *float64   `gorm:"column:broker_checkin_lng" json:"broker_checkin_lng"`
-	BrokerCheckinAcc    *float64   `gorm:"column:broker_checkin_accuracy" json:"broker_checkin_accuracy"`
-	BrokerCheckinAt     *time.Time `gorm:"column:broker_checkin_at" json:"broker_checkin_at"`
-	CustomerCheckinLat  *float64   `gorm:"column:customer_checkin_lat" json:"customer_checkin_lat"`
-	CustomerCheckinLng  *float64   `gorm:"column:customer_checkin_lng" json:"customer_checkin_lng"`
-	CustomerCheckinAcc  *float64   `gorm:"column:customer_checkin_accuracy" json:"customer_checkin_accuracy"`
-	CustomerCheckinAt   *time.Time `gorm:"column:customer_checkin_at" json:"customer_checkin_at"`
+	// Chống gian lận: chỉ khi toạ độ nằm trong bán kính BĐS (checkinMatchRadiusMeters = 300m)
+	// thì bên đó mới được coi là ĐÃ TỚI (xem checkinEvidenceAtEstate ở usecase).
+	// Vĩ độ môi giới lúc sinh OTP
+	BrokerCheckinLat *float64 `gorm:"column:broker_checkin_lat" json:"broker_checkin_lat"`
+	// Kinh độ môi giới lúc sinh OTP
+	BrokerCheckinLng *float64 `gorm:"column:broker_checkin_lng" json:"broker_checkin_lng"`
+	// Sai số GPS (mét) của môi giới — chỉ dùng để cảnh báo chất lượng vị trí
+	BrokerCheckinAcc *float64 `gorm:"column:broker_checkin_accuracy" json:"broker_checkin_accuracy"`
+	// Thời điểm môi giới thao tác check-in (có/không có toạ độ đều ghi)
+	BrokerCheckinAt *time.Time `gorm:"column:broker_checkin_at" json:"broker_checkin_at"`
+	// Vĩ độ khách lúc check-in
+	CustomerCheckinLat *float64 `gorm:"column:customer_checkin_lat" json:"customer_checkin_lat"`
+	// Kinh độ khách lúc check-in
+	CustomerCheckinLng *float64 `gorm:"column:customer_checkin_lng" json:"customer_checkin_lng"`
+	// Sai số GPS (mét) của khách
+	CustomerCheckinAcc *float64 `gorm:"column:customer_checkin_accuracy" json:"customer_checkin_accuracy"`
+	// Thời điểm khách check-in (nhập OTP hoặc bấm "Tôi đã tới")
+	CustomerCheckinAt *time.Time `gorm:"column:customer_checkin_at" json:"customer_checkin_at"`
 	// Khoảng cách giữa 2 bên lúc check-in (mét) — NULL khi thiếu vị trí 1 bên
 	CheckinDistanceMeters *float64 `gorm:"column:checkin_distance_meters" json:"checkin_distance_meters"`
-	// true khi 2 bên check-in gần nhau → coi như đã gặp mặt, không cần OTP nữa
+	// true khi 2 bên ở gần nhau (≤ 300m) ⇒ coi như đã gặp mặt, hệ thống tự chuyển CHECKED_IN (không cần OTP)
 	CheckinMatched bool `gorm:"column:checkin_matched;default:0" json:"checkin_matched"`
 
-	// ── Dấu hiệu khách đã đặt cọc MUA bất động sản (luồng đặt cọc mua làm sau) ──
-	// Khác NULL + nằm trong cửa sổ giữ phí ⇒ hoàn 100% phí môi giới cho khách.
+	// ── Dấu hiệu khách đã ĐẶT CỌC MUA bất động sản ──
+	// Luồng đặt cọc mua (nút "Đặt cọc" ở trang BĐS) sẽ set field này khi khách đặt cọc thành công.
+	// Khác NULL + còn trong thời gian giữ phí ⇒ hoàn 100% phí môi giới cho khách.
 	PurchaseDepositAt *time.Time `gorm:"column:purchase_deposit_at" json:"purchase_deposit_at"`
 
-	// ── Báo cáo kết quả / điểm danh (xem hằng số Report*) ──
-	BrokerReport      string     `gorm:"column:broker_report;size:20" json:"broker_report"`
-	CustomerReport    string     `gorm:"column:customer_report;size:20" json:"customer_report"`
-	BrokerReportedAt  *time.Time `gorm:"column:broker_reported_at" json:"broker_reported_at"`
+	// ── Báo cáo ĐIỂM DANH (chỉ dùng khi 2 bên không check-in được bằng OTP/vị trí) ──
+	// Giá trị: ATTENDED (có mặt) / NO_SHOW (không đến) — xem hằng số Report*.
+	// Hằng số BOUGHT/NOT_BUY chỉ còn cho dữ liệu đơn cũ (luồng mua/không mua đã bỏ).
+	// Môi giới báo: ATTENDED/NO_SHOW
+	BrokerReport string `gorm:"column:broker_report;size:20" json:"broker_report"`
+	// Khách báo: ATTENDED/NO_SHOW
+	CustomerReport string `gorm:"column:customer_report;size:20" json:"customer_report"`
+	// Thời điểm môi giới báo (mỗi bên chỉ báo 1 lần, không sửa)
+	BrokerReportedAt *time.Time `gorm:"column:broker_reported_at" json:"broker_reported_at"`
+	// Thời điểm khách báo
 	CustomerReportedAt *time.Time `gorm:"column:customer_reported_at" json:"customer_reported_at"`
-	// Bằng chứng kèm theo báo cáo kết quả mua/không mua (JSON mảng URL ảnh).
-	// Bắt buộc phải có để làm căn cứ cho admin khi 2 bên báo cáo lệch nhau.
-	BrokerReportEvidence   string `gorm:"column:broker_report_evidence;type:json" json:"broker_report_evidence"`
+	// Ảnh bằng chứng môi giới gửi kèm báo cáo (JSON mảng URL ảnh)
+	BrokerReportEvidence string `gorm:"column:broker_report_evidence;type:json" json:"broker_report_evidence"`
+	// Ảnh bằng chứng khách gửi kèm báo cáo (JSON mảng URL ảnh)
 	CustomerReportEvidence string `gorm:"column:customer_report_evidence;type:json" json:"customer_report_evidence"`
-	// Loại tài liệu khách xuất trình khi khai đã mua nhà (xem hằng số PurchaseProof*)
+	// Loại tài liệu khách xuất trình khi KHAI đã mua nhà (PURCHASE_CONTRACT / DEPOSIT_SLIP / PAYMENT_SLIP)
+	// — chỉ còn cho đơn cũ, luồng mới không yêu cầu nữa
 	CustomerPurchaseProof string `gorm:"column:customer_purchase_proof;size:30" json:"customer_purchase_proof"`
 
-	// ── Timestamps ──
+	// ── Mốc thời gian ──
+	// Thời điểm môi giới bấm "Xác nhận lịch" (đơn sang BROKER_CONFIRMED)
 	BrokerConfirmedAt *time.Time `gorm:"column:broker_confirmed_at" json:"broker_confirmed_at"`
-	ReminderSentAt    *time.Time `gorm:"column:reminder_sent_at" json:"reminder_sent_at"`
-	// Hạn cuối 2 bên phải báo cáo kết quả khi không check-in được (viewing_start + 2h + 24h)
+	// Đã gửi mail nhắc lịch trước 24h chưa (tránh gửi trùng)
+	ReminderSentAt *time.Time `gorm:"column:reminder_sent_at" json:"reminder_sent_at"`
+	// Hạn xử lý của đơn, mang 2 nghĩa theo trạng thái:
+	//   - BROKER_CONFIRMED (chưa check-in): hạn 2 bên báo cáo điểm danh = giờ hẹn + 2h ân hạn + 24h
+	//   - CHECKED_IN: hạn GIỮ PHÍ = hết buổi xem + RefundWindowDays (4 ngày), hết hạn thì tất toán
 	ReportDeadline *time.Time `gorm:"column:report_deadline" json:"report_deadline"`
-	RejectReason   string     `gorm:"column:reject_reason;type:text" json:"reject_reason"`
+	// Lý do môi giới từ chối lịch, hoặc lý do hệ thống tự huỷ đơn quá hạn thanh toán
+	RejectReason string `gorm:"column:reject_reason;type:text" json:"reject_reason"`
 
-	// ── Admin duyệt tài liệu mua nhà ──
+	// ── Admin duyệt tài liệu mua nhà (chỉ còn cho đơn cũ) ──
 	// Chỉ khi admin duyệt thì đơn mới sang VISITED_BOUGHT và tồn kho dự án mới bị trừ.
-	PurchaseDecisionBy   *uint64    `gorm:"column:purchase_decision_by" json:"purchase_decision_by"`
-	PurchaseDecisionAt   *time.Time `gorm:"column:purchase_decision_at" json:"purchase_decision_at"`
-	PurchaseDecisionNote string     `gorm:"column:purchase_decision_note;type:text" json:"purchase_decision_note"`
+	// Admin nào duyệt
+	PurchaseDecisionBy *uint64 `gorm:"column:purchase_decision_by" json:"purchase_decision_by"`
+	// Thời điểm duyệt
+	PurchaseDecisionAt *time.Time `gorm:"column:purchase_decision_at" json:"purchase_decision_at"`
+	// Ghi chú khi duyệt/từ chối tài liệu
+	PurchaseDecisionNote string `gorm:"column:purchase_decision_note;type:text" json:"purchase_decision_note"`
 
+	// Thời điểm tạo đơn (đơn AWAITING_PAYMENT quá hạn tính từ đây để tự huỷ)
 	CreatedAt time.Time `gorm:"column:created_at" json:"created_at"`
+	// Lần cập nhật gần nhất
 	UpdatedAt time.Time `gorm:"column:updated_at" json:"updated_at"`
 
-	// Quan hệ (không tạo FK constraint trong DB)
+	// Quan hệ (không tạo FK constraint trong DB) — nạp bằng Preload khi dựng response
 	Customer   *User       `gorm:"foreignKey:CustomerID;references:ID" json:"customer,omitempty"`
 	Broker     *User       `gorm:"foreignKey:BrokerID;references:ID" json:"broker,omitempty"`
 	RealEstate *RealEstate `gorm:"foreignKey:RealEstateID;references:ID" json:"real_estate,omitempty"`

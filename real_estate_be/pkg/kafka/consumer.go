@@ -56,8 +56,6 @@ func NewConsumer(cfg ConsumerConfig) *Consumer {
 
 // Start bắt đầu consume vô hạn, block goroutine.
 func (c *Consumer) Start(ctx context.Context) {
-	log.Printf("🔄 [Kafka] consumer starting: topic=%s group=%s concurrency=%d",
-		c.cfg.Topic, c.reader.Config().GroupID, c.cfg.Concurrency)
 
 	if c.cfg.Concurrency <= 1 {
 		c.loop(ctx)

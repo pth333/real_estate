@@ -67,9 +67,13 @@
         <div class="flex flex-col gap-0.5 text-xs">
           <span>Môi giới: {{ checkinSideLabel(deposit.broker_checkin, deposit.broker_checkin_at) }}</span>
           <span>Khách: {{ checkinSideLabel(deposit.customer_checkin, deposit.customer_checkin_at) }}</span>
-          <!-- Bằng chứng vị trí: 2 bên ở gần nhau ⇒ buổi xem chắc chắn đã diễn ra -->
+          <!-- Bằng chứng vị trí: chỉ là căn cứ đối chiếu, KHÔNG tự chuyển trạng thái đã check-in -->
           <span v-if="deposit.checkin_matched" class="font-semibold text-emerald-600">
-            Hai bên đã gặp nhau (cách {{ formatDistance(deposit.checkin_distance_meters) }})
+            {{ deposit.status === 'CHECKED_IN' ? 'Hai bên đã gặp nhau' : 'Vị trí 2 bên đã trùng nhau' }}
+            (cách {{ formatDistance(deposit.checkin_distance_meters) }})
+            <template v-if="deposit.status !== 'CHECKED_IN'">
+              — cần khách nhập mã OTP để xác nhận đã check-in
+            </template>
           </span>
           <span v-else-if="deposit.checkin_distance_meters !== null" class="text-amber-600">
             Vị trí 2 bên lệch {{ formatDistance(deposit.checkin_distance_meters) }}

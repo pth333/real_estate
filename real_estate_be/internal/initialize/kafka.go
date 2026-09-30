@@ -65,7 +65,6 @@ func StartKafkaConsumers(ctx context.Context, db *gorm.DB) {
 		notify.Start(ctx)
 	}()
 
-	log.Println("✅ Kafka consumers started")
 }
 
 // ensureTopicExists chủ động tạo topic nếu chưa tồn tại
@@ -109,5 +108,4 @@ func ensureTopicExists(brokers []string, topic string, numPartitions int, replic
 		return
 	}
 
-	log.Printf("🎉 [Kafka-Admin] Topic '%s' created successfully with %d partitions", topic, numPartitions)
 }

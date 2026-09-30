@@ -86,17 +86,17 @@ type IDepositService interface {
 }
 
 type depositService struct {
-	depositRepo      repo.IDepositRepository
-	disputeRepo      repo.IDisputeRepository
-	transactionRepo  repo.ITransactionRepository
-	ratingRepo       repo.IBrokerRatingRepository
-	notifyLogRepo    repo.INotificationLogRepository
-	policyRepo       repo.IDepositPolicyRepository
-	realEstateRepo   repo.RealEstateRepository
-	userRepo         repo.IUserRepository
-	gateway          payment.Gateway
-	mailer           mailer.Mailer
-	cfg              global.DepositConfig
+	depositRepo     repo.IDepositRepository
+	disputeRepo     repo.IDisputeRepository
+	transactionRepo repo.ITransactionRepository
+	ratingRepo      repo.IBrokerRatingRepository
+	notifyLogRepo   repo.INotificationLogRepository
+	policyRepo      repo.IDepositPolicyRepository
+	realEstateRepo  repo.RealEstateRepository
+	userRepo        repo.IUserRepository
+	gateway         payment.Gateway
+	mailer          mailer.Mailer
+	cfg             global.DepositConfig
 }
 
 func NewDepositService(
@@ -267,10 +267,13 @@ func (s *depositService) CreateDeposit(customerID uint64, req dto.CreateDepositR
 	}
 
 	deposit := &model.Deposit{
-		CustomerID:    customerID,
-		RealEstateID:  estate.ID,
-		BrokerID:      *estate.UserID,
-		ProjectID:     estate.ProjectID,
+		CustomerID:   customerID,
+		RealEstateID: estate.ID,
+		BrokerID:     *estate.UserID,
+		ProjectID:    estate.ProjectID,
+		// Amount = số tiền thực thu của đơn, chính là PHÍ MÔI GIỚI.
+		// Toàn bộ logic tất toán (hoàn khách / chuyển môi giới / phạt) tính theo Amount,
+		// nên BẮT BUỘC phải gán — bỏ trống thì mọi khoản tất toán sẽ ra 0đ.
 		Amount:        brokerFee,
 		BrokerFee:     brokerFee,
 		ViewingDate:   viewingDate,
@@ -499,25 +502,33 @@ func (s *depositService) GenerateCheckinOTP(depositID, brokerID uint64, location
 		"otp_expires_at": expiresAt,
 	}
 
+	// Sinh OTP trong cửa sổ check-in = môi giới đã thực hiện check-in. Việc TẤT TOÁN còn
+	// căn cứ vào toạ độ đã lưu (xem checkinEvidenceAtEstate): bấm từ xa/không có vị trí thì
+	// hệ thống không tự động chuyển phí cho môi giới.
+	//ko cập nhật broker checkin ở đây tránh trường hợp tạo otp nơi khác bds
+	// brokerChecked := true
+	// fields["broker_checkin"] = brokerChecked
+	// deposit.BrokerCheckin = &brokerChecked
+
 	warning := ""
-	if usableCheckinLocation(location.CheckinLocation) && atEstate(deposit.RealEstate, location.CheckinLocation) {
+	if hasCheckinCoordinates(location.CheckinLocation) {
 		saveCheckinLocation(deposit, fields, true, location.CheckinLocation, now)
-		brokerChecked := true
-		fields["broker_checkin"] = brokerChecked
-		deposit.BrokerCheckin = &brokerChecked
+		switch {
+		case !atEstate(deposit.RealEstate, location.CheckinLocation):
+			warning = "Vị trí hiện tại của bạn khá xa bất động sản. Hệ thống vẫn ghi nhận bạn đã tới, nhưng riêng vị trí này chưa đủ căn cứ để chuyển phí cho bạn — trừ khi khách nhập mã OTP (lúc đó hệ thống coi như 2 bên đã gặp nhau). Hãy bật định vị đúng chỗ để bằng chứng rõ ràng hơn."
+		case poorCheckinAccuracy(location.CheckinLocation):
+			warning = "Sai số định vị của bạn khá lớn nên bằng chứng vị trí sẽ yếu hơn. Nên thử lại ở nơi thoáng, hoặc để khách nhập mã OTP để xác nhận 2 bên đã gặp nhau."
+		}
 	} else {
-		fields["broker_checkin"] = false
-		warning = "Chưa ghi nhận được vị trí của bạn tại bất động sản. Hãy bật định vị và bấm lại để có bằng chứng bạn đã tới."
+		fields["broker_checkin_at"] = now
+		deposit.BrokerCheckinAt = &now
+		warning = "Chưa lấy được vị trí của bạn. Bạn vẫn sinh được mã, nhưng thiếu vị trí thì chưa đủ căn cứ chuyển phí cho bạn — trừ khi khách nhập mã OTP. Hãy bật định vị rồi bấm lại nếu muốn bằng chứng rõ ràng."
 	}
 
 	if err := s.depositRepo.UpdateFields(deposit.ID, fields); err != nil {
 		return nil, err
 	}
 	if err := s.refreshCheckinMatch(deposit); err != nil {
-		return nil, err
-	}
-	// 2 bên đã ở gần nhau thì coi như đã gặp mặt, không cần khách nhập OTP nữa
-	if err := s.autoCheckinIfMatched(deposit); err != nil {
 		return nil, err
 	}
 
@@ -534,7 +545,7 @@ func saveCheckinLocation(
 	deposit *model.Deposit, fields map[string]interface{}, isBroker bool,
 	location dto.CheckinLocation, now time.Time,
 ) bool {
-	if !usableCheckinLocation(location) {
+	if !hasCheckinCoordinates(location) {
 		return false
 	}
 
@@ -594,42 +605,12 @@ func (s *depositService) refreshCheckinMatch(deposit *model.Deposit) error {
 	return nil
 }
 
-// autoCheckinIfMatched — 2 bên đã ở gần nhau ⇒ coi như buổi xem đã diễn ra:
-// chuyển CHECKED_IN luôn, không bắt khách nhập OTP nữa (OTP chỉ còn là đường dự phòng).
-func (s *depositService) autoCheckinIfMatched(deposit *model.Deposit) error {
-	if !deposit.CheckinMatched || deposit.Status != model.DepositStatusBrokerConfirmed {
-		return nil
-	}
+// LƯU Ý: KHÔNG tự chuyển CHECKED_IN khi 2 bên ở gần nhau. Trạng thái CHECKED_IN chỉ được
+// set khi KHÁCH NHẬP ĐÚNG MÃ OTP (CustomerCheckin). Vị trí 2 bên chỉ là bằng chứng bổ trợ,
+// dùng lúc tất toán tiền (xem checkinEvidenceAtEstate / settleOverdueByCheckinLog).
 
-	customerChecked := true
-	// Hạn giữ phí: hết buổi xem + 4 ngày để khách kịp đặt cọc mua BĐS
-	deadline := s.feeHoldDeadline(deposit)
-	if err := s.depositRepo.UpdateFields(deposit.ID, map[string]interface{}{
-		"status":           model.DepositStatusCheckedIn,
-		"customer_checkin": customerChecked,
-		"otp_hash":         "",
-		"otp_expires_at":   nil,
-		"report_deadline":  deadline,
-	}); err != nil {
-		return err
-	}
-
-	deposit.Status = model.DepositStatusCheckedIn
-	deposit.CustomerCheckin = &customerChecked
-	deposit.OTPHash = ""
-	deposit.OTPExpiresAt = nil
-	s.notifyBoth(deposit, "checked_in_location",
-		fmt.Sprintf("Đã xác nhận buổi xem nhà #%d", deposit.ID),
-		fmt.Sprintf("Hệ thống ghi nhận bạn và môi giới đã ở cùng địa điểm tại buổi xem nhà. Phí môi giới được giữ trong %d ngày: nếu bạn đặt cọc mua bất động sản trong thời gian này, phí sẽ được hoàn 100%% cho bạn.", s.cfg.RefundWindowDays),
-		fmt.Sprintf("Hệ thống ghi nhận bạn và khách đã ở cùng địa điểm tại buổi xem nhà #%d. Phí môi giới sẽ được chuyển cho bạn sau %d ngày nếu khách không đặt cọc mua bất động sản.", deposit.ID, s.cfg.RefundWindowDays),
-	)
-	return nil
-}
-
-// CustomerArrived — khách báo "tôi đã tới" bằng vị trí khi không nhập được OTP
-// (mất mạng, hết pin, mã hết hạn...). Không cần OTP nhưng BẮT BUỘC có vị trí dùng được:
-// - 2 bên ở gần nhau ⇒ tự động CHECKED_IN (đã gặp mặt thật).
-// - Chỉ khách ở gần BĐS ⇒ ghi nhận khách có mặt, chờ đối chiếu với log của môi giới.
+// CustomerArrived — khách xác nhận "Tôi đã tới" (ghi vị trí) khi không nhập mã OTP.
+// Không đổi trạng thái đơn: chỉ ghi nhận vị trí làm bằng chứng khách đã có mặt.
 func (s *depositService) CustomerArrived(depositID, customerID uint64, location dto.CheckinLocationRequest) (*dto.DepositResponse, error) {
 	deposit, err := s.requireSide(depositID, customerID, model.RoleCustomer)
 	if err != nil {
@@ -641,7 +622,7 @@ func (s *depositService) CustomerArrived(depositID, customerID uint64, location 
 	if !s.withinCheckinWindow(deposit, time.Now()) {
 		return nil, errors.New("chưa tới thời gian check-in của buổi xem nhà")
 	}
-	if !usableCheckinLocation(location.CheckinLocation) {
+	if !hasCheckinCoordinates(location.CheckinLocation) {
 		return nil, errors.New("chưa lấy được vị trí của bạn, vui lòng bật định vị và thử lại")
 	}
 
@@ -649,19 +630,16 @@ func (s *depositService) CustomerArrived(depositID, customerID uint64, location 
 	fields := map[string]interface{}{}
 	saveCheckinLocation(deposit, fields, false, location.CheckinLocation, now)
 
-	// Chỉ tính khách có mặt khi ở gần BĐS; ở xa thì vẫn lưu vị trí nhưng chưa phải bằng chứng
-	if atEstate(deposit.RealEstate, location.CheckinLocation) {
-		customerChecked := true
-		fields["customer_checkin"] = customerChecked
-		deposit.CustomerCheckin = &customerChecked
-	}
+	// Khách bấm "Tôi đã tới" (có vị trí) = khách có mặt — KHÔNG cần OTP của môi giới.
+	// Nhờ vậy ca môi giới không đến vẫn có bằng chứng khách đã tới nơi. Khoảng cách tới BĐS
+	// chỉ là tín hiệu đối chiếu lúc tất toán (xem checkinEvidenceAtEstate), không chặn ghi nhận.
+	customerChecked := true
+	fields["customer_checkin"] = customerChecked
+	deposit.CustomerCheckin = &customerChecked
 	if err := s.depositRepo.UpdateFields(deposit.ID, fields); err != nil {
 		return nil, err
 	}
 	if err := s.refreshCheckinMatch(deposit); err != nil {
-		return nil, err
-	}
-	if err := s.autoCheckinIfMatched(deposit); err != nil {
 		return nil, err
 	}
 
@@ -691,10 +669,15 @@ func (s *depositService) CustomerCheckin(depositID, customerID uint64, otp strin
 	fields := map[string]interface{}{}
 	// Vị trí của khách là bằng chứng bổ trợ để đối chiếu với vị trí môi giới
 	saveCheckinLocation(deposit, fields, false, location.CheckinLocation, now)
+	//môi giới sẽ được coi là có mặt khi khác hàng nhập OTP, đảm bảo trường hợp môi giới có tính nhận KH khi đã có lịch
+	brokerChecked := true
+	fields["broker_checkin"] = brokerChecked
+	deposit.BrokerCheckin = &brokerChecked
 
-	customerChecked := true
 	// Hạn giữ phí: hết buổi xem + 4 ngày để khách kịp đặt cọc mua BĐS
 	deadline := s.feeHoldDeadline(deposit)
+
+	customerChecked := true
 	fields["status"] = model.DepositStatusCheckedIn
 	fields["customer_checkin"] = customerChecked
 	fields["otp_hash"] = ""
@@ -1076,28 +1059,28 @@ func (s *depositService) mapList(items []model.Deposit) []dto.DepositResponse {
 // toDepositResponse chuyển model → DTO phẳng cho FE (không lộ otp_hash).
 func (s *depositService) toDepositResponse(deposit *model.Deposit) dto.DepositResponse {
 	resp := dto.DepositResponse{
-		ID:            deposit.ID,
-		Status:        deposit.Status,
-		CustomerID:    deposit.CustomerID,
-		BrokerID:      deposit.BrokerID,
-		RealEstateID:  deposit.RealEstateID,
-		ProjectID:     deposit.ProjectID,
-		Amount:        deposit.Amount,
-		BrokerFee:     deposit.BrokerFee,
-		RefundAmount:  deposit.RefundAmount,
-		PenaltyAmount: deposit.PenaltyAmount,
-		ViewingDate:   formatDate(deposit.ViewingDate),
-		ViewingStart:  deposit.ViewingStart,
-		ViewingEnd:    deposit.ViewingEnd,
-		PaymentMethod: deposit.PaymentMethod,
-		PaymentRef:    deposit.PaymentRef,
-		BrokerReport:  deposit.BrokerReport,
-		CustomerReport: deposit.CustomerReport,
+		ID:                     deposit.ID,
+		Status:                 deposit.Status,
+		CustomerID:             deposit.CustomerID,
+		BrokerID:               deposit.BrokerID,
+		RealEstateID:           deposit.RealEstateID,
+		ProjectID:              deposit.ProjectID,
+		Amount:                 deposit.Amount,
+		BrokerFee:              deposit.BrokerFee,
+		RefundAmount:           deposit.RefundAmount,
+		PenaltyAmount:          deposit.PenaltyAmount,
+		ViewingDate:            formatDate(deposit.ViewingDate),
+		ViewingStart:           deposit.ViewingStart,
+		ViewingEnd:             deposit.ViewingEnd,
+		PaymentMethod:          deposit.PaymentMethod,
+		PaymentRef:             deposit.PaymentRef,
+		BrokerReport:           deposit.BrokerReport,
+		CustomerReport:         deposit.CustomerReport,
 		BrokerReportEvidence:   decodeEvidenceURLs(deposit.BrokerReportEvidence),
 		CustomerReportEvidence: decodeEvidenceURLs(deposit.CustomerReportEvidence),
 		CustomerPurchaseProof:  deposit.CustomerPurchaseProof,
 		PurchaseDepositAt:      formatOptionalTime(deposit.PurchaseDepositAt),
-		RejectReason:  deposit.RejectReason,
+		RejectReason:           deposit.RejectReason,
 		// Bằng chứng vị trí check-in: FE hiển thị cho 2 bên và admin đối chiếu
 		BrokerCheckinAt:       formatOptionalTime(deposit.BrokerCheckinAt),
 		CustomerCheckinAt:     formatOptionalTime(deposit.CustomerCheckinAt),
@@ -1105,8 +1088,13 @@ func (s *depositService) toDepositResponse(deposit *model.Deposit) dto.DepositRe
 		CustomerCheckinAcc:    deposit.CustomerCheckinAcc,
 		CheckinDistanceMeters: deposit.CheckinDistanceMeters,
 		CheckinMatched:        deposit.CheckinMatched,
-		CreatedAt:     deposit.CreatedAt.Format(time.RFC3339),
-		UpdatedAt:     deposit.UpdatedAt.Format(time.RFC3339),
+		// Mức bằng chứng vị trí để FE hiển thị cảnh báo thường trực (không mất khi mở lại đơn)
+		BrokerCheckinEvidence: checkinEvidenceLevel(
+			deposit.RealEstate, deposit.BrokerCheckinAt, deposit.BrokerCheckinLat, deposit.BrokerCheckinLng),
+		CustomerCheckinEvidence: checkinEvidenceLevel(
+			deposit.RealEstate, deposit.CustomerCheckinAt, deposit.CustomerCheckinLat, deposit.CustomerCheckinLng),
+		CreatedAt: deposit.CreatedAt.Format(time.RFC3339),
+		UpdatedAt: deposit.UpdatedAt.Format(time.RFC3339),
 	}
 
 	if deposit.Customer != nil {
@@ -1205,10 +1193,10 @@ func (s *depositService) planForStatus(status string, deposit *model.Deposit) se
 		return settlementPlan{Status: status, Transfer: deposit.Amount, Note: "Khách không đến → môi giới nhận toàn bộ phí"}
 	case model.DepositStatusNoShowBroker:
 		return settlementPlan{
-			Status:   status,
-			Refund:   deposit.Amount,
-			Penalty:  deposit.BrokerFee,
-			Note:     "Môi giới không đến → hoàn 100% phí cho khách + phạt môi giới",
+			Status:  status,
+			Refund:  deposit.Amount,
+			Penalty: deposit.BrokerFee,
+			Note:    "Môi giới không đến → hoàn 100% phí cho khách + phạt môi giới",
 		}
 	case model.DepositStatusRefunded:
 		// Dùng cho ca không bên nào xác nhận buổi xem: hoàn lại toàn bộ phí cho khách
@@ -1491,9 +1479,10 @@ func distanceMeters(lat1, lng1, lat2, lng2 float64) float64 {
 	return earthRadiusMeters * 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
 }
 
-// usableCheckinLocation — toạ độ gửi lên có dùng được làm bằng chứng không.
-// accuracy = 0 nghĩa là client không báo sai số, vẫn chấp nhận.
-func usableCheckinLocation(location dto.CheckinLocation) bool {
+// hasCheckinCoordinates — toạ độ gửi lên có hợp lệ để ghi nhận không.
+// KHÔNG chặn theo sai số GPS: sai số chỉ ảnh hưởng độ tin cậy (xem poorCheckinAccuracy),
+// không được khiến người đã tới thật mà không bấm được check-in.
+func hasCheckinCoordinates(location dto.CheckinLocation) bool {
 	if location.Latitude == 0 && location.Longitude == 0 {
 		return false
 	}
@@ -1503,19 +1492,67 @@ func usableCheckinLocation(location dto.CheckinLocation) bool {
 	if location.Longitude < -180 || location.Longitude > 180 {
 		return false
 	}
-	if location.Accuracy < 0 {
-		return false
-	}
-	return location.Accuracy == 0 || location.Accuracy <= checkinMaxAccuracyMeters
+	return true
 }
 
-// atEstate — toạ độ có nằm trong bán kính bất động sản không.
-// BĐS chưa có toạ độ ⇒ không kiểm chứng được, trả true để không chặn oan người đã tới thật.
+// poorCheckinAccuracy — sai số GPS vượt ngưỡng tin cậy (chỉ dùng để cảnh báo, không chặn)
+func poorCheckinAccuracy(location dto.CheckinLocation) bool {
+	return location.Accuracy > checkinMaxAccuracyMeters
+}
+
+// atEstate — toạ độ gửi lên có nằm trong bán kính bất động sản không.
+// Dùng khi check-in chỉ để CẢNH BÁO (không chặn người đã tới thật mà định vị lệch).
+// BĐS chưa có toạ độ ⇒ không kiểm chứng được, trả true để không chặn oan.
 func atEstate(estate *model.RealEstate, location dto.CheckinLocation) bool {
 	if estate == nil || estate.Latitude == nil || estate.Longitude == nil {
 		return true
 	}
 	return distanceMeters(*estate.Latitude, *estate.Longitude, location.Latitude, location.Longitude) <= checkinMatchRadiusMeters
+}
+
+// Mức chất lượng bằng chứng vị trí của 1 bên — FE dùng để hiển thị cảnh báo thường trực.
+const (
+	// Chưa thao tác check-in
+	checkinEvidenceNone = ""
+	// Có toạ độ trong bán kính bất động sản ⇒ bằng chứng mạnh
+	checkinEvidenceStrong = "AT_ESTATE"
+	// Có toạ độ nhưng ở xa bất động sản ⇒ chưa đủ căn cứ
+	checkinEvidenceFar = "FAR"
+	// Đã thao tác nhưng không có toạ độ (hoặc BĐS chưa có toạ độ để đối chiếu)
+	checkinEvidenceUnknown = "NO_LOCATION"
+)
+
+// checkinEvidenceAtEstate — toạ độ ĐÃ LƯU của 1 bên có nằm trong bán kính bất động sản không.
+// Dùng lúc tất toán để chống gian lận: bấm check-in từ xa, hoặc không có toạ độ, thì KHÔNG
+// được coi là đã tới. BĐS chưa có toạ độ hoặc bên đó không gửi vị trí ⇒ trả false
+// (hệ thống đẩy admin xác minh thay vì tự động trả tiền).
+func checkinEvidenceAtEstate(estate *model.RealEstate, lat, lng *float64) bool {
+	if lat == nil || lng == nil {
+		return false
+	}
+	if estate == nil || estate.Latitude == nil || estate.Longitude == nil {
+		return false
+	}
+	return distanceMeters(*estate.Latitude, *estate.Longitude, *lat, *lng) <= checkinMatchRadiusMeters
+}
+
+// checkinEvidenceLevel — xếp mức bằng chứng vị trí đã lưu của 1 bên để trả về FE.
+// FE hiển thị cảnh báo dựa trên mức này nên cảnh báo KHÔNG mất khi đóng/mở lại đơn.
+func checkinEvidenceLevel(estate *model.RealEstate, at *time.Time, lat, lng *float64) string {
+	if at == nil {
+		return checkinEvidenceNone
+	}
+	if lat == nil || lng == nil {
+		return checkinEvidenceUnknown
+	}
+	if estate == nil || estate.Latitude == nil || estate.Longitude == nil {
+		// Bất động sản chưa có toạ độ ⇒ không đối chiếu được, coi như thiếu căn cứ
+		return checkinEvidenceUnknown
+	}
+	if distanceMeters(*estate.Latitude, *estate.Longitude, *lat, *lng) <= checkinMatchRadiusMeters {
+		return checkinEvidenceStrong
+	}
+	return checkinEvidenceFar
 }
 
 // RefundFeeOnPurchaseDeposit — luồng ĐẶT CỌC MUA bất động sản (làm sau) gọi hàm này khi

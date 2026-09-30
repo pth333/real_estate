@@ -143,6 +143,10 @@ type DepositResponse struct {
 	CustomerCheckinAcc    *float64 `json:"customer_checkin_accuracy"`
 	CheckinDistanceMeters *float64 `json:"checkin_distance_meters"`
 	CheckinMatched        bool     `json:"checkin_matched"`
+	// Chất lượng bằng chứng vị trí của từng bên: "" (chưa thao tác) / AT_ESTATE / FAR / NO_LOCATION.
+	// FE dựa vào đây để hiển thị cảnh báo THƯỜNG TRỰC (không phải toast, không mất khi mở lại đơn).
+	BrokerCheckinEvidence   string `json:"broker_checkin_evidence"`
+	CustomerCheckinEvidence string `json:"customer_checkin_evidence"`
 	BrokerReport       string `json:"broker_report"`
 	CustomerReport     string `json:"customer_report"`
 	// Bằng chứng kèm báo cáo mua/không mua của từng bên

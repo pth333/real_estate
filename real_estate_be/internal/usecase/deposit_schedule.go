@@ -185,39 +185,61 @@ func (s *depositService) releaseFeeAfterHold(deposit *model.Deposit) error {
 		"Hết thời gian giữ phí mà khách không đặt cọc mua → phí thuộc về môi giới")
 }
 
-// settleOverdueByCheckinLog — hết hạn báo cáo mà chưa check-in: quyết định theo LOG check-in.
+// settleOverdueByCheckinLog — hết hạn mà chưa check-in: quyết định theo BẰNG CHỨNG VỊ TRÍ.
 //
-// Nguyên tắc: bên có căn cứ (vị trí/OTP) thắng khi bên kia không có gì; chỉ khi cả 2 đều
-// có log mà vẫn mâu thuẫn mới cần admin. Không ai có log ⇒ hoàn 100% cho khách, vì môi giới
-// là bên nắm công cụ sinh OTP để chứng minh mình đã tới mà đã không dùng.
+// Nguyên tắc chống gian lận: môi giới chỉ được TỰ ĐỘNG nhận phí khi có toạ độ TẠI bất động sản.
+// Bấm "sinh OTP" từ xa (GPS xa BĐS) hoặc không có GPS ⇒ chưa đủ căn cứ, hệ thống KHÔNG tự trả tiền
+// (đẩy admin xem log) — tránh việc môi giới ngồi nhà bấm OTP rồi khai khách bùng để ăn phí.
+//
+// Khách cũng đối chiếu y vậy: bấm "Tôi đã tới" mà vị trí xa BĐS thì không tính là đã tới.
 func (s *depositService) settleOverdueByCheckinLog(deposit *model.Deposit) error {
-	brokerPresent := deposit.BrokerCheckin != nil && *deposit.BrokerCheckin
-	customerPresent := deposit.CustomerCheckin != nil && *deposit.CustomerCheckin
+	brokerAtPlace := checkinEvidenceAtEstate(deposit.RealEstate, deposit.BrokerCheckinLat, deposit.BrokerCheckinLng)
+	customerAtPlace := checkinEvidenceAtEstate(deposit.RealEstate, deposit.CustomerCheckinLat, deposit.CustomerCheckinLng)
 
 	switch {
-	case brokerPresent && !customerPresent:
-		note := "Quá hạn: chỉ môi giới có log check-in → môi giới nhận phí"
-		if deposit.CustomerReport == model.ReportAttended {
-			note = "Quá hạn: khách khai có mặt nhưng không có log vị trí/OTP → môi giới nhận phí"
+	// Môi giới có mặt tại BĐS, khách không có căn cứ nào → khách bùng
+	case brokerAtPlace && !customerAtPlace:
+		note := "Môi giới có vị trí tại bất động sản, khách không xác nhận có mặt → môi giới nhận phí"
+		if deposit.CustomerReport == model.ReportAttended || deposit.CustomerCheckin != nil {
+			note = "Môi giới có vị trí tại bất động sản, khách không có vị trí/OTP hợp lệ → môi giới nhận phí"
 		}
+
 		return s.settleWithNotify(deposit, model.DepositStatusNoShowCustomer, note)
 
-	case !brokerPresent && customerPresent:
-		note := "Quá hạn: chỉ khách có log check-in → hoàn 100% phí cho khách"
-		if deposit.BrokerReport == model.ReportAttended {
-			note = "Quá hạn: môi giới khai có mặt nhưng không check-in tại chỗ → hoàn 100% phí cho khách"
+	// Khách có mặt tại BĐS nhưng môi giới không có căn cứ (không tới, hoặc bấm OTP từ xa)
+	case !brokerAtPlace && customerAtPlace:
+		note := "Khách có vị trí tại bất động sản, môi giới không check-in tại chỗ → hoàn 100% phí cho khách"
+		if deposit.BrokerCheckin != nil {
+			note = "Môi giới bấm check-in nhưng vị trí ở xa bất động sản → hoàn 100% phí cho khách"
 		}
 		return s.settleWithNotify(deposit, model.DepositStatusNoShowBroker, note)
 
-	case brokerPresent && customerPresent:
-		// Cả 2 đều có log nhưng vẫn chưa tất toán được (log/vị trí lệch nhau) → admin xác minh
-		return s.openSystemDispute(deposit,
-			"Hai bên đều có log check-in nhưng chưa thống nhất được kết quả buổi xem")
-
-	default:
+	// Không ai có vị trí tại BĐS (bấm từ xa / thiếu định vị / không ai bấm) → hoàn cho khách
+	case !brokerAtPlace && !customerAtPlace:
+		if deposit.BrokerCheckin != nil && deposit.BrokerCheckinLat == nil {
+			// Môi giới có bấm sinh OTP nhưng không có vị trí: không đủ căn cứ trả tiền, cũng
+			// không đủ căn cứ phạt → admin xem log (giờ sinh OTP, log thông báo 2 bên)
+			return s.openSystemDispute(deposit,
+				"Môi giới sinh OTP nhưng không có vị trí, khách không có căn cứ có mặt → cần xác minh")
+		}
 		return s.settleWithNotify(deposit, model.DepositStatusRefunded,
-			"Không bên nào xác nhận buổi xem → hoàn 100% phí cho khách")
+			"Không bên nào có vị trí tại bất động sản → hoàn 100% phí cho khách")
 	}
+
+	// Cả 2 đều có vị trí tại BĐS ⇒ buổi xem ĐÃ DIỄN RA, chỉ thiếu bước khách nhập mã OTP.
+	// Trường hợp này KHÔNG đẩy admin và cũng không trả tiền ngay: dời hạn sang mốc hết thời
+	// gian giữ phí (hết buổi xem + 4 ngày) để khách kịp đặt cọc mua; tới mốc đó thì tất toán
+	// y như đơn đã check-in (khách đặt cọc mua → hoàn 100%, không đặt cọc → môi giới nhận phí).
+	holdDeadline := s.feeHoldDeadline(deposit)
+	if time.Now().Before(holdDeadline) {
+		if err := s.depositRepo.UpdateFields(deposit.ID, map[string]interface{}{
+			"report_deadline": holdDeadline,
+		}); err != nil {
+			return err
+		}
+		return nil
+	}
+	return s.releaseFeeAfterHold(deposit)
 }
 
 // settleByReport tất toán theo giá trị báo cáo mua/không mua đã nhận.

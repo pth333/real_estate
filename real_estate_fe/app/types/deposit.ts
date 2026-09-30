@@ -119,6 +119,12 @@ export interface Deposit {
   purchase_deposit_at: string
   /** true khi 2 bên ở gần nhau ⇒ buổi xem đã diễn ra */
   checkin_matched: boolean
+  /**
+   * Mức bằng chứng vị trí của từng bên: '' (chưa thao tác) | AT_ESTATE | FAR | NO_LOCATION.
+   * FE dùng để hiển thị cảnh báo THƯỜNG TRỰC — cảnh báo theo dữ liệu đơn nên không mất khi mở lại.
+   */
+  broker_checkin_evidence: string
+  customer_checkin_evidence: string
   broker_report: string
   customer_report: string
   /** Bằng chứng ảnh kèm báo cáo mua/không mua của từng bên */

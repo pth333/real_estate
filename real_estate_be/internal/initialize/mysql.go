@@ -93,7 +93,6 @@ func MigrateDb(db *gorm.DB) {
 	migrateLegacyUserRole(db)
 	seedAdminUser(db)
 	seedDepositPolicies(db)
-	log.Println("✅ DB migration completed")
 }
 
 // seedDepositPolicies chèn chính sách PHÍ MÔI GIỚI theo khoảng giá khi bảng còn trống.

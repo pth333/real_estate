@@ -160,8 +160,6 @@ func seedRbac(db *gorm.DB) {
 		}
 	}
 
-	log.Printf("✅ [RBAC] %d permission, %d role, %d liên kết quyền mới được tạo",
-		len(permissionSeeds), len(roleSeeds), createdLinks)
 }
 
 // migrateLegacyUserRole chuyển dữ liệu từ cột users.role cũ sang bảng nối user_roles,
@@ -189,5 +187,4 @@ func migrateLegacyUserRole(db *gorm.DB) {
 		return
 	}
 
-	log.Printf("✅ [RBAC] đã chuyển %d user từ users.role sang user_roles và xoá cột cũ", result.RowsAffected)
 }

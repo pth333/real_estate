@@ -33,10 +33,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
 import type { Deposit, DepositActorRole } from '~/types/deposit'
 import { useDepositService } from '~/services/deposit.service'
-import IconCloseOutline from '~/icons/IconCloseOutline.vue'
 
 const props = defineProps<{
   show: boolean
