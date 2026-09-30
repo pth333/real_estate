@@ -25,13 +25,10 @@ redis:
 recommendation:
   addr: recommendation:50051
 
-# ── Đặt lịch xem nhà + cổng thanh toán phí môi giới ─────
 payment:
-  return_url: http://soihieuland.io.vn/payment/result
-  ipn_url: http://136.85.81.118/api/2026/deposits/payment/ipn
+  return_url: https://soihieuland.io.vn/payment/result
+  ipn_url: https://soihieuland.io.vn/api/2026/deposits/payment/ipn
   vnpay:
-    tmn_code: ""
-    hash_secret: ""
     payment_url: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
     locale: vn
     expire_minutes: 15
