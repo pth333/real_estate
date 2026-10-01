@@ -9,8 +9,11 @@ mysql:
   database: real_estate_db
 
 kafka:
+  # Trong docker network phải dùng listener INTERNAL (advertise là kafka:29092).
+  # KHÔNG dùng kafka:9092: listener PLAINTEXT advertise 127.0.0.1:9092 (dành cho máy host),
+  # nên khi broker trả metadata/controller endpoint, BE trong container sẽ dial 127.0.0.1 → refused.
   brokers:
-    - kafka:9092
+    - kafka:29092
   client_id: real-estate-be
   group_prefix: real-estate-be
   topics:

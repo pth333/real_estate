@@ -2,9 +2,10 @@ package initialize
 
 import (
 	"context"
+	"errors"
 	"log"
-	"net"
-	"strconv"
+	"strings"
+	"time"
 
 	"real_estate_be/internal/global"
 	kafkaconsumer "real_estate_be/internal/kafka"
@@ -67,33 +68,20 @@ func StartKafkaConsumers(ctx context.Context, db *gorm.DB) {
 
 }
 
-// ensureTopicExists chủ động tạo topic nếu chưa tồn tại
+// ensureTopicExists chủ động tạo topic nếu chưa tồn tại.
+//
+// LƯU Ý: Kafka hiện đại (2.x+) tự forward CreateTopics từ broker bất kỳ tới controller,
+// nên KHÔNG cần tự dial controller nữa. Cách cũ (conn.Controller() rồi Dial host/port đó)
+// rất dễ chết vì endpoint controller trả về theo ADVERTISED LISTENER của client:
+// nếu compose advertise PLAINTEXT://127.0.0.1:9092 mà BE chạy trong container khác thì
+// "127.0.0.1" là chính BE ⇒ dial tcp 127.0.0.1:9092: connection refused.
+//
+// Ở đây chỉ dial broker đầu tiên (đúng listener của môi trường đang chạy) và thử lại vài lần
+// vì lúc BE khởi động, Kafka có thể chưa sẵn sàng.
 func ensureTopicExists(brokers []string, topic string, numPartitions int, replicationFactor int) {
 	if len(brokers) == 0 {
 		return
 	}
-
-	// Kết nối tới broker đầu tiên để gửi yêu cầu quản trị (Admin)
-	conn, err := kafkago.Dial("tcp", brokers[0])
-	if err != nil {
-		log.Printf("⚠️ [Kafka-Admin] failed to connect to broker %s: %v", brokers[0], err)
-		return
-	}
-	defer conn.Close()
-
-	controller, err := conn.Controller()
-	if err != nil {
-		log.Printf("⚠️ [Kafka-Admin] failed to get controller: %v", err)
-		return
-	}
-
-	var controllerConn *kafkago.Conn
-	controllerConn, err = kafkago.Dial("tcp", net.JoinHostPort(controller.Host, strconv.Itoa(controller.Port)))
-	if err != nil {
-		log.Printf("⚠️ [Kafka-Admin] failed to connect to controller: %v", err)
-		return
-	}
-	defer controllerConn.Close()
 
 	topicConfig := kafkago.TopicConfig{
 		Topic:             topic,
@@ -101,11 +89,37 @@ func ensureTopicExists(brokers []string, topic string, numPartitions int, replic
 		ReplicationFactor: replicationFactor,
 	}
 
-	err = controllerConn.CreateTopics(topicConfig)
-	if err != nil {
-		// Nếu topic đã tồn tại thì broker sẽ trả về lỗi, chúng ta có thể an tâm bỏ qua
-		log.Printf("ℹ️ [Kafka-Admin] Topic '%s' check completed (it may already exist or auto-created: %v)", topic, err)
-		return
+	const maxAttempts = 5
+	var lastErr error
+
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		conn, err := kafkago.Dial("tcp", brokers[0])
+		if err != nil {
+			lastErr = err
+			log.Printf("⚠️ [Kafka-Admin] chưa kết nối được broker %s (lần %d/%d): %v",
+				brokers[0], attempt, maxAttempts, err)
+			time.Sleep(time.Duration(attempt) * 2 * time.Second)
+			continue
+		}
+
+		err = conn.CreateTopics(topicConfig)
+		conn.Close()
+		if err == nil {
+			log.Printf("✅ [Kafka-Admin] đã tạo topic '%s' (%d partition)", topic, numPartitions)
+			return
+		}
+
+		// Topic đã tồn tại là trường hợp bình thường → coi như xong
+		if errors.Is(err, kafkago.TopicAlreadyExists) ||
+			strings.Contains(strings.ToLower(err.Error()), "already exists") {
+			log.Printf("ℹ️ [Kafka-Admin] topic '%s' đã tồn tại", topic)
+			return
+		}
+
+		lastErr = err
+		log.Printf("⚠️ [Kafka-Admin] tạo topic '%s' thất bại (lần %d/%d): %v", topic, attempt, maxAttempts, err)
+		time.Sleep(time.Duration(attempt) * 2 * time.Second)
 	}
 
+	log.Printf("⚠️ [Kafka-Admin] bỏ qua tạo topic '%s' sau %d lần thử: %v", topic, maxAttempts, lastErr)
 }
