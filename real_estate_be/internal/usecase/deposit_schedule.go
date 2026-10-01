@@ -7,6 +7,7 @@ import (
 
 	"real_estate_be/internal/dto"
 	model "real_estate_be/internal/models"
+	"real_estate_be/pkg/vntime"
 )
 
 // ══════════════════════════════════════════════════════════
@@ -15,7 +16,7 @@ import (
 
 // RunScheduledTasks chạy toàn bộ job định kỳ. Được gọi từ scheduler mỗi chu kỳ.
 func (s *depositService) RunScheduledTasks() {
-	now := time.Now()
+	now := vntime.Now()
 	s.cancelUnpaidDeposits(now)
 	s.autoRejectExpiredDeposits(now)
 	s.openReportWindows(now)
@@ -231,7 +232,7 @@ func (s *depositService) settleOverdueByCheckinLog(deposit *model.Deposit) error
 	// gian giữ phí (hết buổi xem + 4 ngày) để khách kịp đặt cọc mua; tới mốc đó thì tất toán
 	// y như đơn đã check-in (khách đặt cọc mua → hoàn 100%, không đặt cọc → môi giới nhận phí).
 	holdDeadline := s.feeHoldDeadline(deposit)
-	if time.Now().Before(holdDeadline) {
+	if vntime.Now().Before(holdDeadline) {
 		if err := s.depositRepo.UpdateFields(deposit.ID, map[string]interface{}{
 			"report_deadline": holdDeadline,
 		}); err != nil {

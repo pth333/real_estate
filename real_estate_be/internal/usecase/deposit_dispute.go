@@ -8,6 +8,7 @@ import (
 
 	"real_estate_be/internal/dto"
 	model "real_estate_be/internal/models"
+	"real_estate_be/pkg/vntime"
 )
 
 // ══════════════════════════════════════════════════════════
@@ -36,7 +37,7 @@ func (s *depositService) OpenDispute(depositID, userID uint64, req dto.CreateDis
 		raisedBy = model.DisputeRaisedByBroker
 	}
 
-	deadline := time.Now().Add(time.Duration(s.cfg.DisputeEvidenceHours) * time.Hour)
+	deadline := vntime.Now().Add(time.Duration(s.cfg.DisputeEvidenceHours) * time.Hour)
 	dispute := &model.Dispute{
 		DepositID:        deposit.ID,
 		RaisedBy:         raisedBy,
@@ -88,7 +89,7 @@ func (s *depositService) AddDisputeEvidence(disputeID, userID uint64, req dto.Ad
 	if dispute.Deposit == nil || (dispute.Deposit.CustomerID != userID && dispute.Deposit.BrokerID != userID) {
 		return nil, errors.New("bạn không thuộc đơn đặt lịch của tranh chấp này")
 	}
-	if dispute.EvidenceDeadline != nil && time.Now().After(*dispute.EvidenceDeadline) {
+	if dispute.EvidenceDeadline != nil && vntime.Now().After(*dispute.EvidenceDeadline) {
 		return nil, errors.New("đã quá hạn upload bằng chứng")
 	}
 	if len(req.EvidenceURLs) == 0 {
@@ -173,7 +174,7 @@ func (s *depositService) ResolveDispute(disputeID, adminID uint64, req dto.Resol
 		return nil, err
 	}
 
-	now := time.Now()
+	now := vntime.Now()
 	dispute.Status = model.DisputeStatusResolved
 	dispute.Resolution = req.Resolution
 	dispute.ResolvedBy = &adminID
@@ -235,7 +236,7 @@ func (s *depositService) buildDisputePlan(req dto.ResolveDisputeRequest, deposit
 // openSystemDispute — hệ thống tự mở tranh chấp khi 2 bên báo cáo mâu thuẫn
 // hoặc quá hạn báo cáo. Tiền được giữ nguyên tại escrow.
 func (s *depositService) openSystemDispute(deposit *model.Deposit, reason string) error {
-	deadline := time.Now().Add(time.Duration(s.cfg.DisputeEvidenceHours) * time.Hour)
+	deadline := vntime.Now().Add(time.Duration(s.cfg.DisputeEvidenceHours) * time.Hour)
 	dispute := &model.Dispute{
 		DepositID:        deposit.ID,
 		RaisedBy:         model.DisputeRaisedBySystem,

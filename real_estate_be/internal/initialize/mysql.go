@@ -14,7 +14,11 @@ import (
 
 func InitMysql() {
 	m := global.Config.Mysql
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+	// loc=Local: driver đọc/ghi cột DATETIME theo time.Local. Toàn bộ tiến trình đã bị ép
+	// time.Local = UTC+7 ở main() (vntime.SetDefault) nên dữ liệu luôn theo giờ VN, kể cả
+	// khi VPS/container chạy UTC.
+	// time_zone='+07:00': để hàm phía MySQL (NOW(), CURDATE()...) cũng trả giờ VN.
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local&time_zone=%%27%%2B07%%3A00%%27",
 		m.Username,
 		m.Password,
 		m.Host,

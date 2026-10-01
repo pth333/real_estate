@@ -9,6 +9,7 @@ import (
 	model "real_estate_be/internal/models"
 	"real_estate_be/internal/repo"
 	kafkapkg "real_estate_be/pkg/kafka"
+	"real_estate_be/pkg/vntime"
 
 	"gorm.io/gorm"
 )
@@ -166,7 +167,7 @@ func isToday(posted string) bool {
 		return false
 	}
 
-	now := time.Now()
+	now := vntime.Now()
 	return t.Year() == now.Year() &&
 		t.Month() == now.Month() &&
 		t.Day() == now.Day()

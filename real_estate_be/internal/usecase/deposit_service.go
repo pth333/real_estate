@@ -17,6 +17,7 @@ import (
 	"real_estate_be/internal/repo"
 	"real_estate_be/pkg/mailer"
 	"real_estate_be/pkg/payment"
+	"real_estate_be/pkg/vntime"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -294,7 +295,7 @@ func (s *depositService) CreateDeposit(customerID uint64, req dto.CreateDepositR
 		ClientIP:  clientIP,
 		Method:    method,
 		BankCode:  req.BankCode,
-		ExpiresAt: time.Now().Add(time.Duration(s.cfg.PaymentTimeoutMinutes) * time.Minute),
+		ExpiresAt: vntime.Now().Add(time.Duration(s.cfg.PaymentTimeoutMinutes) * time.Minute),
 	})
 	if err != nil {
 		return nil, err
@@ -358,7 +359,7 @@ func (s *depositService) HandlePaymentCallback(params map[string]string) (*dto.P
 		}, nil
 	}
 
-	now := time.Now()
+	now := vntime.Now()
 	if err := s.depositRepo.UpdateFields(deposit.ID, map[string]interface{}{
 		"status":  model.DepositStatusPending,
 		"paid_at": now,
@@ -411,7 +412,7 @@ func (s *depositService) ConfirmDeposit(depositID, brokerID uint64) (*dto.Deposi
 		return nil, errors.New("chỉ xác nhận được đơn đang chờ xử lý")
 	}
 
-	now := time.Now()
+	now := vntime.Now()
 	if err := s.depositRepo.UpdateFields(deposit.ID, map[string]interface{}{
 		"status":              model.DepositStatusBrokerConfirmed,
 		"broker_confirmed_at": now,
@@ -486,7 +487,7 @@ func (s *depositService) GenerateCheckinOTP(depositID, brokerID uint64, location
 	if deposit.Status != model.DepositStatusBrokerConfirmed {
 		return nil, errors.New("chỉ sinh được OTP khi lịch đã được xác nhận")
 	}
-	if !s.withinCheckinWindow(deposit, time.Now()) {
+	if !s.withinCheckinWindow(deposit, vntime.Now()) {
 		return nil, errors.New("chưa tới thời gian check-in của buổi xem nhà")
 	}
 
@@ -495,7 +496,7 @@ func (s *depositService) GenerateCheckinOTP(depositID, brokerID uint64, location
 	if err != nil {
 		return nil, err
 	}
-	now := time.Now()
+	now := vntime.Now()
 	expiresAt := now.Add(time.Duration(s.cfg.OTPValidMinutes) * time.Minute)
 
 	fields := map[string]interface{}{
@@ -620,14 +621,14 @@ func (s *depositService) CustomerArrived(depositID, customerID uint64, location 
 	if deposit.Status != model.DepositStatusBrokerConfirmed {
 		return nil, errors.New("đơn không ở trạng thái chờ check-in")
 	}
-	if !s.withinCheckinWindow(deposit, time.Now()) {
+	if !s.withinCheckinWindow(deposit, vntime.Now()) {
 		return nil, errors.New("chưa tới thời gian check-in của buổi xem nhà")
 	}
 	if !hasCheckinCoordinates(location.CheckinLocation) {
 		return nil, errors.New("chưa lấy được vị trí của bạn, vui lòng bật định vị và thử lại")
 	}
 
-	now := time.Now()
+	now := vntime.Now()
 	fields := map[string]interface{}{}
 	saveCheckinLocation(deposit, fields, false, location.CheckinLocation, now)
 
@@ -659,14 +660,14 @@ func (s *depositService) CustomerCheckin(depositID, customerID uint64, otp strin
 	if deposit.OTPHash == "" || deposit.OTPExpiresAt == nil {
 		return nil, errors.New("môi giới chưa sinh mã OTP")
 	}
-	if time.Now().After(*deposit.OTPExpiresAt) {
+	if vntime.Now().After(*deposit.OTPExpiresAt) {
 		return nil, errors.New("mã OTP đã hết hạn, đề nghị môi giới sinh lại")
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(deposit.OTPHash), []byte(strings.TrimSpace(otp))); err != nil {
 		return nil, errors.New("mã OTP không đúng")
 	}
 
-	now := time.Now()
+	now := vntime.Now()
 	fields := map[string]interface{}{}
 	// Vị trí của khách là bằng chứng bổ trợ để đối chiếu với vị trí môi giới
 	saveCheckinLocation(deposit, fields, false, location.CheckinLocation, now)
@@ -753,7 +754,7 @@ func (s *depositService) SubmitReport(depositID, userID uint64, req dto.ReportRe
 	evidenceURLs := req.EvidenceURLs
 	purchaseProof := strings.ToUpper(strings.TrimSpace(req.PurchaseProof))
 
-	now := time.Now()
+	now := vntime.Now()
 	fields := map[string]interface{}{}
 	if isBroker {
 		fields["broker_report"] = report
@@ -849,7 +850,7 @@ func (s *depositService) DecidePurchase(depositID, adminID uint64, req dto.Purch
 		return nil, errors.New("đơn đặt lịch không ở trạng thái chờ duyệt tài liệu mua nhà")
 	}
 
-	now := time.Now()
+	now := vntime.Now()
 	note := strings.TrimSpace(req.Note)
 
 	if !req.Approved {
@@ -928,7 +929,7 @@ func (s *depositService) RateBroker(depositID, customerID uint64, req dto.RateBr
 		CustomerID: customerID,
 		Rating:     req.Rating,
 		Comment:    req.Comment,
-		CreatedAt:  time.Now(),
+		CreatedAt:  vntime.Now(),
 	}); err != nil {
 		return err
 	}
@@ -1136,7 +1137,7 @@ func (s *depositService) toDepositResponse(deposit *model.Deposit) dto.DepositRe
 		resp.CustomerCheckin = *deposit.CustomerCheckin
 	}
 
-	now := time.Now()
+	now := vntime.Now()
 	resp.CanConfirm = deposit.Status == model.DepositStatusPending
 	resp.CanCheckin = deposit.Status == model.DepositStatusBrokerConfirmed && s.withinCheckinWindow(deposit, now)
 	resp.CanReport = deposit.Status == model.DepositStatusBrokerConfirmed
@@ -1224,7 +1225,7 @@ func (s *depositService) settleWithNotify(deposit *model.Deposit, status, note s
 
 // settle ghi nhận toàn bộ dòng tiền + đổi trạng thái trong 1 transaction.
 func (s *depositService) settle(deposit *model.Deposit, plan settlementPlan) error {
-	now := time.Now()
+	now := vntime.Now()
 	refund := round2(plan.Refund)
 	transfer := round2(plan.Transfer)
 	penalty := round2(plan.Penalty)
@@ -1318,7 +1319,7 @@ func (s *depositService) sendMail(depositID uint64, trigger, to, subject, body s
 		Subject:   subject,
 		Content:   body,
 		Status:    "SENT",
-		CreatedAt: time.Now(),
+		CreatedAt: vntime.Now(),
 	}
 
 	if err := s.mailer.Send(mailer.Message{To: to, Subject: subject, Body: body}); err != nil {
@@ -1357,13 +1358,22 @@ func (s *depositService) notifySettlement(deposit *model.Deposit, status string)
 // Helper
 // ══════════════════════════════════════════════════════════
 
+// parseViewingSlot — kiểm tra ngày + khung giờ khách chọn (dùng thời điểm hiện tại làm mốc).
 func parseViewingSlot(dateStr, startStr, endStr string) (time.Time, string, string, error) {
-	viewingDate, err := time.ParseInLocation(dateLayout, strings.TrimSpace(dateStr), time.Local)
+	return parseViewingSlotAt(vntime.Now(), dateStr, startStr, endStr)
+}
+
+// parseViewingSlotAt — tách riêng `now` để test được (không phụ thuộc giờ hệ thống).
+//
+// LƯU Ý QUAN TRỌNG: time.Parse("15:04", "16:00") trả về mốc giờ ở UTC với NGÀY ZERO
+// (0000-01-01 16:00 +0000), nên KHÔNG được so trực tiếp với `now` (giờ local, năm thật) —
+// so kiểu đó thì mọi khung giờ hôm nay đều bị coi là đã qua. Ở đây chỉ so PHÚT TRONG NGÀY.
+func parseViewingSlotAt(now time.Time, dateStr, startStr, endStr string) (time.Time, string, string, error) {
+	viewingDate, err := time.ParseInLocation(dateLayout, strings.TrimSpace(dateStr), vntime.Location)
 	if err != nil {
 		return time.Time{}, "", "", errors.New("ngày xem nhà không hợp lệ (định dạng YYYY-MM-DD)")
 	}
 
-	now := time.Now()
 	todayStr := now.Format(dateLayout)
 	if viewingDate.Format(dateLayout) < todayStr {
 		return time.Time{}, "", "", errors.New("ngày xem nhà không được ở quá khứ")
@@ -1392,13 +1402,18 @@ func parseViewingSlot(dateStr, startStr, endStr string) (time.Time, string, stri
 			"khung giờ xem nhà chỉ trong khoảng %02d:00 - %02d:00", viewingSlotFirstHour, viewingSlotLastHour)
 	}
 
-	// Đặt trong ngày hôm nay thì khung phải còn ở tương lai
-	if viewingDate.Format(dateLayout) == todayStr && !startAt.After(now) {
+	// Đặt trong ngày hôm nay thì khung phải còn ở tương lai (so theo giờ:phút trong ngày)
+	if viewingDate.Format(dateLayout) == todayStr && clockMinutes(startAt) <= clockMinutes(now) {
 		return time.Time{}, "", "", errors.New("khung giờ xem nhà hôm nay phải sau thời điểm hiện tại")
 	}
 
 	// Chuẩn hoá lại "HH:MM" để cột viewing_start/viewing_end luôn cùng định dạng
 	return viewingDate, startAt.Format(timeLayout), endAt.Format(timeLayout), nil
+}
+
+// clockMinutes — số phút kể từ 00:00, chỉ dùng phần giờ:phút (bỏ ngày/múi giờ)
+func clockMinutes(t time.Time) int {
+	return t.Hour()*60 + t.Minute()
 }
 
 // normalizeContactInfo kiểm tra họ tên + SĐT khách để lại cho buổi xem.
@@ -1456,7 +1471,7 @@ func (s *depositService) feeHoldDeadline(deposit *model.Deposit) time.Time {
 	_, endAt, err := viewingRange(deposit)
 	if err != nil {
 		// Không ghép được mốc thời gian thì tính từ lúc gọi để đơn không bị treo vô hạn
-		endAt = time.Now()
+		endAt = vntime.Now()
 	}
 	return endAt.AddDate(0, 0, s.cfg.RefundWindowDays)
 }
@@ -1565,7 +1580,7 @@ func (s *depositService) RefundFeeOnPurchaseDeposit(depositID uint64) error {
 		return errors.New("không tìm thấy đơn đặt lịch")
 	}
 
-	now := time.Now()
+	now := vntime.Now()
 	if err := s.depositRepo.UpdateFields(deposit.ID, map[string]interface{}{
 		"purchase_deposit_at": now,
 	}); err != nil {
@@ -1589,11 +1604,11 @@ func (s *depositService) RefundFeeOnPurchaseDeposit(depositID uint64) error {
 // viewingRange ghép viewing_date + giờ bắt đầu/kết thúc thành mốc thời gian đầy đủ.
 func viewingRange(deposit *model.Deposit) (time.Time, time.Time, error) {
 	dateStr := deposit.ViewingDate.Format(dateLayout)
-	startAt, err := time.ParseInLocation(dateLayout+" "+timeLayout, dateStr+" "+deposit.ViewingStart, time.Local)
+	startAt, err := time.ParseInLocation(dateLayout+" "+timeLayout, dateStr+" "+deposit.ViewingStart, vntime.Location)
 	if err != nil {
 		return time.Time{}, time.Time{}, err
 	}
-	endAt, err := time.ParseInLocation(dateLayout+" "+timeLayout, dateStr+" "+deposit.ViewingEnd, time.Local)
+	endAt, err := time.ParseInLocation(dateLayout+" "+timeLayout, dateStr+" "+deposit.ViewingEnd, vntime.Location)
 	if err != nil {
 		return time.Time{}, time.Time{}, err
 	}
@@ -1602,7 +1617,7 @@ func viewingRange(deposit *model.Deposit) (time.Time, time.Time, error) {
 
 func buildPaymentRef() string {
 	raw := strings.ReplaceAll(uuid.New().String(), "-", "")
-	return fmt.Sprintf("DEP%d%s", time.Now().Unix(), strings.ToUpper(raw[:8]))
+	return fmt.Sprintf("DEP%d%s", vntime.Now().Unix(), strings.ToUpper(raw[:8]))
 }
 
 // buildNumericOTP sinh OTP 6 số bằng nguồn ngẫu nhiên an toàn (chống đoán mã).
@@ -1611,7 +1626,7 @@ func buildNumericOTP() string {
 	value, err := rand.Int(rand.Reader, max)
 	if err != nil {
 		// Fallback hiếm gặp: dùng thời gian nano để không chặn luồng nghiệp vụ
-		return fmt.Sprintf("%06d", time.Now().UnixNano()%1_000_000)
+		return fmt.Sprintf("%06d", vntime.Now().UnixNano()%1_000_000)
 	}
 	return fmt.Sprintf("%06d", value.Int64())
 }

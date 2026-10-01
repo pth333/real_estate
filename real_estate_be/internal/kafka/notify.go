@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"log"
-	"time"
 
 	"real_estate_be/internal/global"
 	model "real_estate_be/internal/models"
 	"real_estate_be/internal/repo"
 	kafkapkg "real_estate_be/pkg/kafka"
+	"real_estate_be/pkg/vntime"
 
 	kafkago "github.com/segmentio/kafka-go"
 )
@@ -75,7 +75,7 @@ func (n *NotifyConsumer) handle(ctx context.Context, msg kafkago.Message) error 
 		ListingID: event.ListingID,
 		Type:      "new_listing",
 		Payload:   string(payloadBytes),
-		CreatedAt: time.Now(),
+		CreatedAt: vntime.Now(),
 	}
 
 	if err := n.repo.Create(notif); err != nil {

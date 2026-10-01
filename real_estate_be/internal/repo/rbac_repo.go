@@ -1,9 +1,8 @@
 package repo
 
 import (
-	"time"
-
 	model "real_estate_be/internal/models"
+	"real_estate_be/pkg/vntime"
 
 	"gorm.io/gorm"
 )
@@ -155,7 +154,7 @@ func (r *rbacRepo) SetUserRoles(userID uint64, roleIDs []uint64) error {
 			return nil
 		}
 
-		now := time.Now()
+		now := vntime.Now()
 		links := make([]model.UserRole, 0, len(roleIDs))
 		for _, roleID := range roleIDs {
 			links = append(links, model.UserRole{UserID: userID, RoleID: roleID, CreatedAt: now})
@@ -191,7 +190,7 @@ func (r *rbacRepo) AddRoleByCode(userID uint64, roleCode string) error {
 		return nil
 	}
 
-	return r.db.Create(&model.UserRole{UserID: userID, RoleID: role.ID, CreatedAt: time.Now()}).Error
+	return r.db.Create(&model.UserRole{UserID: userID, RoleID: role.ID, CreatedAt: vntime.Now()}).Error
 }
 
 func (r *rbacRepo) ListUsers(search string, offset, limit int) ([]model.User, int64, error) {

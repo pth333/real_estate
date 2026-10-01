@@ -4,6 +4,7 @@ import (
 	"time"
 
 	model "real_estate_be/internal/models"
+	"real_estate_be/pkg/vntime"
 )
 
 // Header keys.
@@ -108,7 +109,7 @@ type RealEstateNewListingEvent struct {
 }
 
 func (e RealEstateNewListingEvent) GetKey() string {
-	return time.Now().Format("20060102") // Partition key theo ngày hoặc ID
+	return vntime.Now().Format("20060102") // Partition key theo ngày hoặc ID
 }
 
 func NewRealEstateNewListingEvent(m model.RealEstate) RealEstateNewListingEvent {
@@ -117,7 +118,7 @@ func NewRealEstateNewListingEvent(m model.RealEstate) RealEstateNewListingEvent 
 			EventType: EventTypeNewListing,
 			Source:    SourceApp,
 			Version:   VersionV1,
-			Timestamp: time.Now(),
+			Timestamp: vntime.Now(),
 		},
 		ListingID: m.ID,
 		Title:     m.Title,

@@ -13,7 +13,7 @@
       </n-button>
       <n-button v-if="isBroker && canGenerateOtp" key="broker-arrived" type="warning" :loading="processing"
         @click="generateOtp">
-        Tôi đã tới — sinh mã OTP
+        Tôi đã tới - Sinh mã OTP
       </n-button>
 
       <!-- Khách: 1 chạm = xác nhận đã tới, hệ thống tự ghi vị trí (không cần nhập gì) -->
@@ -62,7 +62,7 @@
 
     <!-- Môi giới: vị trí là căn cứ chuyển phí, khách nhập mã OTP là căn cứ chắc nhất -->
     <n-alert v-if="isBroker && canGenerateOtp" type="info" :bordered="false" class="text-xs">
-      Bấm <strong>Tôi đã tới — sinh mã OTP</strong> rồi đọc mã cho khách nhập: khách nhập mã là căn cứ chắc chắn
+      Bấm <strong>Tôi đã tới - Sinh mã OTP</strong> rồi đọc mã cho khách nhập: khách nhập mã là căn cứ chắc chắn
       nhất cho buổi xem. Vị trí của bạn cũng được ghi nhận làm bằng chứng (nên bật định vị đúng chỗ).
     </n-alert>
 
@@ -243,7 +243,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
 import { NButton, NInput, NModal, NRadio, NRadioGroup, NRate } from 'naive-ui'
 import type { Deposit, DepositActorRole } from '~/types/deposit'
 import { PURCHASE_PROOF_LABEL, PURCHASE_PROOF_OPTIONS } from '~/types/deposit'

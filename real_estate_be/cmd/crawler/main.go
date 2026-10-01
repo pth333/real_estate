@@ -13,9 +13,13 @@ import (
 	"real_estate_be/internal/global"
 	"real_estate_be/internal/initialize"
 	kafkapkg "real_estate_be/pkg/kafka"
+	"real_estate_be/pkg/vntime"
 )
 
 func main() {
+	// Ép cả tiến trình dùng giờ VN (UTC+7) trước khi mở DB (VPS thường chạy UTC)
+	vntime.SetDefault()
+
 	// Load config + DB
 	initialize.RunCrawler()
 

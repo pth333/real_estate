@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"real_estate_be/pkg/vntime"
 )
 
 // VNPayGateway — adapter cổng VNPay (mặc định sandbox).
@@ -26,13 +28,12 @@ func (g *VNPayGateway) IsMock() bool { return false }
 
 // CreatePaymentURL sinh URL thanh toán VNPay kèm chữ ký HMAC-SHA512.
 func (g *VNPayGateway) CreatePaymentURL(req CreatePaymentRequest) (string, error) {
-	//fix vấn đề về timezone khi deloy lên vps, VNPay yêu cầu timezone là UTC+7 (ICT)
-	var vnLoc = time.FixedZone("ICT", 7*60*60) // UTC+7
-
-	now := time.Now().In(vnLoc)
+	// VNPay yêu cầu mốc thời gian theo UTC+7 (ICT) — dùng chung pkg/vntime để không lệch
+	// khi VPS chạy UTC.
+	now := vntime.Now()
 	expire := now.Add(time.Duration(g.cfg.VNPay.ExpireMinutes) * time.Minute)
 	if !req.ExpiresAt.IsZero() {
-		expire = req.ExpiresAt.In(vnLoc)
+		expire = req.ExpiresAt.In(vntime.Location)
 	}
 
 	createDate := now.Format("20060102150405")
