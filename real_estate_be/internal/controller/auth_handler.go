@@ -2,6 +2,7 @@ package controller
 
 import (
 	"real_estate_be/internal/dto"
+	"real_estate_be/internal/global"
 	"real_estate_be/internal/response"
 	"real_estate_be/internal/usecase"
 	"real_estate_be/pkg/jwt"
@@ -17,6 +18,21 @@ func NewUserHandler(service usecase.AuthServiceInterface) *UserHandler {
 	return &UserHandler{
 		service: service,
 	}
+}
+
+// setRefreshCookie — ghi cookie refresh_token dùng chung cho login/refresh/logout.
+// httpOnly để JS không đọc được; Secure bật/tắt theo config `server.cookie_secure`
+// (chỉ bật khi chạy HTTPS, bật nhầm lúc chạy HTTP thì browser sẽ không lưu cookie).
+func setRefreshCookie(c *fiber.Ctx, value string, maxAge int) {
+	c.Cookie(&fiber.Cookie{
+		Name:     "refresh_token",
+		Value:    value,
+		HTTPOnly: true,
+		Secure:   global.Config.Server.CookieSecure,
+		SameSite: "Lax",
+		Path:     "/",
+		MaxAge:   maxAge,
+	})
 }
 
 func (h *UserHandler) Register(c *fiber.Ctx) error {
@@ -44,16 +60,8 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 		return response.Unauthorized(c, err.Error(), err)
 	}
 
-	// Set refresh token vào http-only cookie
-	c.Cookie(&fiber.Cookie{
-		Name:     "refresh_token",
-		Value:    refreshToken,
-		HTTPOnly: true,
-		Secure:   false, // true nếu dùng HTTPS
-		SameSite: "Lax",
-		Path:     "/",
-		MaxAge:   7 * 24 * 3600, // 7 ngày
-	})
+	// Set refresh token vào http-only cookie (7 ngày)
+	setRefreshCookie(c, refreshToken, 7*24*3600)
 
 	return response.OK(c, fiber.Map{
 		"token": accessToken,
@@ -73,16 +81,8 @@ func (h *UserHandler) RefreshToken(c *fiber.Ctx) error {
 		return response.Unauthorized(c, "Refresh token failed", err.Error())
 	}
 
-	// Set refresh token mới vào cookie
-	c.Cookie(&fiber.Cookie{
-		Name:     "refresh_token",
-		Value:    newRefresh,
-		HTTPOnly: true,
-		Secure:   false,
-		SameSite: "Lax",
-		Path:     "/",
-		MaxAge:   7 * 24 * 3600,
-	})
+	// Set refresh token mới vào cookie (xoay vòng token)
+	setRefreshCookie(c, newRefresh, 7*24*3600)
 
 	return response.OK(c, fiber.Map{
 		"token": newAccess,
@@ -90,16 +90,8 @@ func (h *UserHandler) RefreshToken(c *fiber.Ctx) error {
 }
 
 func (h *UserHandler) Logout(c *fiber.Ctx) error {
-	// Xoá cookie refresh token
-	c.Cookie(&fiber.Cookie{
-		Name:     "refresh_token",
-		Value:    "",
-		HTTPOnly: true,
-		Secure:   false,
-		SameSite: "Lax",
-		Path:     "/",
-		MaxAge:   -1,
-	})
+	// Xoá cookie refresh token (MaxAge = -1)
+	setRefreshCookie(c, "", -1)
 
 	return response.OK(c, fiber.Map{
 		"message": "Logged out",

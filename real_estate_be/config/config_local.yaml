@@ -1,5 +1,7 @@
 server:
   port: 8080
+  # Local chạy HTTP nên để false (bật true thì browser không lưu cookie refresh_token)
+  cookie_secure: false
 mysql:
   host: localhost
   port: 3308

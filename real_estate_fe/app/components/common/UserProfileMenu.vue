@@ -24,12 +24,6 @@ import { UserMenu } from "~/types/window";
 // Khởi tạo các store và class quản lý menu người dùng
 const auth = useAuthStore();
 
-/**
- * Bọc trong computed để menu TỰ CẬP NHẬT khi store nạp xong quyền.
- * Trước đây `new UserMenu(auth.user?.roles)` chạy 1 lần lúc setup nên menu bị "đóng băng"
- * theo state tại thời điểm mount: cookie cũ chưa có roles → hiện sai, và phải load lại
- * trang vài lần mới đúng.
- */
 const userMenu = computed(() => new UserMenu(auth.user?.roles));
 
 // Map danh sách tùy chọn từ class sang cấu trúc của Naive UI dropdown dựa trên role, kèm icon và divider
@@ -38,7 +32,6 @@ const dropdownOptions = computed(() => {
   const list: DropdownOption[] = [];
 
   options.forEach((option) => {
-    // Thêm đường gạch phân cách (divider) trước mục "Đăng xuất" để bám sát giao diện chuẩn
     if (option.key === "logout" && list.length > 0) {
       list.push({
         type: "divider",

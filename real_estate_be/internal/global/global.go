@@ -102,6 +102,11 @@ type R2Config struct {
 
 type ServerConfig struct {
 	Port int `mapstructure:"port"`
+	// CookieSecure — cờ `Secure` cho cookie refresh_token:
+	// false (mặc định) khi chạy HTTP, bật true khi FE/BE phục vụ qua HTTPS.
+	// Bật sai (HTTPS thật nhưng để false thì vẫn chạy; HTTP mà bật true thì browser
+	// sẽ KHÔNG lưu cookie ⇒ mất phiên đăng nhập).
+	CookieSecure bool `mapstructure:"cookie_secure"`
 }
 
 type MysqlConfig struct {

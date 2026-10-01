@@ -14,6 +14,13 @@
 export default defineNuxtRouteMiddleware(async (to) => {
   const authStore = useAuthStore()
 
+  // ── Nạp phiên TRƯỚC khi kiểm tra ──
+  // init() tự lo thứ tự đúng: nếu access token hết hạn/mất nhưng còn cookie refresh_token
+  // thì gọi /auth/refresh trước, rồi mới lấy user info (roles/permissions).
+  // Có chống gọi trùng nên GlobalInit gọi cùng lúc cũng không phát sinh request thứ 2,
+  // và khách vãng lai (không có phiên) thì hàm trả về ngay, không gọi API nào.
+  await authStore.init()
+
   // ── Trang đăng nhập / đăng ký ──
   const guestPaths = ['/login', '/register', '/dang-nhap', '/dang-ky']
   if (guestPaths.includes(to.path)) {
@@ -29,19 +36,12 @@ export default defineNuxtRouteMiddleware(async (to) => {
     requiredRoles.length > 0 ||
     requiredPermissions.length > 0
 
-  // ── Trang công khai: khách vãng lai vào thẳng, không gọi API quyền ──
+  // ── Trang công khai: khách vãng lai vào thẳng ──
   if (!needsLogin) return
 
-  // ── Trang cần đăng nhập ──
+  // ── Trang cần đăng nhập: init() đã cố refresh xong, giờ không có token nghĩa là hết phiên ──
   if (!authStore.token) {
     // Nhớ trang đang muốn vào để đăng nhập xong quay lại đúng chỗ
-    return navigateTo({ path: '/dang-nhap', query: { redirect: to.fullPath } })
-  }
-
-  // Nạp quyền mới nhất (có chống gọi trùng) trước khi kiểm tra meta,
-  // vì user đọc từ cookie có thể đã cũ sau khi admin đổi role.
-  await authStore.ensureAccessLoaded()
-  if (!authStore.token) {
     return navigateTo({ path: '/dang-nhap', query: { redirect: to.fullPath } })
   }
 

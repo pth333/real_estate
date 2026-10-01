@@ -72,14 +72,7 @@ export class UserMenu {
     ];
   }
 
-  /**
-   * Lấy danh sách tùy chọn menu đã lọc theo các role hiện tại của người dùng.
-   *
-   * FAIL-CLOSED: chỉ hiện mục mà user THỰC SỰ có role tương ứng.
-   * Trước đây hàm này trả TOÀN BỘ options khi chưa biết role (undefined hoặc mảng rỗng),
-   * nên khách hàng vẫn thấy cả mục quản trị/admin nếu quyền chưa kịp nạp.
-   * Mục không khai báo `roles` (VD Đăng xuất) thì luôn hiện.
-   */
+
   getFilteredOptions(): UserMenuOption[] {
     const roles = this.roles ?? [];
     return this.options.filter(

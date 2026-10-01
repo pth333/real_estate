@@ -1,5 +1,9 @@
 server:
   port: 8000
+  # Cookie refresh_token có cờ Secure hay không.
+  # Đang để false = giữ nguyên hành vi cũ. Khi FE/BE chạy HTTPS thật thì đổi thành true
+  # (bật nhầm lúc còn HTTP thì browser sẽ KHÔNG lưu cookie ⇒ mất phiên đăng nhập).
+  cookie_secure: true
 
 mysql:
   host: mariadb

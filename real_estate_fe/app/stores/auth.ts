@@ -14,7 +14,8 @@ import { useTrackingService } from "~/services/tracking.service";
  * - user               : thông tin user (kèm roles[] + permissions[])
  * - permissions/roles  : bản sao dạng mảng để component đọc trực tiếp
  * - hasPermission()/hasRole() : dùng để ẩn/hiện UI
- * - fetchCurrentUser(): gọi GET /auth/user-current-info, dùng ở middleware route và lúc khởi động
+ * - init()             : NẠP PHIÊN duy nhất 1 lần — tự refresh token trước (nếu cần) rồi
+ *                        mới gọi GET /auth/user-current-info. Dùng ở GlobalInit + middleware.
  */
 export const useAuthStore = defineStore("auth", () => {
   const tokenCookie = useCookie<string | null>("auth_token", {
@@ -35,8 +36,8 @@ export const useAuthStore = defineStore("auth", () => {
   const user = ref<UserInfo | null>(userCookie.value ?? null);
   // Cờ cho biết đã gọi API user-current-info ít nhất 1 lần trong phiên này
   const accessLoaded = ref(false);
-  // Promise của request đang bay — dùng để chống gọi trùng khi nhiều nơi cùng yêu cầu
-  let accessPromise: Promise<UserInfo | null> | null = null;
+  // Promise của lần nạp phiên đang chạy — mọi nơi gọi init() đều chờ CHUNG 1 lần
+  let initPromise: Promise<void> | null = null;
 
   watch(token, (val) => {
     tokenCookie.value = val;
@@ -84,60 +85,67 @@ export const useAuthStore = defineStore("auth", () => {
     token.value = null;
     user.value = null;
     accessLoaded.value = false;
+    initPromise = null;
     if (import.meta.client) {
       window.currentUser = undefined;
     }
   }
 
   /**
-   * Lấy thông tin user hiện tại từ backend và ghi vào state global.
-   * Trả về user (hoặc user cũ đọc từ cookie nếu chỉ là lỗi mạng).
+   * Nạp phiên đăng nhập — MỘT hàm duy nhất, chạy tuần tự, có chống gọi trùng.
    *
-   * CHỐNG GỌI TRÙNG: middleware route và GlobalInit có thể cùng gọi hàm này
-   * lúc tải trang → dùng chung 1 promise đang bay, chỉ phát 1 request.
+   * Thứ tự cố định (đây là chỗ trước đây bị race):
+   *   1. Có dấu hiệu đã đăng nhập (còn token HOẶC còn user cookie) mà chưa có access token
+   *      → gọi /auth/refresh. BE đọc cookie httpOnly `refresh_token` nên KHÔNG cần token cũ.
+   *   2. Có token → GET /auth/user-current-info (silent: request nền không hiện toast lỗi).
+   *   3. Chỉ khi 401/403 (kể cả sau khi đã refresh) mới xoá phiên; lỗi mạng thì giữ user đọc
+   *      từ cookie để không văng đăng nhập oan và không mất menu của user.
    */
-  function fetchCurrentUser(force = false): Promise<UserInfo | null> {
-    if (!token.value) return Promise.resolve(null);
+  function init(force = false): Promise<void> {
+    if (!force && initPromise) return initPromise;
 
-    // Đã có quyền rồi và không ép gọi lại → dùng luôn state hiện tại
-    if (!force && accessLoaded.value) return Promise.resolve(user.value);
+    const promise = (async () => {
+      // Khách vãng lai hoàn toàn: không có gì để nạp, cũng KHÔNG gọi refresh
+      if (!token.value && !user.value) return;
 
-    // Đang có request bay → trả về chính promise đó, không tạo request thứ 2
-    if (accessPromise) return accessPromise;
+      // (1) Chưa có access token (hết hạn/bị xoá) nhưng còn phiên → lấy lại bằng refresh token
+      if (!token.value) {
+        const refreshed = await refreshToken();
+        if (!refreshed) {
+          clearSession();
+          return;
+        }
+      }
 
-    // Ghi nhớ token lúc bắt đầu: nếu user đăng xuất/đổi phiên trong lúc chờ
-    // thì bỏ qua kết quả trả về, tránh ghi đè lại state của phiên đã kết thúc.
-    const tokenAtRequest = token.value;
-
-    accessPromise = (async () => {
+      // (2) Lấy quyền MỚI NHẤT (admin vừa đổi role thì không cần đăng nhập lại)
+      const tokenAtRequest = token.value;
       try {
         const current = await useAuthService().getUserCurrentInfo();
-        if (token.value !== tokenAtRequest) return null;
+        // Phiên bị đổi/đăng xuất trong lúc chờ → bỏ kết quả, không ghi đè state mới
+        if (!tokenAtRequest || token.value !== tokenAtRequest) return;
         user.value = current;
         accessLoaded.value = true;
-        return current;
       } catch (error: unknown) {
-        if (token.value !== tokenAtRequest) return null;
+        if (token.value !== tokenAtRequest) return;
         const status = (error as { response?: { status?: number } })?.response?.status;
+        // (3) Token vừa refresh vẫn bị từ chối → phiên thật sự hết hạn
         if (status === 401 || status === 403) {
-          // Token hỏng/hết hạn hoặc tài khoản bị khoá → xoá phiên,
-          // middleware route sẽ đá về trang đăng nhập.
           clearSession();
-          return null;
+          return;
         }
-        // Lỗi mạng/server tạm thời: giữ user cũ để không văng đăng nhập oan
-        return user.value;
-      } finally {
-        accessPromise = null;
+        // Lỗi mạng/server tạm thời: giữ user hiện có, KHÔNG toast, KHÔNG xoá phiên
       }
     })();
 
-    return accessPromise;
+    // Giữ promise cục bộ để trả về (clearSession ở trong có thể đặt initPromise = null
+    // để lần nạp sau được phép chạy lại)
+    initPromise = promise;
+    return promise;
   }
 
-  /** Đảm bảo đã có quyền mới nhất — gọi nhiều lần cũng chỉ phát 1 request */
+  /** Giữ tên cũ cho nơi đang gọi (middleware/route) — nay chỉ là alias của init() */
   async function ensureAccessLoaded(): Promise<void> {
-    await fetchCurrentUser();
+    await init();
   }
 
   async function login(payload: LoginRequest) {
@@ -209,7 +217,7 @@ export const useAuthStore = defineStore("auth", () => {
     hasAnyRole,
     hasAnyPermission,
     can,
-    fetchCurrentUser,
+    init,
     ensureAccessLoaded,
 
     login,

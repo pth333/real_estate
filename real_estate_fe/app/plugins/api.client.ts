@@ -27,6 +27,25 @@ const useRefreshState = () =>
   useState<boolean>("api:isRefreshing", () => false);
 const useFailedQueue = () => useState<QueueItem[]>("api:failedQueue", () => []);
 
+/**
+ * Chỉ 2 endpoint này KHÔNG được tự refresh để tránh vòng lặp vô hạn:
+ * - /auth/refresh: chính nó là bước refresh
+ * - /auth/login  : login sai thì phải báo lỗi, không phải refresh
+ * Các endpoint /auth/* khác (vd: /auth/user-current-info) VẪN được refresh —
+ * trước đây chặn cả nhóm /auth/ nên token hết hạn là mất luôn user info.
+ */
+const NO_REFRESH_ENDPOINTS = ["/auth/refresh", "/auth/login"];
+
+/** Lấy HTTP status từ lỗi của $fetch/ofetch (mỗi bản đặt ở field khác nhau) */
+function httpStatus(err: unknown): number {
+  const e = err as {
+    response?: { status?: number };
+    statusCode?: number;
+    status?: number;
+  };
+  return e?.response?.status ?? e?.statusCode ?? e?.status ?? 0;
+}
+
 function processQueue(error: unknown) {
   const queue = useFailedQueue();
   const items = [...queue.value];
@@ -98,8 +117,11 @@ export const api = {
       // Lỗi business đã xử lý ở trên → chỉ throw
       if (err?.__business) throw err;
 
-      // 401 → refresh token
-      if (err?.response?.status === 401 && !url.includes("/auth/")) {
+      // 401 → refresh token rồi retry đúng 1 lần (trừ endpoint refresh/login)
+      const canAutoRefresh = !NO_REFRESH_ENDPOINTS.some((path) =>
+        url.includes(path),
+      );
+      if (httpStatus(err) === 401 && canAutoRefresh) {
         if (isRefreshing.value) {
           return new Promise<T>((resolve, reject) => {
             failedQueue.value.push({
@@ -115,7 +137,15 @@ export const api = {
         isRefreshing.value = true;
         try {
           // Gọi refresh token qua store
-          await authStore.refreshToken();
+          const refreshed = await authStore.refreshToken();
+
+          // Refresh thất bại (không còn phiên) → trả lỗi cho caller, không retry vô ích
+          if (!refreshed) {
+            processQueue(err);
+            // Request nền (silent) không được tự ý điều hướng người dùng
+            if (!config.silent) navigateTo("/dang-nhap");
+            throw err;
+          }
 
           // Retry tất cả request trong queue
           processQueue(null);
@@ -130,13 +160,6 @@ export const api = {
             credentials: "include",
             timeout: config.timeout ?? 15_000,
           });
-        } catch (refreshErr) {
-          processQueue(refreshErr);
-          window.message?.warning(
-            "Phiên đăng nhập hết hạn, vui lòng đăng nhập lại",
-          );
-          navigateTo("/dang-nhap");
-          throw refreshErr;
         } finally {
           isRefreshing.value = false;
         }
@@ -149,7 +172,7 @@ export const api = {
           err?.data?.error ||
           err?.message ||
           "Có lỗi xảy ra";
-        const status = err?.response?.status;
+        const status = httpStatus(err);
         if (status >= 500) window.message?.error(msg);
         else if (status >= 400) window.message?.warning(msg);
         else window.message?.error(msg);

@@ -11,14 +11,12 @@ if (import.meta.client) {
   window.message = useMessage()
 }
 
-// Nạp thông tin user hiện tại (roles[] + permissions[]) vào state global ngay khi
-// app khởi động, để middleware route và UI luôn có quyền MỚI NHẤT — admin vừa đổi
-// role thì chỉ cần tải lại trang, không phải đăng nhập lại.
-// Dùng ensureAccessLoaded (có chống gọi trùng) thay vì fetchCurrentUser trực tiếp,
-// vì middleware route cũng đã yêu cầu cùng dữ liệu này lúc tải trang.
+// Nạp phiên đăng nhập (user + roles + permissions) ngay khi app khởi động.
+// init() tự lo thứ tự: refresh token TRƯỚC (nếu cần) rồi mới gọi user-current-info,
+// và chống gọi trùng nên middleware route gọi lại cũng không phát sinh request thứ 2.
 const authStore = useAuthStore()
 
 onMounted(() => {
-  authStore.ensureAccessLoaded()
+  authStore.init()
 })
 </script>

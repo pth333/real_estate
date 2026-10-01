@@ -26,23 +26,28 @@ export class AuthService extends BaseService {
     return this.post<AuthResponse>('/auth/register', payload)
   }
 
-  /** Làm mới access token — trả nguyên envelope để store kiểm tra `success` */
+  /**
+   * Làm mới access token từ cookie httpOnly `refresh_token`.
+   * silent: true — đây là request nền (khởi động phiên/SSE), thất bại thì store tự xử lý,
+   * KHÔNG hiện toast "Invalid or expired token" cho người dùng.
+   */
   refresh(): Promise<AuthResponse> {
-    return this.post<AuthResponse>('/auth/refresh')
+    return this.api.post<AuthResponse>('/auth/refresh', undefined, { silent: true })
   }
 
-  /** Đăng xuất — không cần đọc body, chỉ cần gọi thành công */
+  /** Đăng xuất — không cần đọc body, chỉ cần gọi thành công (silent để không toast lỗi) */
   async logout(): Promise<void> {
-    await this.post('/auth/logout')
+    await this.api.post('/auth/logout', undefined, { silent: true })
   }
 
   /**
    * Thông tin user đang đăng nhập: id, tên, email, roles[], permissions[].
    * FE gọi lúc khởi động để state global luôn có quyền MỚI NHẤT
    * (admin đổi role thì không cần đăng nhập lại mới thấy đúng giao diện).
+   * silent: true vì đây là request nền lúc tải trang.
    */
   getUserCurrentInfo(): Promise<UserInfo> {
-    return this.getData<UserInfo>('/auth/user-current-info')
+    return this.getData<UserInfo>('/auth/user-current-info', undefined, true)
   }
 
   /** Gửi OTP xác thực số điện thoại trước khi đăng tin */
