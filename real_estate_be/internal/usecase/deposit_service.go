@@ -285,9 +285,6 @@ func (s *depositService) CreateDeposit(customerID uint64, req dto.CreateDepositR
 		PaymentMethod: method,
 		PaymentRef:    buildPaymentRef(),
 	}
-	if err := s.depositRepo.Create(deposit); err != nil {
-		return nil, err
-	}
 
 	// Sinh URL thanh toán cho PHÍ MÔI GIỚI; tiền vào tài khoản platform, KHÔNG vào môi giới ngay
 	paymentURL, err := s.gateway.CreatePaymentURL(payment.CreatePaymentRequest{
@@ -300,6 +297,10 @@ func (s *depositService) CreateDeposit(customerID uint64, req dto.CreateDepositR
 		ExpiresAt: time.Now().Add(time.Duration(s.cfg.PaymentTimeoutMinutes) * time.Minute),
 	})
 	if err != nil {
+		return nil, err
+	}
+
+	if err := s.depositRepo.Create(deposit); err != nil {
 		return nil, err
 	}
 

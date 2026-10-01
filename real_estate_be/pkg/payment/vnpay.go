@@ -26,11 +26,17 @@ func (g *VNPayGateway) IsMock() bool { return false }
 
 // CreatePaymentURL sinh URL thanh toán VNPay kèm chữ ký HMAC-SHA512.
 func (g *VNPayGateway) CreatePaymentURL(req CreatePaymentRequest) (string, error) {
-	now := time.Now()
+	//fix vấn đề về timezone khi deloy lên vps, VNPay yêu cầu timezone là UTC+7 (ICT)
+	var vnLoc = time.FixedZone("ICT", 7*60*60) // UTC+7
+
+	now := time.Now().In(vnLoc)
 	expire := now.Add(time.Duration(g.cfg.VNPay.ExpireMinutes) * time.Minute)
 	if !req.ExpiresAt.IsZero() {
-		expire = req.ExpiresAt
+		expire = req.ExpiresAt.In(vnLoc)
 	}
+
+	createDate := now.Format("20060102150405")
+	expireDate := expire.Format("20060102150405")
 
 	params := map[string]string{
 		"vnp_Version":    "2.1.0",
@@ -44,8 +50,8 @@ func (g *VNPayGateway) CreatePaymentURL(req CreatePaymentRequest) (string, error
 		"vnp_Amount":     formatAmount(req.Amount),
 		"vnp_ReturnUrl":  g.cfg.ReturnURL,
 		"vnp_IpAddr":     req.ClientIP,
-		"vnp_CreateDate": now.Format("20060102150405"),
-		"vnp_ExpireDate": expire.Format("20060102150405"),
+		"vnp_CreateDate": createDate,
+		"vnp_ExpireDate": expireDate,
 	}
 
 	if req.BankCode != "" {
