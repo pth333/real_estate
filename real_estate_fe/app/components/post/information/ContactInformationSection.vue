@@ -39,7 +39,7 @@
                     Số điện thoại <span class="text-red-500">*</span>
                 </label>
                 <n-select v-model:value="postStore.form.contact_phone" :options="phoneOptions"
-                    placeholder="Chọn số điện thoại liên hệ"
+                    placeholder="Chọn số điện thoại liên hệ" filterable tag
                     :status="postStore.errorsContact.contact_phone ? 'error' : 'default'"
                     @update:value="handlePhoneSelect" />
                 <span v-if="postStore.errorsContact.contact_phone" class="text-xs text-red-500 mt-1 block">{{
@@ -61,10 +61,12 @@ const emit = defineEmits<{
 }>()
 // Định nghĩa danh sách option bao gồm các số đã xác thực và lựa chọn thêm mới
 const phoneOptions = computed(() => {
-    const list = verifiedPhones.value.map(phone => ({
-        label: phone,
-        value: phone
-    }))
+    // tạm thời bỏ đi vì chưa có tiền thuê sms
+    // const list = verifiedPhones.value.map(phone => ({
+    //     label: phone,
+    //     value: phone
+    // }))
+    const list = []
     list.push({
         label: '+ Thêm số điện thoại mới',
         value: 'add_new_phone'
@@ -76,6 +78,8 @@ const phoneOptions = computed(() => {
 const handlePhoneSelect = (value: string) => {
     if (value === 'add_new_phone') {
         // Mở modal OTP để nhập số điện thoại mới và OTP
+        window.message?.warning('Admin chưa đủ tiền thuê SMS, OTP đang đi... xin tiền. Vui lòng nhập sdt nhé!')
+        return
         emit('update:showOTPModal', true)
 
         // Khôi phục lại giá trị hiển thị cũ để không hiển thị chữ 'add_new_phone' trên ô select
