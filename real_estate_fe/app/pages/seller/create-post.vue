@@ -54,7 +54,7 @@
             </n-button>
         </div>
 
-        <ModalOTPAuthentication v-model:showOTPModal="showOTPModal" />
+        <!-- <ModalOTPAuthentication v-model:showOTPModal="showOTPModal" /> -->
 
         <!-- Modal hỏi tiếp tục bản nháp cũ -->
         <DraftModal v-model:show="showDraftModal" />
@@ -170,10 +170,11 @@ const loadingPostDetail = async () => {
 }
 
 onMounted(() => {
-    if (!isEdit.value && !phoneVerified.value) {
-        showOTPModal.value = true
-        return
-    }
+    //tam thoi tat di vì chưa có tiền thuê sms
+    // if (!isEdit.value && !phoneVerified.value) {
+    //     showOTPModal.value = true
+    //     return
+    // }
     if (!isEdit.value) {
         postStore.form.contact_phone = verifiedPhone.value || ""
     }
