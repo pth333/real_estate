@@ -945,10 +945,6 @@ func (s *depositService) RateBroker(depositID, customerID uint64, req dto.RateBr
 	})
 }
 
-// ══════════════════════════════════════════════════════════
-// Truy vấn chi tiết / danh sách
-// ══════════════════════════════════════════════════════════
-
 func (s *depositService) ListCustomerDeposits(customerID uint64, status string, page, size int) ([]dto.DepositResponse, int64, error) {
 	offset, limit := paginate(page, size)
 	items, total, err := s.depositRepo.ListByCustomer(customerID, status, offset, limit)
@@ -1162,10 +1158,6 @@ func (s *depositService) withinCheckinWindow(deposit *model.Deposit, now time.Ti
 	grace := time.Duration(s.cfg.CheckinGraceHours) * time.Hour
 	return now.After(startAt.Add(-otpEarlyMinutes*time.Minute)) && now.Before(endAt.Add(grace))
 }
-
-// ══════════════════════════════════════════════════════════
-// Tất toán escrow (plan mục 2.4)
-// ══════════════════════════════════════════════════════════
 
 // settlementPlan — kế hoạch chia tiền khi tất toán 1 deposit.
 type settlementPlan struct {

@@ -21,12 +21,10 @@ import { NIcon } from "naive-ui";
 import { useAuthStore } from "~/stores/auth";
 import { UserMenu } from "~/types/window";
 
-// Khởi tạo các store và class quản lý menu người dùng
 const auth = useAuthStore();
 
 const userMenu = computed(() => new UserMenu(auth.user?.roles));
 
-// Map danh sách tùy chọn từ class sang cấu trúc của Naive UI dropdown dựa trên role, kèm icon và divider
 const dropdownOptions = computed(() => {
   const options = userMenu.value.getFilteredOptions();
   const list: DropdownOption[] = [];
@@ -74,18 +72,12 @@ const dropdownOptions = computed(() => {
   return list;
 });
 
-/**
- * Xử lý đăng xuất tài khoản và chuyển hướng về trang đăng nhập
- */
+
 const handleLogout = async () => {
   await auth.logout();
   navigateTo("/dang-nhap");
 };
 
-/**
- * Xử lý khi người dùng chọn một tùy chọn trong menu dropdown
- * @param key Key của tùy chọn được chọn
- */
 const handleSelect = async (key: string) => {
   const option = userMenu.value.getOptionByKey(key);
   if (option?.path) {

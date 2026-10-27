@@ -29,6 +29,10 @@ redis:
   addr: redis:6379
   db: 0
 
+r2:
+  region: auto
+  bucket: real-estate-files
+
 recommendation:
   addr: recommendation:50051
 

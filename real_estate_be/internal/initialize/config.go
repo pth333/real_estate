@@ -61,7 +61,7 @@ func LoadConfig() {
 	v.BindEnv("r2.access_key_id", "RE_R2_ACCESS_KEY_ID")
 	v.BindEnv("r2.secret_access_key", "RE_R2_SECRET_ACCESS_KEY")
 	v.BindEnv("r2.public_url", "RE_R2_PUBLIC_URL")
-	v.BindEnv("infobip.api_key", "RE_INFOBIP_API_KEY")
+	// v.BindEnv("infobip.api_key", "RE_INFOBIP_API_KEY")
 	// Cổng thanh toán + admin (chỉ có trong .env / env hệ thống)
 	v.BindEnv("payment.vnpay.tmn_code", "RE_PAYMENT_VNPAY_TMN_CODE")
 	v.BindEnv("payment.vnpay.hash_secret", "RE_PAYMENT_VNPAY_HASH_SECRET")

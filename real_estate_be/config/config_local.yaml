@@ -4,7 +4,7 @@ server:
   cookie_secure: false
 mysql:
   host: localhost
-  port: 3308
+  port: 3307
   username: root
   password: 1111
   database: real_estate_db
